@@ -1,0 +1,1637 @@
+import React, { useEffect, useMemo, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import {
+  Activity,
+  BarChart3,
+  Bot,
+  Brain,
+  ChevronDown,
+  Clock,
+  Copy,
+  Cpu,
+  Database,
+  Download,
+  Edit3,
+  FileText,
+  Gauge,
+  GitBranch,
+  MoreHorizontal,
+  Paperclip,
+  Mic,
+  MessageSquarePlus,
+  PanelRight,
+  Route,
+  Send,
+  ShieldAlert,
+  Sparkles,
+  Terminal,
+  ThumbsDown,
+  ThumbsUp,
+  User,
+  Trash2,
+  X,
+} from 'lucide-react'
+import remarkGfm from 'remark-gfm'
+import {
+  API_BASE,
+  applyAutomation,
+  approvePromptVersion,
+  createChat,
+  deleteChat,
+  deleteMessage,
+  getAnalytics,
+  getChat,
+  getChats,
+  getHistory,
+  getLearningReport,
+  getProviderStatus,
+  rejectPromptVersion,
+  renameChat,
+  rollbackPromptVersion,
+  runWorkflow,
+  sendFeedback,
+  uploadFiles,
+  uploadRecordings,
+} from './api'
+
+const taskTypes = [
+  'auto',
+  'resume',
+  'coding',
+  'business',
+  'research',
+  'finance',
+  'pharmacy',
+  'image_generation',
+  'app_automation',
+  'recording_summary',
+  'system_explanation',
+  'document_analysis',
+  'file_summary',
+  'resume_review',
+  'code_review',
+  'data_analysis',
+  'general',
+]
+
+const promptCards = [
+  'Explain how EvolveAgent AI works',
+  'Improve my resume for a software engineering internship',
+  'Review my FastAPI backend architecture',
+  'Analyze a business idea and find risks',
+  'Create a 2-minute project demo script',
+  'Generate an image prompt for a futuristic AI assistant',
+  'Add a small settings panel to this app',
+  'Summarize this recording',
+  'Upload a resume and ask for improvements',
+  'Upload a CSV and analyze patterns',
+  'Upload a code file and explain it',
+]
+
+const progressSteps = [
+  'Master Agent is understanding your request',
+  'Task type is being detected',
+  'Specialist agents are analyzing',
+  'Judge Agent is reviewing quality',
+  'Evolution Agent is preparing improvement notes',
+  'Memory Agent is saving the result',
+  'Final answer is ready',
+]
+
+function formatType(type = '') {
+  return type.replaceAll('_', ' ')
+}
+
+function formatSimpleAnswer(result, fallback = '') {
+  if (!result) return fallback
+  if (result.image_result) {
+    return result.final_output || 'I created an image preview using a safe image prompt.'
+  }
+  return (result.final_output || fallback || '').replace(/The Master Agent classified this as .*?\.\s*/gi, '').trim()
+}
+
+function assetUrl(path = '') {
+  if (!path) return ''
+  if (path.startsWith('http')) return path
+  return `${API_BASE}${path}`
+}
+
+function runModeLabel(result, fallbackMode) {
+  if (result?.image_result) {
+    return result.image_result.provider
+  }
+  return fallbackMode
+}
+
+function messageKey(message) {
+  return message.message_id || message.id
+}
+
+function CodeBlock({ inline, className = '', children }) {
+  const code = String(children).replace(/\n$/, '')
+  const language = /language-(\w+)/.exec(className)?.[1] || 'code'
+  if (inline) {
+    return <code className="inline-code">{children}</code>
+  }
+  return (
+    <div className="code-block">
+      <div className="code-toolbar">
+        <span>{language}</span>
+        <button type="button" onClick={() => navigator.clipboard.writeText(code)}>
+          Copy code
+        </button>
+      </div>
+      <pre>
+        <code className={className}>{code}</code>
+      </pre>
+    </div>
+  )
+}
+
+function MarkdownMessage({ content }) {
+  return (
+    <div className="markdown-content">
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ code: CodeBlock }}>
+        {content}
+      </ReactMarkdown>
+    </div>
+  )
+}
+
+function App() {
+  const [input, setInput] = useState('')
+  const [taskType, setTaskType] = useState('auto')
+  const [deepMode, setDeepMode] = useState(false)
+  const [developerMode, setDeveloperMode] = useState(false)
+  const [messages, setMessages] = useState([])
+  const [sessionId, setSessionId] = useState(null)
+  const [selectedRunId, setSelectedRunId] = useState(null)
+  const [chats, setChats] = useState([])
+  const [history, setHistory] = useState([])
+  const [providerStatus, setProviderStatus] = useState(null)
+  const [analytics, setAnalytics] = useState(null)
+  const [learningReport, setLearningReport] = useState(null)
+  const [showAnalytics, setShowAnalytics] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [progressIndex, setProgressIndex] = useState(0)
+  const [error, setError] = useState('')
+  const [copied, setCopied] = useState('')
+  const [showRawJson, setShowRawJson] = useState(false)
+  const [attachedFiles, setAttachedFiles] = useState([])
+  const [attachedRecordings, setAttachedRecordings] = useState([])
+  const [uploadingFiles, setUploadingFiles] = useState(false)
+  const [uploadingRecordings, setUploadingRecordings] = useState(false)
+  const [voiceUsed, setVoiceUsed] = useState(false)
+  const [voiceTranscript, setVoiceTranscript] = useState('')
+  const [listening, setListening] = useState(false)
+  const [automationResults, setAutomationResults] = useState({})
+
+  useEffect(() => {
+    refreshHistory()
+    refreshChats()
+    refreshProviderStatus()
+    refreshAnalytics()
+    refreshLearningReport()
+  }, [])
+
+  useEffect(() => {
+    if (!loading) return undefined
+    const timer = window.setInterval(() => {
+      setProgressIndex((current) => Math.min(current + 1, progressSteps.length - 1))
+    }, 900)
+    return () => window.clearInterval(timer)
+  }, [loading])
+
+  const selectedRun = useMemo(() => {
+    const assistantMessages = messages.filter((message) => message.role === 'assistant' && message.result)
+    const selectedMessage = assistantMessages.find((message) => message.id === selectedRunId) || assistantMessages.at(-1)
+    return selectedMessage?.result
+  }, [messages, selectedRunId])
+
+  async function refreshHistory() {
+    setHistory(await getHistory())
+  }
+
+  async function refreshProviderStatus() {
+    setProviderStatus(await getProviderStatus())
+  }
+
+  async function refreshAnalytics() {
+    setAnalytics(await getAnalytics())
+  }
+
+  async function refreshLearningReport() {
+    setLearningReport(await getLearningReport())
+  }
+
+  async function decidePromptVersion(version, action) {
+    try {
+      const payload = { agent_name: version.agent_name, version_id: version.version_id }
+      if (action === 'approve') await approvePromptVersion(payload)
+      if (action === 'reject') await rejectPromptVersion(payload)
+      if (action === 'rollback') await rollbackPromptVersion(payload)
+      await refreshLearningReport()
+      setCopied(`Prompt ${action} saved`)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function refreshChats() {
+    setChats(await getChats())
+  }
+
+  async function newChat() {
+    try {
+      const chat = await createChat()
+      setSessionId(chat.session_id)
+      await refreshChats()
+    } catch {
+      setSessionId(null)
+    }
+    setMessages([])
+    setSelectedRunId(null)
+    setError('')
+    setInput('')
+  }
+
+  async function loadChat(nextSessionId) {
+    try {
+      const chat = await getChat(nextSessionId)
+      setSessionId(chat.session_id)
+      setMessages(chat.messages || [])
+      const lastAssistant = [...(chat.messages || [])].reverse().find((message) => message.role === 'assistant' && message.result)
+      setSelectedRunId(messageKey(lastAssistant || {}) || null)
+      setError('')
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function handleRenameChat(nextSessionId, currentTitle) {
+    const title = window.prompt('Rename chat', currentTitle)
+    if (!title?.trim()) return
+    await renameChat(nextSessionId, title.trim())
+    await refreshChats()
+  }
+
+  async function handleDeleteChat(nextSessionId) {
+    await deleteChat(nextSessionId)
+    if (sessionId === nextSessionId) {
+      newChat()
+    }
+    await refreshChats()
+  }
+
+  async function submitMessage(text = input) {
+    const prompt = text.trim()
+    if (!prompt || loading) return
+    const processedFiles = attachedFiles.filter((file) => file.status === 'processed')
+    const processedRecordings = attachedRecordings.filter((recording) => recording.status === 'processed')
+
+    const userMessage = {
+      id: crypto.randomUUID(),
+      message_id: crypto.randomUUID(),
+      role: 'user',
+      content: prompt,
+      attached_files: processedFiles,
+      attached_recordings: processedRecordings,
+      voice_used: voiceUsed,
+      voice_transcript: voiceTranscript,
+    }
+    setMessages((current) => [...current, userMessage])
+    setInput('')
+    setLoading(true)
+    setError('')
+    setProgressIndex(0)
+
+    try {
+      const data = await runWorkflow({
+        user_input: prompt,
+        task_type: taskType,
+        deep_mode: deepMode,
+        session_id: sessionId,
+        file_ids: processedFiles.map((file) => file.file_id),
+        recording_ids: processedRecordings.map((recording) => recording.recording_id),
+        voice_used: voiceUsed,
+        voice_transcript: voiceTranscript || null,
+      })
+      const assistantMessage = {
+        id: data.message_id,
+        message_id: data.message_id,
+        role: 'assistant',
+        content: formatSimpleAnswer(data),
+        result: data,
+      }
+      setMessages((current) => [...current, assistantMessage])
+      setSessionId(data.session_id)
+      setSelectedRunId(assistantMessage.id)
+      await refreshHistory()
+      await refreshChats()
+      await refreshProviderStatus()
+      await refreshAnalytics()
+      await refreshLearningReport()
+      setAttachedFiles([])
+      setAttachedRecordings([])
+      setVoiceUsed(false)
+      setVoiceTranscript('')
+    } catch (err) {
+      setError(err.message)
+      setMessages((current) => [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: `I could not run the workflow: ${err.message}`,
+          error: true,
+        },
+      ])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function submitFeedback(result, rating) {
+    if (!result) return
+    try {
+      await sendFeedback({
+        session_id: result.session_id,
+        message_id: result.message_id,
+        run_id: result.run_id,
+        rating,
+      })
+      setCopied(rating === 'saved' ? 'Saved as good answer' : 'Feedback saved')
+      window.setTimeout(() => setCopied(''), 1300)
+      await refreshAnalytics()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function handleFileSelect(event) {
+    const files = Array.from(event.target.files || [])
+    event.target.value = ''
+    if (files.length === 0) return
+    if (files.length + attachedFiles.length > 5) {
+      setError('You can attach up to 5 files per message.')
+      return
+    }
+    setUploadingFiles(true)
+    setError('')
+    try {
+      const result = await uploadFiles(files, sessionId)
+      setAttachedFiles((current) => [...current, ...(result.files || [])])
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setUploadingFiles(false)
+    }
+  }
+
+  async function handleRecordingSelect(event) {
+    const files = Array.from(event.target.files || [])
+    event.target.value = ''
+    if (files.length === 0) return
+    if (files.length + attachedRecordings.length > 5) {
+      setError('You can attach up to 5 recordings per message.')
+      return
+    }
+    setUploadingRecordings(true)
+    setError('')
+    try {
+      const result = await uploadRecordings(files, sessionId)
+      setAttachedRecordings((current) => [...current, ...(result.recordings || [])])
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setUploadingRecordings(false)
+    }
+  }
+
+  function removeAttachedFile(fileId) {
+    setAttachedFiles((current) => current.filter((file) => file.file_id !== fileId))
+  }
+
+  function removeAttachedRecording(recordingId) {
+    setAttachedRecordings((current) => current.filter((recording) => recording.recording_id !== recordingId))
+  }
+
+  function handleKeyDown(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      submitMessage()
+    }
+  }
+
+  function startVoiceInput() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SpeechRecognition) {
+      setError('Voice input is not supported in this browser yet.')
+      return
+    }
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'en-US'
+    recognition.interimResults = false
+    recognition.maxAlternatives = 1
+    recognition.onstart = () => {
+      setListening(true)
+      setError('')
+    }
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript || ''
+      setInput(transcript)
+      setVoiceTranscript(transcript)
+      setVoiceUsed(Boolean(transcript))
+    }
+    recognition.onerror = () => {
+      setError('Voice input could not be transcribed. Try again or type your message.')
+    }
+    recognition.onend = () => setListening(false)
+    recognition.start()
+  }
+
+  async function copyText(text) {
+    await navigator.clipboard.writeText(text)
+    setCopied('Copied')
+    window.setTimeout(() => setCopied(''), 1300)
+  }
+
+  async function regenerateLastResponse() {
+    const lastUser = [...messages].reverse().find((message) => message.role === 'user')
+    if (lastUser) {
+      await submitMessage(lastUser.content)
+    }
+  }
+
+  async function handleAutomationApply(result, approved) {
+    if (!result?.run_id) return
+    try {
+      const applyResult = await applyAutomation({ run_id: result.run_id, approved })
+      setAutomationResults((current) => ({ ...current, [result.run_id]: applyResult }))
+      setCopied(approved ? 'Automation approval processed' : 'Automation rejected')
+      window.setTimeout(() => setCopied(''), 1300)
+      await refreshLearningReport()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  function editMessage(message) {
+    setInput(message.content)
+  }
+
+  async function handleDeleteMessage(message) {
+    const id = messageKey(message)
+    if (!id) return
+    setMessages((current) => current.filter((item) => messageKey(item) !== id))
+    if (message.result && selectedRunId === id) {
+      setSelectedRunId(null)
+    }
+    if (sessionId) {
+      try {
+        await deleteMessage(sessionId, id)
+        await refreshChats()
+      } catch (err) {
+        setError(err.message)
+      }
+    }
+  }
+
+  function currentChatTitle() {
+    return chats.find((item) => item.session_id === sessionId)?.title || 'EvolveAgent AI Chat'
+  }
+
+  function exportMarkdown() {
+    const lines = [`# ${currentChatTitle()}`, '', `Exported: ${new Date().toLocaleString()}`, '']
+    messages.forEach((message) => {
+      lines.push(`## ${message.role === 'user' ? 'User' : 'EvolveAgent AI'}`)
+      lines.push('')
+      lines.push(message.result ? formatSimpleAnswer(message.result, message.content) : message.content)
+      const files = message.attached_files || []
+      const recordings = message.attached_recordings || []
+      if (files.length) {
+        lines.push('')
+        lines.push(`Attached files: ${files.map((file) => file.filename).join(', ')}`)
+      }
+      if (recordings.length) {
+        lines.push('')
+        lines.push(`Attached recordings: ${recordings.map((recording) => recording.filename).join(', ')}`)
+      }
+      lines.push('')
+    })
+    downloadFile(`${currentChatTitle().replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-chat.md`, lines.join('\n'), 'text/markdown')
+  }
+
+  function exportJson() {
+    const payload = {
+      session: chats.find((item) => item.session_id === sessionId) || { session_id: sessionId, title: currentChatTitle() },
+      messages,
+    }
+    downloadFile(`${currentChatTitle().replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-chat.json`, JSON.stringify(payload, null, 2), 'application/json')
+  }
+
+  function copyConversation() {
+    const text = messages
+      .map((message) => `${message.role === 'user' ? 'User' : 'EvolveAgent AI'}:\n${message.result ? formatSimpleAnswer(message.result, message.content) : message.content}`)
+      .join('\n\n')
+    copyText(text)
+  }
+
+  function downloadFile(filename, content, type) {
+    const blob = new Blob([content], { type })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const modeLabel = providerStatus ? `${providerStatus.llm_mode} mode` : 'checking'
+  const providerList = providerStatus?.available_providers?.join(', ') || 'none'
+  const realProvidersAvailable = (providerStatus?.available_providers || []).filter((provider) => provider !== 'mock')
+  const realModeWithoutRealProvider = providerStatus?.llm_mode === 'real' && realProvidersAvailable.length === 0
+  const previewText = (text, limit = 360) => {
+    const compact = String(text || '').replace(/\s+/g, ' ').trim()
+    if (compact.length <= limit) return compact
+    return `${compact.slice(0, limit).trim()}...`
+  }
+
+  return (
+    <main className={`app-shell chat-shell ${developerMode ? 'developer-mode' : 'simple-mode'}`}>
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <div className="brand-mark">
+            <Brain size={21} />
+          </div>
+          <div>
+            <h1>EvolveAgent AI</h1>
+            <p>Agent Chat</p>
+          </div>
+        </div>
+
+        <button className="new-chat-button" onClick={newChat}>
+          <MessageSquarePlus size={16} />
+          New Chat
+        </button>
+
+        <section className="sidebar-section">
+          <div className="side-heading">
+            <Cpu size={15} />
+            <span>Providers</span>
+          </div>
+          <div className="provider-card">
+            <div>
+              <span>Mode</span>
+              <strong>{modeLabel}</strong>
+            </div>
+            <div>
+              <span>Available</span>
+              <strong>{providerList}</strong>
+            </div>
+          </div>
+          {providerStatus && (
+            <div className="provider-flags">
+              <span className={providerStatus.openai_configured ? 'configured' : ''}>OpenAI {providerStatus.openai_configured ? 'ready' : 'not set'}</span>
+              <span className={providerStatus.anthropic_configured ? 'configured' : ''}>Claude {providerStatus.anthropic_configured ? 'ready' : 'not set'}</span>
+              <span className={providerStatus.gemini_configured ? 'configured' : ''}>Gemini {providerStatus.gemini_configured ? 'ready' : 'not set'}</span>
+              <span className={providerStatus.mistral_configured ? 'configured' : ''}>Mistral {providerStatus.mistral_configured ? 'ready' : 'not set'}</span>
+            </div>
+          )}
+          {realModeWithoutRealProvider && (
+            <p className="provider-warning">Real mode is enabled, but no real provider key is configured. Mock fallback will be used.</p>
+          )}
+        </section>
+
+        <section className="sidebar-section">
+          <button className="analytics-toggle" type="button" onClick={() => setShowAnalytics((current) => !current)}>
+            <span>
+              <BarChart3 size={15} />
+              Analytics
+            </span>
+            <ChevronDown size={15} />
+          </button>
+          {showAnalytics && analytics && (
+            <div className="analytics-panel">
+              <div>
+                <span>Total runs</span>
+                <strong>{analytics.total_runs}</strong>
+              </div>
+              <div>
+                <span>Average score</span>
+                <strong>{analytics.average_judge_score}</strong>
+              </div>
+              <div>
+                <span>Common task</span>
+                <strong>{formatType(analytics.most_common_task_type || 'none')}</strong>
+              </div>
+              <div>
+                <span>Top agent</span>
+                <strong>{analytics.most_used_agents?.[0]?.agent_name || 'none'}</strong>
+              </div>
+              <div>
+                <span>Fallbacks</span>
+                <strong>{analytics.fallback_count}</strong>
+              </div>
+              <div>
+                <span>File tasks</span>
+                <strong>{analytics.file_task_count}</strong>
+              </div>
+              <div>
+                <span>Image tasks</span>
+                <strong>{analytics.image_task_count}</strong>
+              </div>
+              <div>
+                <span>Recording tasks</span>
+                <strong>{analytics.recording_task_count || 0}</strong>
+              </div>
+              <div>
+                <span>Feedback</span>
+                <strong>
+                  {analytics.feedback_summary?.helpful || 0}/{analytics.feedback_summary?.not_helpful || 0}/{analytics.feedback_summary?.saved || 0}
+                </strong>
+              </div>
+              <div className="recent-runs">
+                <span>Recent runs</span>
+                {(analytics.recent_runs || []).slice(0, 4).map((run) => (
+                  <p key={run.run_id}>
+                    {formatType(run.task_type)} · score {run.overall_judge_score}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section className="sidebar-section history-panel">
+          <div className="side-heading">
+            <Clock size={15} />
+            <span>Run History</span>
+          </div>
+          <div className="history-list">
+            {chats.length === 0 && <p className="muted">No chats yet.</p>}
+            {chats.slice(0, 12).map((item) => (
+              <div className={`history-item ${sessionId === item.session_id ? 'active' : ''}`} key={item.session_id}>
+                <button type="button" onClick={() => loadChat(item.session_id)}>
+                  <span>{item.title}</span>
+                  <strong>{item.message_count}</strong>
+                  <small>{item.updated_at ? new Date(item.updated_at).toLocaleString() : ''}</small>
+                </button>
+                <div className="chat-row-actions">
+                  <button type="button" onClick={() => handleRenameChat(item.session_id, item.title)}>Rename</button>
+                  <button type="button" onClick={() => handleDeleteChat(item.session_id)} aria-label="Delete chat">
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </aside>
+
+      <section className="chat-workspace">
+        <header className="chat-topbar">
+          <div>
+            <div className="section-kicker">
+              <Terminal size={16} />
+              AI Workbench
+            </div>
+            <h2>Ask EvolveAgent AI</h2>
+            <p>Your request is routed through specialist agents and returned as one final answer.</p>
+          </div>
+          <div className="topbar-actions">
+            <div className="mode-toggle" role="group" aria-label="Mode toggle">
+              <button className={!developerMode ? 'active' : ''} onClick={() => setDeveloperMode(false)}>
+                Simple
+              </button>
+              <button className={developerMode ? 'active' : ''} onClick={() => setDeveloperMode(true)}>
+                Developer
+              </button>
+            </div>
+            <div className="status-pill">
+              <Sparkles size={16} />
+              {modeLabel}
+            </div>
+            <div className="export-actions">
+              <button type="button" onClick={copyConversation} disabled={messages.length === 0}>
+                <Copy size={14} />
+                Copy chat
+              </button>
+              <button type="button" onClick={exportMarkdown} disabled={messages.length === 0}>
+                <Download size={14} />
+                Markdown
+              </button>
+              <button type="button" onClick={exportJson} disabled={messages.length === 0}>
+                JSON
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <section className="chat-scroll">
+          {messages.length === 0 && !loading && (
+              <div className="chat-empty">
+              <div className="empty-orb">
+                <Brain size={30} />
+              </div>
+              <h2>Ask EvolveAgent AI</h2>
+              <p>A multi-agent AI workspace for planning, writing, coding, analysis, and image prompts.</p>
+              <div className="prompt-grid">
+                {promptCards.map((prompt) => (
+                  <button key={prompt} onClick={() => submitMessage(prompt)}>
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {messages.map((message) => {
+            const displayContent = message.result ? formatSimpleAnswer(message.result, message.content) : message.content
+            const imageResult = message.result?.image_result
+            const automationPlan = message.result?.automation_plan
+            const automationResult = message.result?.run_id ? automationResults[message.result.run_id] : null
+            const files = message.attached_files || []
+            const recordings = message.attached_recordings || []
+            const id = messageKey(message)
+
+            return (
+              <article
+                className={`chat-message ${message.role} ${message.error ? 'error-message' : ''}`}
+                key={id}
+                onClick={() => message.result && setSelectedRunId(id)}
+              >
+                <div className="message-avatar">{message.role === 'user' ? <User size={17} /> : <Bot size={17} />}</div>
+                <div className="message-body">
+                  <div className="message-label">{message.role === 'user' ? 'You' : 'EvolveAgent AI'}</div>
+                  <div className="message-content">
+                    {message.role === 'assistant' && !message.error ? <MarkdownMessage content={displayContent} /> : displayContent}
+                  </div>
+
+                  {files.length > 0 && (
+                    <div className="attached-file-list">
+                      <span>Attached files</span>
+                      {files.map((file) => (
+                        <div className="attached-file-pill" key={file.file_id || file.filename}>
+                          <FileText size={14} />
+                          {file.filename}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {recordings.length > 0 && (
+                    <div className="attached-file-list">
+                      <span>Attached recordings</span>
+                      {recordings.map((recording) => (
+                        <div className="attached-file-pill" key={recording.recording_id || recording.filename}>
+                          <Mic size={14} />
+                          {recording.filename}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {imageResult && (
+                    <div className="image-result-card">
+                      <img src={assetUrl(imageResult.image_url)} alt="Generated mock preview" />
+                      <div className="prompt-box">
+                        <span>Prompt used</span>
+                        <p>{imageResult.prompt}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {automationPlan && (
+                    <div className="automation-plan-card">
+                      <div className="automation-plan-header">
+                        <span>Approval required</span>
+                        <strong>{automationPlan.risk_level} risk</strong>
+                      </div>
+                      <p>{automationPlan.summary}</p>
+                      <div className="automation-columns">
+                        <div>
+                          <span>Files to change</span>
+                          {(automationPlan.files_to_change || []).length ? (
+                            <ul>{automationPlan.files_to_change.map((file) => <li key={file}>{file}</li>)}</ul>
+                          ) : (
+                            <p>No direct file edits proposed.</p>
+                          )}
+                        </div>
+                        <div>
+                          <span>Commands</span>
+                          {(automationPlan.commands_to_run || []).length ? (
+                            <ul>{automationPlan.commands_to_run.map((command) => <li key={command}>{command}</li>)}</ul>
+                          ) : (
+                            <p>No commands proposed.</p>
+                          )}
+                        </div>
+                      </div>
+                      {!automationResult ? (
+                        <div className="automation-actions">
+                          <button type="button" onClick={(event) => {
+                            event.stopPropagation()
+                            handleAutomationApply(message.result, true)
+                          }}>
+                            Approve plan
+                          </button>
+                          <button type="button" onClick={(event) => {
+                            event.stopPropagation()
+                            handleAutomationApply(message.result, false)
+                          }}>
+                            Reject
+                          </button>
+                        </div>
+                      ) : (
+                        <div className={`automation-result ${automationResult.success ? 'success' : 'failed'}`}>
+                          {automationResult.summary}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {message.result && (
+                    <>
+                      {developerMode && message.role === 'assistant' && (
+                        <div className="message-chips">
+                          <span>{formatType(message.result.task_type)}</span>
+                          <span>{message.result.master_plan.confidence}% confidence</span>
+                          <span>score {message.result.judge_result.overall_score}</span>
+                          <span>{runModeLabel(message.result, modeLabel)}</span>
+                          <span>{message.result.memory_saved ? 'memory saved' : 'memory open'}</span>
+                        </div>
+                      )}
+                      <div className="message-actions">
+                        {message.role === 'assistant' && (
+                          <>
+                            <button
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                submitFeedback(message.result, 'helpful')
+                              }}
+                            >
+                              <ThumbsUp size={14} />
+                              Helpful
+                            </button>
+                            <button
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                submitFeedback(message.result, 'not_helpful')
+                              }}
+                            >
+                              <ThumbsDown size={14} />
+                              Not helpful
+                            </button>
+                            <button
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                submitFeedback(message.result, 'saved')
+                              }}
+                            >
+                              Save as good answer
+                            </button>
+                          </>
+                        )}
+                        <button
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            copyText(imageResult?.prompt || displayContent)
+                          }}
+                        >
+                          <Copy size={14} />
+                          {imageResult ? 'Copy Prompt' : 'Copy'}
+                        </button>
+                        {message.role === 'user' && (
+                          <button
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              editMessage(message)
+                            }}
+                          >
+                            <Edit3 size={14} />
+                            Edit
+                          </button>
+                        )}
+                        <button
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            regenerateLastResponse()
+                          }}
+                        >
+                          Regenerate
+                        </button>
+                        <button
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            setSelectedRunId(id)
+                            setDeveloperMode(true)
+                          }}
+                        >
+                          View details
+                        </button>
+                        <button
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleDeleteMessage(message)
+                          }}
+                        >
+                          <Trash2 size={14} />
+                          Delete
+                        </button>
+                      </div>
+                    </>
+                  )}
+                  {!message.result && message.role === 'user' && (
+                    <div className="message-actions">
+                      <button onClick={() => editMessage(message)}>
+                        <Edit3 size={14} />
+                        Edit
+                      </button>
+                      <button onClick={() => handleDeleteMessage(message)}>
+                        <Trash2 size={14} />
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </article>
+            )
+          })}
+
+          {loading && (
+            <article className="chat-message assistant loading-message">
+              <div className="message-avatar">
+                <Activity size={17} />
+              </div>
+              <div className="message-body">
+                <div className="message-label">EvolveAgent AI</div>
+                <div className="progress-timeline">
+                  {progressSteps.map((step, index) => (
+                    <div className={`progress-step ${index <= progressIndex ? 'active' : ''}`} key={step}>
+                      <span>{index + 1}</span>
+                      <p>{step}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </article>
+          )}
+        </section>
+
+        <section className="chat-composer">
+          <div className="composer-controls">
+            <select value={taskType} onChange={(event) => setTaskType(event.target.value)} aria-label="Task type">
+              {taskTypes.map((type) => (
+                <option key={type} value={type}>
+                  {formatType(type)[0].toUpperCase() + formatType(type).slice(1)}
+                </option>
+              ))}
+            </select>
+            <label className="toggle-row" htmlFor="deep-mode">
+              <input
+                id="deep-mode"
+                type="checkbox"
+                checked={deepMode}
+                onChange={(event) => setDeepMode(event.target.checked)}
+              />
+              Deep Mode
+            </label>
+          </div>
+          {attachedFiles.length > 0 && (
+            <div className="file-chip-row">
+              {attachedFiles.map((file) => (
+                <div className={`file-chip ${file.status}`} key={file.file_id}>
+                  <FileText size={15} />
+                  <div>
+                    <strong>{file.filename}</strong>
+                    <span>{file.status === 'processed' ? file.extension : file.error || file.status}</span>
+                  </div>
+                  <button type="button" onClick={() => removeAttachedFile(file.file_id)} aria-label={`Remove ${file.filename}`}>
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {attachedRecordings.length > 0 && (
+            <div className="file-chip-row">
+              {attachedRecordings.map((recording) => (
+                <div className={`file-chip ${recording.status}`} key={recording.recording_id}>
+                  <Mic size={15} />
+                  <div>
+                    <strong>{recording.filename}</strong>
+                    <span>{recording.status === 'processed' ? `${recording.extension} transcript ready` : recording.error || recording.status}</span>
+                  </div>
+                  <button type="button" onClick={() => removeAttachedRecording(recording.recording_id)} aria-label={`Remove ${recording.filename}`}>
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="input-shell">
+            <label className="upload-button" aria-label="Attach files">
+              <input
+                type="file"
+                multiple
+                onChange={handleFileSelect}
+                accept=".txt,.md,.json,.csv,.py,.js,.ts,.jsx,.tsx,.html,.css,.pdf,.docx"
+              />
+              {uploadingFiles ? <Activity size={18} /> : <Paperclip size={18} />}
+            </label>
+            <label className="upload-button" aria-label="Attach recordings">
+              <input
+                type="file"
+                multiple
+                onChange={handleRecordingSelect}
+                accept=".mp3,.m4a,.wav,.mp4,.webm,audio/*,video/mp4,video/webm"
+              />
+              {uploadingRecordings ? <Activity size={18} /> : <Mic size={18} />}
+            </label>
+            <button className={`mic-button ${listening ? 'listening' : ''}`} type="button" onClick={startVoiceInput} aria-label="Use voice input">
+              <Mic size={18} />
+            </button>
+            <textarea
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask EvolveAgent AI anything..."
+              rows={1}
+            />
+            <button className="send-button" onClick={() => submitMessage()} disabled={loading || uploadingFiles || uploadingRecordings || input.trim().length < 1} aria-label="Send message">
+              {loading ? <Activity size={18} /> : <Send size={18} />}
+            </button>
+          </div>
+          {listening && <p className="voice-status">Listening for your command...</p>}
+          {voiceUsed && voiceTranscript && <p className="voice-status">Voice transcript ready. You can edit it before sending.</p>}
+          {error && <p className="error">{error}</p>}
+          {copied && <p className="copy-toast">{copied}</p>}
+        </section>
+      </section>
+
+      <aside className={`inspector ${developerMode ? 'visible' : 'simple-hidden'}`}>
+        <div className="side-heading">
+          <PanelRight size={15} />
+          <span>Inspector</span>
+        </div>
+
+        {selectedRun ? (
+          <>
+            <details className="inspector-section" open>
+              <summary>
+                <Database size={15} />
+                Run Summary
+                <ChevronDown size={15} />
+              </summary>
+              <div className="mini-grid">
+                <div>
+                  <span>Type</span>
+                  <strong>{formatType(selectedRun.master_plan.detected_task_type)}</strong>
+                </div>
+                <div>
+                  <span>Confidence</span>
+                  <strong>{selectedRun.master_plan.confidence}%</strong>
+                </div>
+                <div>
+                  <span>Score</span>
+                  <strong>{selectedRun.judge_result.overall_score}</strong>
+                </div>
+                <div>
+                  <span>Memory</span>
+                  <strong>{selectedRun.memory_saved ? 'Saved' : 'Open'}</strong>
+                </div>
+                <div>
+                  <span>Session</span>
+                  <strong>{selectedRun.session_id?.slice(0, 8) || 'n/a'}</strong>
+                </div>
+                <div>
+                  <span>Message</span>
+                  <strong>{selectedRun.message_id?.slice(0, 8) || 'n/a'}</strong>
+                </div>
+                <div>
+                  <span>Run</span>
+                  <strong>{selectedRun.run_id?.slice(0, 8) || 'n/a'}</strong>
+                </div>
+              </div>
+            </details>
+
+            {selectedRun.quality_gates && (
+              <details className="inspector-section" open>
+                <summary>
+                  <ShieldAlert size={15} />
+                  Security & Governance
+                  <ChevronDown size={15} />
+                </summary>
+                <div className="mini-grid">
+                  <div>
+                    <span>Prompt check</span>
+                    <strong>{selectedRun.quality_gates.prompt_injection_check}</strong>
+                  </div>
+                  <div>
+                    <span>Secret scan</span>
+                    <strong>{selectedRun.quality_gates.secret_scan}</strong>
+                  </div>
+                  <div>
+                    <span>Permission</span>
+                    <strong>{selectedRun.quality_gates.permission_check}</strong>
+                  </div>
+                  <div>
+                    <span>File context</span>
+                    <strong>{selectedRun.quality_gates.file_context_check}</strong>
+                  </div>
+                </div>
+                {selectedRun.security_report && (
+                  <div className="developer-prompt-block">
+                    <span>Risk assessment</span>
+                    <p>
+                      {selectedRun.security_report.risk_level} risk · score {selectedRun.security_report.risk_score} · permission{' '}
+                      {selectedRun.security_report.permission_level}
+                    </p>
+                    <p>{selectedRun.security_report.recommendation}</p>
+                    {(selectedRun.security_report.prompt_injection?.suspicious_phrases || []).length > 0 && (
+                      <>
+                        <h3>Suspicious phrases</h3>
+                        <ul>
+                          {selectedRun.security_report.prompt_injection.suspicious_phrases.map((phrase) => (
+                            <li key={phrase}>{phrase}</li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                    {selectedRun.security_report.secret_scan?.secrets_detected && (
+                      <p>
+                        Redacted {selectedRun.security_report.secret_scan.redaction_count} secret-like value(s):{' '}
+                        {(selectedRun.security_report.secret_scan.detected_types || []).join(', ')}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {(selectedRun.governance_events || []).length > 0 && (
+                  <div className="agent-list">
+                    <h3>Governance events</h3>
+                    {selectedRun.governance_events.map((event, index) => (
+                      <div className="provider-row" key={`${event.action_type}-${index}`}>
+                        <strong>{event.action_type}</strong>
+                        <div className="model-meta">
+                          <span>{event.permission_level}</span>
+                          {event.blocked && <span>blocked</span>}
+                          {event.approved && <span>approved</span>}
+                          <span>risk {event.risk_score}</span>
+                        </div>
+                        <p>{event.reason}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </details>
+            )}
+
+            <article className="metric-card score-card">
+              <div className="section-title">
+                <Gauge size={17} />
+                <h2>Judge Score</h2>
+              </div>
+              <strong>{selectedRun.judge_result.overall_score}</strong>
+              <p>{selectedRun.judge_result.recommendation}</p>
+            </article>
+
+            <details className="inspector-section" open>
+              <summary>
+                <MoreHorizontal size={15} />
+                Provider Metadata
+                <ChevronDown size={15} />
+              </summary>
+              <div className="agent-list">
+                {selectedRun.agent_outputs.map((item) => (
+                  <div className="provider-row" key={`${item.agent_name}-${item.model}`}>
+                    <strong>{item.agent_name}</strong>
+                    <div className="model-meta">
+                      <span>{item.provider}</span>
+                      <span>{item.model}</span>
+                      <span>{item.latency_ms} ms</span>
+                      {item.fallback_used && <span>fallback</span>}
+                      {item.error && <span>{item.error}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </details>
+
+            {selectedRun.image_result && (
+              <article className="metric-card">
+                <div className="section-title">
+                  <Sparkles size={17} />
+                  <h2>Image Result</h2>
+                </div>
+                <img className="inspector-image" src={assetUrl(selectedRun.image_result.image_url)} alt="Generated mock preview" />
+                <div className="model-meta">
+                  <span>{selectedRun.image_result.provider}</span>
+                  <span>{selectedRun.image_result.model}</span>
+                  {selectedRun.image_result.fallback_used && <span>fallback used</span>}
+                  {selectedRun.image_result.safety_rewritten && <span>safety rewritten</span>}
+                </div>
+                {selectedRun.image_result.fallback_error && (
+                  <div className="developer-prompt-block warning-block">
+                    <span>Fallback reason</span>
+                    <p>{selectedRun.image_result.fallback_error}</p>
+                  </div>
+                )}
+                <div className="developer-prompt-block">
+                  <span>Original user prompt</span>
+                  <p>{selectedRun.image_result.original_prompt || 'Not stored for this run.'}</p>
+                </div>
+                <div className="developer-prompt-block">
+                  <span>Safe rewritten prompt</span>
+                  <p>{selectedRun.image_result.prompt}</p>
+                </div>
+              </article>
+            )}
+
+            {selectedRun.file_context_used && (
+              <details className="inspector-section" open>
+                <summary>
+                  <FileText size={15} />
+                  File Context
+                  <ChevronDown size={15} />
+                </summary>
+                <div className="mini-grid">
+                  <div>
+                    <span>Context used</span>
+                    <strong>{selectedRun.file_context_used ? 'Yes' : 'No'}</strong>
+                  </div>
+                  <div>
+                    <span>Characters</span>
+                    <strong>{selectedRun.file_context_characters || 0}</strong>
+                  </div>
+                  <div>
+                    <span>Files</span>
+                    <strong>{selectedRun.files_used?.length || 0}</strong>
+                  </div>
+                </div>
+                <div className="agent-list">
+                  {(selectedRun.files_used || []).map((file) => (
+                    <div className="provider-row" key={file.file_id}>
+                      <strong>{file.filename}</strong>
+                      <div className="model-meta">
+                        <span>{file.extension}</span>
+                        <span>{file.content_type || 'unknown type'}</span>
+                        <span>{file.size_bytes} bytes</span>
+                        <span>{file.extracted_text_length} chars</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {selectedRun.file_summary && (
+                  <div className="developer-prompt-block">
+                    <span>File summary</span>
+                    <p>{selectedRun.file_summary.summary}</p>
+                    <ul>{selectedRun.file_summary.key_points.map((point) => <li key={point}>{point}</li>)}</ul>
+                  </div>
+                )}
+              </details>
+            )}
+
+            {selectedRun.recording_context_used && (
+              <details className="inspector-section" open>
+                <summary>
+                  <Mic size={15} />
+                  Recording Context
+                  <ChevronDown size={15} />
+                </summary>
+                <div className="mini-grid">
+                  <div>
+                    <span>Context used</span>
+                    <strong>{selectedRun.recording_context_used ? 'Yes' : 'No'}</strong>
+                  </div>
+                  <div>
+                    <span>Recordings</span>
+                    <strong>{selectedRun.recordings_used?.length || 0}</strong>
+                  </div>
+                  <div>
+                    <span>Actions</span>
+                    <strong>{selectedRun.action_items?.length || 0}</strong>
+                  </div>
+                  <div>
+                    <span>Decisions</span>
+                    <strong>{selectedRun.decisions?.length || 0}</strong>
+                  </div>
+                </div>
+                <div className="agent-list">
+                  {(selectedRun.recordings_used || []).map((recording) => (
+                    <div className="provider-row" key={recording.recording_id}>
+                      <strong>{recording.filename}</strong>
+                      <div className="model-meta">
+                        <span>{recording.extension}</span>
+                        <span>{recording.content_type || 'unknown type'}</span>
+                        <span>{recording.transcript_length} chars</span>
+                        <span>{recording.provider}/{recording.model}</span>
+                        {recording.fallback_used && <span>fallback</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {selectedRun.transcript_preview && (
+                  <div className="developer-prompt-block">
+                    <span>Transcript preview</span>
+                    <p>{selectedRun.transcript_preview}</p>
+                  </div>
+                )}
+                {selectedRun.recording_summary && (
+                  <div className="developer-prompt-block">
+                    <span>Recording summary</span>
+                    <p>{selectedRun.recording_summary.detailed_summary}</p>
+                    <h3>Action items</h3>
+                    <ul>{(selectedRun.recording_summary.action_items || []).map((item) => <li key={item}>{item}</li>)}</ul>
+                    <h3>Decisions</h3>
+                    <ul>{(selectedRun.recording_summary.decisions || []).map((item) => <li key={item}>{item}</li>)}</ul>
+                  </div>
+                )}
+              </details>
+            )}
+
+            <details className="inspector-section" open>
+              <summary>
+                <Route size={15} />
+                Workflow Trace
+                <ChevronDown size={15} />
+              </summary>
+              <p className="plan-reason">{selectedRun.master_plan.selection_reason}</p>
+              <div className="trace-list compact">
+                {selectedRun.workflow_trace.map((step) => (
+                  <div className="trace-item" key={`${step.step}-${step.stage}-${step.agent_name}`}>
+                    <div className={`trace-number ${step.status}`}>{step.step}</div>
+                    <div>
+                      <div className="trace-heading">
+                        <strong>{step.stage}</strong>
+                        <span>{step.agent_name}</span>
+                      </div>
+                      <p>{step.summary}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </details>
+
+            <details className="inspector-section">
+              <summary>
+                <Gauge size={15} />
+                Judge Result
+                <ChevronDown size={15} />
+              </summary>
+              <p className="plan-reason">{selectedRun.judge_result.recommendation}</p>
+              <h3>Strengths</h3>
+              <ul>{selectedRun.judge_result.strengths.map((item) => <li key={item}>{item}</li>)}</ul>
+              <h3>Weaknesses</h3>
+              <ul>{selectedRun.judge_result.weaknesses.map((item) => <li key={item}>{item}</li>)}</ul>
+            </details>
+
+            <details className="inspector-section" open>
+              <summary>
+                <BarChart3 size={15} />
+                Agent Evaluation
+                <ChevronDown size={15} />
+              </summary>
+              <div className="mini-grid">
+                <div>
+                  <span>Strongest</span>
+                  <strong>{selectedRun.judge_result.strongest_agent || 'n/a'}</strong>
+                </div>
+                <div>
+                  <span>Weakest</span>
+                  <strong>{selectedRun.judge_result.weakest_agent || 'n/a'}</strong>
+                </div>
+              </div>
+              <h3>Per-agent scores</h3>
+              <div className="agent-list">
+                {(selectedRun.judge_result.per_agent_scores || []).map((item) => (
+                  <div className="provider-row" key={item.agent_name}>
+                    <strong>{item.agent_name}</strong>
+                    <div className="model-meta">
+                      <span>usefulness {item.usefulness_score}</span>
+                      <span>clarity {item.clarity_score}</span>
+                    </div>
+                    <p>{item.contribution_summary}</p>
+                    <p><strong>Weakness:</strong> {item.weakness}</p>
+                    <p><strong>Improve:</strong> {item.improvement_suggestion}</p>
+                  </div>
+                ))}
+              </div>
+              <h3>Workflow strengths</h3>
+              <ul>{(selectedRun.judge_result.workflow_strengths || []).map((item) => <li key={item}>{item}</li>)}</ul>
+              <h3>Workflow weaknesses</h3>
+              <ul>{(selectedRun.judge_result.workflow_weaknesses || []).map((item) => <li key={item}>{item}</li>)}</ul>
+            </details>
+
+            <details className="inspector-section" open={developerMode}>
+              <summary>
+                <Bot size={15} />
+                Agent Outputs
+                <ChevronDown size={15} />
+              </summary>
+              <div className="agent-list">
+                {selectedRun.agent_outputs.length === 0 && <p className="muted">No text agents were run for this task.</p>}
+                {selectedRun.agent_outputs.map((item) => (
+                  <details key={item.agent_name}>
+                    <summary>{item.agent_name}</summary>
+                    <div className="model-meta">
+                      <span>{item.provider}</span>
+                      <span>{item.model}</span>
+                      <span>{item.latency_ms} ms</span>
+                      {item.fallback_used && <span>fallback</span>}
+                    </div>
+                    <p>{item.output}</p>
+                  </details>
+                ))}
+              </div>
+            </details>
+
+            <details className="inspector-section" open={developerMode && selectedRun.consensus_candidates.length > 0}>
+              <summary>
+                <GitBranch size={15} />
+                Deep Mode Consensus
+                <ChevronDown size={15} />
+              </summary>
+              {selectedRun.consensus_candidates.length === 0 ? (
+                <p className="muted">Deep Mode was not used for this response.</p>
+              ) : (
+                <div className="agent-list">
+                  <p className="developer-help">Deep Mode compares multiple model candidates before writing the final answer.</p>
+                  {selectedRun.consensus_winner && (
+                    <div className="detail-card">
+                      <strong>Selected winner</strong>
+                      <p>{selectedRun.consensus_winner}</p>
+                      {selectedRun.consensus_judge_reason && <p>{selectedRun.consensus_judge_reason}</p>}
+                      {(selectedRun.consensus_disagreement_notes || []).length > 0 && (
+                        <ul>
+                          {selectedRun.consensus_disagreement_notes.map((note) => <li key={note}>{note}</li>)}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                  {selectedRun.consensus_candidates.map((item) => (
+                    <details key={item.agent_name}>
+                      <summary>{item.agent_name}</summary>
+                      <div className="model-meta">
+                        <span>{item.provider}</span>
+                        <span>{item.model}</span>
+                        <span>{item.latency_ms} ms</span>
+                        {item.fallback_used && <span>fallback</span>}
+                      </div>
+                      {item.fallback_used && (
+                        <p className="fallback-note">Fallback used because provider was unavailable or failed.</p>
+                      )}
+                      <p>{previewText(item.output)}</p>
+                    </details>
+                  ))}
+                </div>
+              )}
+            </details>
+
+            <details className="inspector-section" open>
+              <summary>
+                <ShieldAlert size={15} />
+                Evolution Notes
+                <ChevronDown size={15} />
+              </summary>
+              <ul>
+                {selectedRun.evolution_notes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            </details>
+
+            {selectedRun.automation_plan && (
+              <details className="inspector-section" open>
+                <summary>
+                  <Terminal size={15} />
+                  Automation Plan
+                  <ChevronDown size={15} />
+                </summary>
+                <div className="developer-prompt-block">
+                  <span>Plan summary</span>
+                  <p>{selectedRun.automation_plan.summary}</p>
+                </div>
+                <div className="mini-grid">
+                  <div>
+                    <span>Risk</span>
+                    <strong>{selectedRun.automation_plan.risk_level}</strong>
+                  </div>
+                  <div>
+                    <span>Status</span>
+                    <strong>{selectedRun.automation_status || 'pending'}</strong>
+                  </div>
+                </div>
+                {selectedRun.automation_plan.project_scan && (
+                  <div className="developer-prompt-block">
+                    <span>Project scan</span>
+                    <p>{selectedRun.automation_plan.project_scan.scan_summary}</p>
+                    <div className="model-meta">
+                      {(selectedRun.automation_plan.project_scan.frameworks_detected || []).map((framework) => (
+                        <span key={framework}>{framework}</span>
+                      ))}
+                      {selectedRun.automation_plan.project_scan.package_manager && (
+                        <span>{selectedRun.automation_plan.project_scan.package_manager}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <h3>Files to change</h3>
+                <ul>{(selectedRun.automation_plan.files_to_change || []).map((file) => <li key={file}>{file}</li>)}</ul>
+                <h3>Commands to run</h3>
+                <ul>{(selectedRun.automation_plan.commands_to_run || []).map((command) => <li key={command}>{command}</li>)}</ul>
+                <h3>Consensus planning</h3>
+                <p>{selectedRun.automation_plan.judge_reason}</p>
+              </details>
+            )}
+
+            {learningReport && (
+              <details className="inspector-section">
+                <summary>
+                  <Brain size={15} />
+                  Learning Report
+                  <ChevronDown size={15} />
+                </summary>
+                <div className="mini-grid">
+                  <div>
+                    <span>Runs analyzed</span>
+                    <strong>{learningReport.total_runs_analyzed}</strong>
+                  </div>
+                  <div>
+                    <span>Prompt proposals</span>
+                    <strong>{learningReport.proposed_prompt_versions?.length || 0}</strong>
+                  </div>
+                </div>
+                <h3>Strongest agents</h3>
+                <ul>{(learningReport.strongest_agents || []).map((item) => <li key={item.agent_name}>{item.agent_name}: {item.average_score}</li>)}</ul>
+                <h3>Weakest agents by task</h3>
+                {(learningReport.weakest_agents_by_task_type || []).map((group) => (
+                  <div className="detail-card" key={group.task_type}>
+                    <strong>{formatType(group.task_type)}</strong>
+                    <ul>{(group.agents || []).map((item) => <li key={item.agent_name}>{item.agent_name}: {item.average_score}</li>)}</ul>
+                  </div>
+                ))}
+                <h3>Workflow recommendations</h3>
+                {(learningReport.best_workflows_by_task_type || []).slice(0, 4).map((workflow) => (
+                  <div className="detail-card" key={workflow.task_type}>
+                    <strong>{formatType(workflow.task_type)} · score {workflow.average_score}</strong>
+                    <p>Feedback positive rate: {Math.round((workflow.feedback_positive_rate || 0) * 100)}%</p>
+                    <p>Fallback rate: {Math.round((workflow.fallback_rate || 0) * 100)}%</p>
+                    <p>Recommended workflow: {(workflow.recommended_workflow || workflow.best_agents || []).join(', ')}</p>
+                  </div>
+                ))}
+                <h3>Prompt suggestions</h3>
+                <ul>{(learningReport.prompt_improvement_suggestions || []).map((item) => <li key={item}>{item}</li>)}</ul>
+                <h3>Model routing</h3>
+                <ul>{(learningReport.model_routing_suggestions || []).map((item) => <li key={`${item.category}-${item.recommendation}`}>{item.category}: {item.recommendation}</li>)}</ul>
+                <h3>User preferences</h3>
+                <ul>{(learningReport.user_preference_patterns || []).map((item) => <li key={item.preference}>{item.preference}: {item.score}</li>)}</ul>
+                <h3>Recurring failure reasons</h3>
+                <ul>{(learningReport.recurring_failure_reasons || []).map((item) => <li key={item.reason}>{item.reason}: {item.count}</li>)}</ul>
+                <h3>Recommended next actions</h3>
+                <ul>{(learningReport.recommended_next_actions || []).map((item) => <li key={item}>{item}</li>)}</ul>
+                <h3>Prompt versions</h3>
+                {(learningReport.active_prompt_versions || []).map((version) => (
+                  <div className="detail-card" key={version.version_id}>
+                    <strong>{version.agent_name} · active</strong>
+                    <p>{version.reason}</p>
+                    <button className="secondary-button" type="button" onClick={() => decidePromptVersion(version, 'rollback')}>Rollback</button>
+                  </div>
+                ))}
+                {(learningReport.proposed_prompt_versions || []).map((version) => (
+                  <div className="detail-card" key={version.version_id}>
+                    <strong>{version.agent_name} · proposed</strong>
+                    <p>{version.reason}</p>
+                    <div className="inline-actions">
+                      <button className="secondary-button" type="button" onClick={() => decidePromptVersion(version, 'approve')}>Approve</button>
+                      <button className="secondary-button" type="button" onClick={() => decidePromptVersion(version, 'reject')}>Reject</button>
+                    </div>
+                  </div>
+                ))}
+              </details>
+            )}
+
+            <details className="inspector-section">
+              <summary>
+                <MoreHorizontal size={15} />
+                Raw JSON
+                <ChevronDown size={15} />
+              </summary>
+              <button className="raw-toggle" type="button" onClick={() => setShowRawJson((current) => !current)}>
+                {showRawJson ? 'Hide raw JSON' : 'Show raw JSON'}
+              </button>
+              {showRawJson && <pre className="raw-json">{JSON.stringify(selectedRun, null, 2)}</pre>}
+            </details>
+          </>
+        ) : (
+          <p className="muted">Run a task to inspect routing, model choices, score, and saved memory.</p>
+        )}
+
+        <p className="safety">
+          Decision-support only. Not legal, medical, financial, or professional advice. Human review is required.
+        </p>
+      </aside>
+    </main>
+  )
+}
+
+export default App
