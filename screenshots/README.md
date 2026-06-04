@@ -35,6 +35,15 @@ Add final screenshots here for submission, GitHub, or portfolio use. Actual scre
    - Export Chat menu/buttons.
    - Show Copy chat, Markdown export, and JSON export controls.
 
+8. `mission-control.png`
+   - Mission Control panel.
+   - Suggested prompt: `Build an AI resume analyzer app.`
+   - Show active goal, progress, task cards, run task, and mark done controls.
+
+9. `custom-agent-builder.png`
+   - Agent Builder / Skill Store panel.
+   - Show custom agents, template list, and a Create from template button.
+
 ## Safety Checklist
 
 - Do not include API keys.

@@ -10,6 +10,9 @@ class RunRequest(BaseModel):
     recording_ids: list[str] = Field(default_factory=list, description="Uploaded recording IDs to include as transcript context.")
     voice_used: bool = Field(default=False, description="Whether the request came from browser voice transcription.")
     voice_transcript: str | None = Field(default=None, description="Browser-transcribed voice command text, if used.")
+    goal_id: str | None = Field(default=None, description="Optional Mission Control goal ID associated with this run.")
+    task_id: str | None = Field(default=None, description="Optional Mission Control task ID associated with this run.")
+    custom_agent_id: str | None = Field(default=None, description="Optional custom agent ID to include in the workflow.")
 
 
 class RenameChatRequest(BaseModel):
@@ -42,3 +45,69 @@ class PromptProposalRequest(BaseModel):
 class PromptDecisionRequest(BaseModel):
     agent_name: str = Field(..., min_length=1, max_length=80)
     version_id: str = Field(..., min_length=1, max_length=80)
+
+
+class CreateGoalRequest(BaseModel):
+    prompt: str | None = Field(default=None, max_length=4000)
+    title: str | None = Field(default=None, max_length=120)
+    description: str | None = Field(default=None, max_length=4000)
+    source_session_id: str | None = None
+    source_message_id: str | None = None
+    tags: list[str] = Field(default_factory=list)
+
+
+class UpdateGoalRequest(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=120)
+    description: str | None = Field(default=None, max_length=4000)
+    status: str | None = Field(default=None, pattern="^(active|paused|completed|archived)$")
+    tags: list[str] | None = None
+
+
+class CreateGoalTaskRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=160)
+    description: str = Field(default="", max_length=4000)
+    phase: str = Field(default="Planning", max_length=80)
+    priority: str = Field(default="medium", pattern="^(low|medium|high)$")
+    depends_on: list[str] = Field(default_factory=list)
+    recommended_agent: str = Field(default="Strategy Agent", max_length=120)
+    estimated_effort: str = Field(default="medium", pattern="^(small|medium|large)$")
+    requires_approval: bool = False
+    automation_supported: bool = False
+
+
+class UpdateGoalTaskRequest(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=160)
+    description: str | None = Field(default=None, max_length=4000)
+    phase: str | None = Field(default=None, max_length=80)
+    status: str | None = Field(default=None, pattern="^(pending|running|needs_approval|blocked|done|failed)$")
+    priority: str | None = Field(default=None, pattern="^(low|medium|high)$")
+    depends_on: list[str] | None = None
+    recommended_agent: str | None = Field(default=None, max_length=120)
+    estimated_effort: str | None = Field(default=None, pattern="^(small|medium|large)$")
+    requires_approval: bool | None = None
+    automation_supported: bool | None = None
+
+
+class CreateCustomAgentRequest(BaseModel):
+    name: str | None = Field(default=None, max_length=100)
+    description: str | None = Field(default="", max_length=1000)
+    role: str | None = Field(default="", max_length=1000)
+    prompt: str | None = Field(default="", max_length=8000)
+    tools_allowed: list[str] = Field(default_factory=list)
+    model_preference: str = Field(default="default", pattern="^(default|openai|claude|gemini|mock)$")
+    memory_scope: str = Field(default="session", pattern="^(none|session|workspace|global)$")
+    approval_level: str = Field(default="read_only", pattern="^(read_only|plan_only|approve_to_edit|approve_to_run|blocked)$")
+    enabled: bool = True
+    template_name: str | None = Field(default=None, max_length=120)
+
+
+class UpdateCustomAgentRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    description: str | None = Field(default=None, max_length=1000)
+    role: str | None = Field(default=None, max_length=1000)
+    prompt: str | None = Field(default=None, max_length=8000)
+    tools_allowed: list[str] | None = None
+    model_preference: str | None = Field(default=None, pattern="^(default|openai|claude|gemini|mock)$")
+    memory_scope: str | None = Field(default=None, pattern="^(none|session|workspace|global)$")
+    approval_level: str | None = Field(default=None, pattern="^(read_only|plan_only|approve_to_edit|approve_to_run|blocked)$")
+    enabled: bool | None = None

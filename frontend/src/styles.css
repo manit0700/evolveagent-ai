@@ -1233,6 +1233,137 @@ h2 {
   font-weight: 900;
 }
 
+.secondary-button.full-width {
+  width: 100%;
+  justify-content: center;
+}
+
+.mission-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.goal-card,
+.agent-template-card {
+  display: grid;
+  width: 100%;
+  gap: 5px;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: #151a21;
+  color: #dfe8df;
+  padding: 10px;
+}
+
+.goal-card:hover,
+.agent-template-card:hover {
+  border-color: rgba(154, 210, 141, 0.34);
+  background: rgba(154, 210, 141, 0.08);
+}
+
+.goal-card strong,
+.agent-template-card strong {
+  color: #f3f7f2;
+  font-size: 13px;
+}
+
+.goal-card span,
+.agent-template-card span {
+  color: #9ad28d;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.agent-template-card p,
+.goal-detail p,
+.task-card p {
+  margin: 0;
+  color: #aeb9c3;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.agent-template-card button,
+.task-card button,
+.goal-result-card button {
+  min-height: 28px;
+  border: 1px solid rgba(154, 210, 141, 0.22);
+  border-radius: 8px;
+  background: rgba(154, 210, 141, 0.1);
+  color: #e8f4e5;
+  padding: 5px 8px;
+  font-weight: 900;
+}
+
+.goal-detail {
+  display: grid;
+  gap: 9px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 4px;
+  padding-top: 10px;
+}
+
+.goal-detail h3,
+.mission-panel h3,
+.goal-result-card h3 {
+  margin: 0;
+  color: #edf3ee;
+  font-size: 13px;
+}
+
+.progress-bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #9ad28d, #72c0ff);
+}
+
+.task-card,
+.task-preview {
+  display: grid;
+  gap: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: #10151c;
+  padding: 9px;
+}
+
+.task-card strong,
+.task-preview strong {
+  color: #f1f6f2;
+  font-size: 12px;
+}
+
+.task-card span,
+.task-preview span {
+  color: #a9b3bd;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.goal-result-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  border: 1px solid rgba(154, 210, 141, 0.2);
+  border-radius: 12px;
+  background: rgba(154, 210, 141, 0.06);
+  padding: 14px;
+}
+
+.task-preview-list {
+  display: grid;
+  gap: 8px;
+}
+
 .secondary-button:hover {
   border-color: rgba(154, 210, 141, 0.35);
   background: rgba(154, 210, 141, 0.1);
@@ -1411,8 +1542,9 @@ ul {
   }
 
   .input-shell {
-    grid-template-columns: minmax(0, 1fr) 46px;
+    grid-template-columns: 40px 40px 40px minmax(0, 1fr) 46px;
     padding: 10px;
+    gap: 7px;
   }
 
   .input-shell button {

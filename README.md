@@ -1,14 +1,16 @@
 # EvolveAgent AI
 
-**Current version:** MVP v2.3 — Advanced Adaptive Learning Engine
+**Current version:** MVP v2.5 — Mission Control + Custom Agent Builder
 
-**One-line description:** A voice-capable, approval-gated multi-agent AI workspace with Master Agent routing, real multi-LLM consensus, adaptive learning reports, workflow strategy memory, model routing recommendations, user preference learning, file/recording analysis, mock image previews, and safe automation planning.
+**One-line description:** A voice-capable, approval-gated multi-agent AI workspace with Master Agent routing, Mission Control goal/task graphs, Custom Agent Builder, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
 
 ## Project Overview
 
 EvolveAgent AI is a full-stack AI workbench built to demonstrate advanced multi-agent orchestration without overbuilding into a production platform. A Master Orchestrator Agent classifies each request, chooses the correct workflow, coordinates specialist agents, evaluates output quality, stores memory and analytics, and returns one clean answer through a modern chat UI.
 
-The app supports normal text requests, uploaded document analysis, recording/audio transcript summaries, mock image-generation previews, browser voice command input, approval-gated app automation planning, human feedback, and analytics. Simple Mode keeps the user experience clean. Developer Mode exposes the workflow trace, provider metadata, judge results, per-agent evaluation, automation plans, learning reports, recording transcript metadata, file context, and raw JSON for demos and technical review.
+The app supports normal text requests, uploaded document analysis, recording/audio transcript summaries, mock image-generation previews, browser voice command input, Mission Control goal planning, custom agents, approval-gated app automation planning, human feedback, and analytics. Simple Mode keeps the user experience clean. Developer Mode exposes the workflow trace, provider metadata, judge results, per-agent evaluation, automation plans, learning reports, recording transcript metadata, file context, goal/task metadata, custom agent metadata, and raw JSON for demos and technical review.
+
+MVP v2.5 adds **Mission Control**, a goal/task operating layer for large objectives. Users can turn a big goal into phases, task cards, dependencies, recommended agents, progress tracking, and runnable subtasks. It also adds a **Custom Agent Builder** with reusable specialist agents and templates that remain governed by the same permissions, prompt-injection checks, secret scanning, and analytics as built-in agents.
 
 ## Feature List
 
@@ -48,6 +50,13 @@ The app supports normal text requests, uploaded document analysis, recording/aud
 - Copy, regenerate, edit, delete, rename, and export controls
 - Simple Mode and Developer Mode
 - JSON-based local storage
+- Mission Control goal planning and task graph storage
+- Goal Planner Agent for phases, tasks, dependencies, risk, and next-best-task recommendations
+- Goal/task APIs for create, list, update, archive, add task, update task, and run task
+- Mission Control UI with active goals, progress, task cards, task status, run task, and mark done controls
+- Custom Agent Builder with reusable specialist agents
+- Agent Skill Store templates for Resume, Code Review, Meeting Notes, File Summary, Pharmacy PA, Construction Bid, Business Analyst, Startup Strategy, Bug Fix, and Study Notes agents
+- Governance, analytics, and learning integration for goals and custom agents
 
 ## Tech Stack
 
@@ -86,6 +95,7 @@ flowchart TD
     Detect -->|Image Request| ImageFlow[Mock Image Agent Workflow]
     Detect -->|App Automation| AutoFlow[Approval-Gated Automation Workflow]
     Detect -->|Recording Summary| RecordingFlow[Recording Intelligence Workflow]
+    Detect -->|Goal Planning| GoalFlow[Mission Control Goal Planner]
 
     FileFlow --> Extract[Extract Text and Metadata]
     Extract --> FileAgent[File Analysis Agent]
@@ -119,6 +129,10 @@ flowchart TD
     RecUpload --> Transcribe[Mock or OpenAI Transcription]
     Transcribe --> RecAgent[Recording Analysis Agent]
     RecAgent --> TextFlow
+    GoalFlow --> GoalPlanner[Goal Planner Agent]
+    GoalPlanner --> GoalStore[Goal and Task Graph Storage]
+    GoalStore --> MissionUI[Mission Control UI]
+    MissionUI --> TextFlow
 
     Analytics --> Memory[Memory Agent and JSON Storage]
     Memory --> Learning[Adaptive Learning Engine]
@@ -146,6 +160,43 @@ flowchart TD
 13. Frontend displays a clean answer in Simple Mode or detailed trace in Developer Mode.
 14. User can submit feedback, which is saved and reflected in analytics.
 
+## Mission Control Workflow
+
+MVP v2.5 adds `goal_planning` for larger objectives such as:
+
+- `Build an AI resume analyzer app`
+- `Create a full implementation plan for a SaaS app`
+- `Break this goal into tasks`
+
+Workflow:
+
+1. Master Agent detects `goal_planning`.
+2. Goal Planner Agent creates a goal title, phases, task graph, dependencies, priorities, recommended agents, risk level, and next best task.
+3. Goal Service saves the goal to `goals.json` and tasks to `task_graphs.json`.
+4. Simple Mode shows the mission plan and task list.
+5. Mission Control UI shows active goals, progress, task cards, and status controls.
+6. Users can run an individual task through the existing `/api/run` workflow.
+7. Task results, run IDs, progress, analytics, learning, and governance metadata are saved.
+
+Goal Mode does not silently execute code changes. Any task that becomes app automation still goes through the existing approval workflow.
+
+## Custom Agent Builder
+
+MVP v2.5 adds reusable custom agents. Custom agents can be created manually or from templates such as:
+
+- Resume Agent
+- Code Review Agent
+- Meeting Notes Agent
+- File Summary Agent
+- Pharmacy PA Agent
+- Construction Bid Agent
+- Business Analyst Agent
+- Startup Strategy Agent
+- Bug Fix Agent
+- Study Notes Agent
+
+Custom agents are reusable workflow specialists that operate under the same permission, governance, and safety rules as built-in agents. They cannot bypass the prompt-injection firewall, secret scanner, permission system, safe command runner, or governance logging.
+
 ## Text-Agent Workflow
 
 1. **Research Agent** identifies background context and important facts.
@@ -159,7 +210,7 @@ flowchart TD
 
 ## Real Multi-LLM Consensus Workflow
 
-MVP v2.3 keeps optional Deep Mode consensus planning. Normal chat requests still use the existing OpenAI-first text workflow with mock fallback. When Deep Mode is enabled, the Master Agent asks the LLM Router for available consensus providers and compares independent candidates before final synthesis.
+MVP v2.5 keeps optional Deep Mode consensus planning. Normal chat requests still use the existing OpenAI-first text workflow with mock fallback. When Deep Mode is enabled, the Master Agent asks the LLM Router for available consensus providers and compares independent candidates before final synthesis.
 
 Provider behavior:
 
@@ -270,11 +321,11 @@ The Image Agent:
 5. Returns a user-facing mock preview and prompt.
 6. Saves image metadata for Developer Mode and analytics.
 
-Real image APIs are intentionally not included in MVP v2.3.
+Real image APIs are intentionally not included in MVP v2.5.
 
 ## Voice Command Workflow
 
-MVP v2.3 includes a microphone button near the chat input.
+MVP v2.5 includes a microphone button near the chat input.
 
 1. User clicks the microphone.
 2. Browser Web Speech API listens for a short command.
@@ -292,7 +343,7 @@ No paid transcription API is required for v2.0 voice commands.
 
 ## App Automation Workflow
 
-MVP v2.3 includes `app_automation` for requests such as:
+MVP v2.5 includes `app_automation` for requests such as:
 
 - add a page
 - create a component
@@ -344,7 +395,7 @@ Correct wording:
 
 It analyzes judge scores, per-agent scores, task types, provider/model usage, fallback status, latency, human feedback, file/image/recording/automation task metadata, workflow outcomes, and user preference signals.
 
-The v2.3 learning report includes:
+The v2.5 learning report includes:
 
 - strongest and weakest agents by task type
 - best and worst workflows by task type
@@ -362,6 +413,20 @@ Learning endpoints:
 - `POST /api/learning/approve-prompt`
 - `POST /api/learning/reject-prompt`
 - `POST /api/learning/rollback-prompt`
+- `POST /api/goals`
+- `GET /api/goals`
+- `GET /api/goals/{goal_id}`
+- `PATCH /api/goals/{goal_id}`
+- `DELETE /api/goals/{goal_id}`
+- `POST /api/goals/{goal_id}/tasks`
+- `PATCH /api/goals/{goal_id}/tasks/{task_id}`
+- `POST /api/goals/{goal_id}/tasks/{task_id}/run`
+- `GET /api/agents/templates`
+- `POST /api/agents/custom`
+- `GET /api/agents/custom`
+- `GET /api/agents/custom/{agent_id}`
+- `PATCH /api/agents/custom/{agent_id}`
+- `DELETE /api/agents/custom/{agent_id}`
 
 Prompt changes are versioned and reversible. Proposed prompts do not activate without approval.
 
@@ -538,6 +603,9 @@ npm run build
 - Analyze a business idea and find risks.
 - Create a 2-minute project demo script.
 - Generate an image prompt for a futuristic AI assistant.
+- Build an AI resume analyzer app.
+- Create a full implementation plan for a SaaS app.
+- Break this goal into tasks.
 - Upload a resume and ask: "Review this resume for a software engineering internship."
 - Upload a CSV and ask: "Analyze this data and identify patterns."
 - Upload a code file and ask: "Explain this code and suggest improvements."
@@ -628,3 +696,5 @@ Automation safety rules:
 - Created Simple Mode for clean user-facing responses and Developer Mode for inspecting provider metadata, consensus candidates, selected model winner, workflow trace, judge scores, per-agent evaluation, file context, and raw JSON.
 - Added browser voice input, approval-gated app automation planning, safe project scanning, allowlisted command execution, and an Adaptive Learning Engine for orchestration-level optimization.
 - Implemented a mock Image Agent with protected-character prompt rewriting and mock preview generation.
+- Added Mission Control with goal planning, task graph storage, progress tracking, runnable subtasks, and goal/task analytics.
+- Built a governed Custom Agent Builder with reusable specialist agents and prebuilt Agent Skill Store templates.

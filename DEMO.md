@@ -1,6 +1,6 @@
 # EvolveAgent AI Demo Guide
 
-Use this guide for a 2-minute portfolio, class, or interview demo of **EvolveAgent AI MVP v2.3**.
+Use this guide for a 2-minute portfolio, class, or interview demo of **EvolveAgent AI MVP v2.5**.
 
 ## 2-Minute Demo Script
 
@@ -52,7 +52,7 @@ Run:
 Generate an image prompt for a futuristic AI assistant.
 ```
 
-Explain that MVP v2.3 uses a mock image provider, cleans prompt wording, rewrites protected-character requests safely, and returns a preview without calling a real image API.
+Explain that MVP v2.5 uses a mock image provider, cleans prompt wording, rewrites protected-character requests safely, and returns a preview without calling a real image API.
 
 **1:30-1:45 — Show recording intelligence**
 
@@ -62,7 +62,7 @@ Upload an MP3, M4A, WAV, MP4, or WEBM recording and ask:
 Summarize this recording and list action items.
 ```
 
-Explain that v2.3 stores the recording, transcribes it in mock or OpenAI mode, runs the Recording Analysis Agent, and returns summaries, action items, decisions, study notes, and Q&A.
+Explain that v2.5 stores the recording, transcribes it in mock or OpenAI mode, runs the Recording Analysis Agent, and returns summaries, action items, decisions, study notes, and Q&A.
 
 **1:45-2:00 — Show safe app automation**
 
@@ -90,7 +90,7 @@ Also show the Developer Mode Learning Report if time permits.
 
 **Close with value**
 
-This project demonstrates a realistic multi-agent architecture with task routing, model fallback, file analysis, recording intelligence, mock image generation, voice input, approval-gated automation planning, per-agent evaluation, feedback, analytics, and orchestration-level learning reports.
+This project demonstrates a realistic multi-agent architecture with task routing, model fallback, file analysis, recording intelligence, mock image generation, voice input, Mission Control goal/task graphs, custom agent templates, approval-gated automation planning, per-agent evaluation, feedback, analytics, and orchestration-level learning reports.
 
 ## What to Show First
 
@@ -113,12 +113,50 @@ Then switch to Developer Mode to show the system depth.
 4. `Generate an image prompt for a futuristic AI assistant.`
 5. Upload a recording and ask: `Summarize this recording and list action items.`
 6. Turn on Deep Mode and ask: `Compare the best plan for improving this project demo.`
-7. `Add dark mode to this app.`
-8. `Run tests for this project.`
-9. `Explain the current app architecture.`
-10. Upload a document and ask: `Summarize this uploaded document.`
-11. Click feedback buttons and open Analytics.
-12. Switch to Developer Mode and show consensus, per-agent evaluation, and learning report.
+7. `Build an AI resume analyzer app.`
+8. Open Mission Control and run one task.
+9. Create a custom `Resume Agent` from the template list.
+10. `Add dark mode to this app.`
+11. `Run tests for this project.`
+12. `Explain the current app architecture.`
+13. Upload a document and ask: `Summarize this uploaded document.`
+14. Click feedback buttons and open Analytics.
+15. Switch to Developer Mode and show consensus, per-agent evaluation, goals, custom agents, and learning report.
+
+## How to Explain Mission Control
+
+Say:
+
+Mission Control turns large objectives into trackable goals and task graphs. The Goal Planner Agent creates phases, task cards, dependencies, priorities, recommended agents, risk level, and the next best task. The user can run one task at a time through the existing agent workflow. Goal Mode does not silently execute code; any task that becomes app automation still requires approval.
+
+Demo prompt:
+
+```text
+Build an AI resume analyzer app.
+```
+
+Then open **Mission Control** and show:
+
+- active goal
+- progress percent
+- phases and task cards
+- priority and status badges
+- run task button
+- mark done button
+
+## How to Explain Custom Agent Builder
+
+Say:
+
+Custom agents are reusable workflow specialists that operate under the same permission, governance, and safety rules as built-in agents. They cannot bypass prompt-injection checks, secret scanning, approval gates, or governance logging.
+
+Show the Agent Builder panel and create a template-based agent, such as:
+
+- Resume Agent
+- Code Review Agent
+- Meeting Notes Agent
+- File Summary Agent
+- Business Analyst Agent
 
 ## How to Explain the Master Agent
 
@@ -152,13 +190,13 @@ Specialist agents divide the work:
 
 ## How to Explain Real Multi-LLM Consensus
 
-The app can use real OpenAI text mode when `OPENAI_API_KEY` is configured. In Deep Mode, MVP v2.3 asks the LLM Router for configured consensus providers, such as OpenAI, Claude, Gemini, and Mistral. Each provider creates an independent candidate answer, the Judge Agent compares them, and the Writing Agent synthesizes one final answer.
+The app can use real OpenAI text mode when `OPENAI_API_KEY` is configured. In Deep Mode, MVP v2.5 asks the LLM Router for configured consensus providers, such as OpenAI, Claude, Gemini, and Mistral. Each provider creates an independent candidate answer, the Judge Agent compares them, and the Writing Agent synthesizes one final answer.
 
 If only OpenAI is configured, Deep Mode compares OpenAI with mock. If no keys are present, or if a provider call fails, candidates fall back to mock mode. This keeps the demo stable and lets the full workflow run without paid API access.
 
 Developer Mode shows each candidate, provider/model metadata, fallback status, selected winner, and judge comparison notes. Simple Mode only shows the final answer.
 
-Image generation intentionally stays on `mock_image` in MVP v2.3.
+Image generation intentionally stays on `mock_image` in MVP v2.5.
 
 ## How to Explain File Upload
 
@@ -177,7 +215,7 @@ Limitations:
 
 Say:
 
-EvolveAgent AI v2.3 supports recording upload for MP3, M4A, WAV, MP4, and WEBM files. The backend validates the recording, stores it locally, transcribes it using mock mode or OpenAI transcription mode, and runs a Recording Analysis Agent. The output includes a short summary, detailed summary, key points, action items, decisions, follow-up tasks, study notes, and Q&A.
+EvolveAgent AI v2.5 supports recording upload for MP3, M4A, WAV, MP4, and WEBM files. The backend validates the recording, stores it locally, transcribes it using mock mode or OpenAI transcription mode, and runs a Recording Analysis Agent. The output includes a short summary, detailed summary, key points, action items, decisions, follow-up tasks, study notes, and Q&A.
 
 Limitations:
 

@@ -1,14 +1,14 @@
-# EvolveAgent AI MVP v2.3 — Final Project Summary
+# EvolveAgent AI MVP v2.5 — Mission Control + Custom Agent Builder Summary
 
 ## Short Summary
 
-EvolveAgent AI is a voice-controlled, ChatGPT-style multi-agent AI workspace with real multi-LLM consensus and an Advanced Adaptive Learning Engine. It routes user requests through a Master Orchestrator Agent, specialist agents, a Judge Agent, an Evolution Agent, memory storage, feedback, analytics, safe automation planning, recording analysis, and learning reports that optimize the orchestration layer.
+EvolveAgent AI is a voice-controlled, ChatGPT-style multi-agent AI workspace with Mission Control, Custom Agent Builder, real multi-LLM consensus, governance, and an Advanced Adaptive Learning Engine. It routes user requests through a Master Orchestrator Agent, specialist agents, a Judge Agent, an Evolution Agent, memory storage, feedback, analytics, safe automation planning, recording analysis, goal/task planning, reusable custom agents, and learning reports that optimize the orchestration layer.
 
 ## Full Technical Summary
 
 EvolveAgent AI is built with a FastAPI backend and Vite React frontend. The backend receives chat requests, creates or loads chat sessions, classifies task type, runs the correct workflow, evaluates results, saves memory and analytics, and returns a structured response. The frontend presents Simple Mode for clean user-facing answers and Developer Mode for workflow inspection.
 
-MVP v2.3 supports real OpenAI text mode, optional Deep Mode consensus across configured OpenAI, Claude, Gemini, and Mistral providers, mock fallback, JSON-based chat/session storage, file upload and document analysis, recording upload and transcript summaries, mock image preview generation, per-agent evaluation, human feedback, analytics, browser voice command input, approval-gated app automation planning, safe project scanning, allowlisted test/build command execution, prompt versioning, task-specific learning insights, workflow strategy memory, model routing suggestions, and user preference learning.
+MVP v2.5 supports real OpenAI text mode, optional Deep Mode consensus across configured OpenAI, Claude, Gemini, and Mistral providers, mock fallback, JSON-based chat/session storage, file upload and document analysis, recording upload and transcript summaries, mock image preview generation, per-agent evaluation, human feedback, analytics, browser voice command input, Mission Control goal/task graphs, Custom Agent Builder templates, approval-gated app automation planning, safe project scanning, allowlisted test/build command execution, prompt versioning, task-specific learning insights, workflow strategy memory, model routing suggestions, and user preference learning.
 
 ## Key Features
 
@@ -42,6 +42,12 @@ MVP v2.3 supports real OpenAI text mode, optional Deep Mode consensus across con
 - Real OpenAI text mode with mock fallback
 - Real multi-LLM consensus in Deep Mode
 - Consensus winner and model tournament tracking
+- Mission Control goal planning and task graph storage
+- Goal Planner Agent with phases, dependencies, priorities, risk, and next-best-task recommendations
+- Goal/task APIs and Mission Control UI
+- Custom Agent Builder with governed reusable specialist agents
+- Prebuilt Agent Skill Store templates
+- Goal/custom-agent analytics and learning insights
 
 ## Architecture Overview
 
@@ -70,6 +76,9 @@ Normal chatbots often produce one opaque answer. EvolveAgent AI separates routin
 - It supports voice-to-chat input.
 - It can prepare safe app automation plans.
 - It can compare multiple model candidates in Deep Mode and synthesize one final answer.
+- It can turn a large goal into a trackable task graph.
+- It can run individual goal tasks through the existing agent workflow.
+- It lets users create reusable governed custom agents from templates.
 - It requires approval before automation apply.
 - It has Simple Mode for users and Developer Mode for technical review.
 - It has mock fallback so it remains demoable without paid API access.
@@ -132,6 +141,9 @@ Correct learning description:
 - `Generate an image prompt for a futuristic AI assistant`
 - `Explain how EvolveAgent AI works`
 - `Review my FastAPI backend architecture`
+- `Build an AI resume analyzer app`
+- `Create a full implementation plan for a SaaS app`
+- `Break this goal into tasks`
 
 ## Resume Bullets
 
@@ -144,7 +156,9 @@ Correct learning description:
 - Implemented approval-gated app automation planning with safe project scanning, path validation, and allowlisted build/test command execution.
 - Created an Advanced Adaptive Learning Engine that tracks judge scores, per-agent scores, feedback, model performance, workflow strategy, prompt versions, and inferred user preferences.
 - Built Simple Mode for clean user-facing responses and Developer Mode for inspecting workflow trace, provider metadata, automation plans, learning reports, judge scores, per-agent scores, file context, image metadata, and raw JSON.
+- Added Mission Control for goal planning, task graph creation, task progress tracking, runnable subtasks, and goal analytics.
+- Built a Custom Agent Builder with governed reusable agents and prebuilt templates for resume review, code review, meetings, files, pharmacy PA, business analysis, bug fixing, and study notes.
 
 ## Interview Explanation
 
-EvolveAgent AI is a full-stack project I built to demonstrate a voice-controlled multi-agent AI operating workflow. Instead of sending every prompt to one chatbot, the system uses a Master Orchestrator Agent to classify the task and route it through the right workflow. Text tasks go through research, logic, risk, strategy, writing, judging, evolution, and memory agents. In Deep Mode, it can compare candidates from configured OpenAI, Claude, Gemini, Mistral, and mock providers, then synthesize one final answer. File tasks use a File Analysis Agent before the normal workflow. Recording tasks use a Transcription Service and Recording Analysis Agent. Image tasks use a mock Image Agent with safe prompt rewriting. App automation tasks scan the project and create an implementation plan, but require approval before any apply step. Simple Mode keeps the UI clean, while Developer Mode shows consensus candidates, selected winner, model metadata, and the full agent workflow for technical review.
+EvolveAgent AI is a full-stack project I built to demonstrate a voice-controlled multi-agent AI operating workflow. Instead of sending every prompt to one chatbot, the system uses a Master Orchestrator Agent to classify the task and route it through the right workflow. Text tasks go through research, logic, risk, strategy, writing, judging, evolution, and memory agents. In Deep Mode, it can compare candidates from configured OpenAI, Claude, Gemini, Mistral, and mock providers, then synthesize one final answer. File tasks use a File Analysis Agent before the normal workflow. Recording tasks use a Transcription Service and Recording Analysis Agent. Image tasks use a mock Image Agent with safe prompt rewriting. App automation tasks scan the project and create an implementation plan, but require approval before any apply step. MVP v2.5 adds Mission Control for goal/task graphs and a Custom Agent Builder for reusable governed specialists. Simple Mode keeps the UI clean, while Developer Mode shows consensus candidates, selected winner, model metadata, goals, custom agents, and the full agent workflow for technical review.

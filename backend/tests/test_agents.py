@@ -24,6 +24,7 @@ def test_task_type_detection():
     assert MasterOrchestratorAgent.detect_task_type("add login page to this app") == "app_automation"
     assert MasterOrchestratorAgent.detect_task_type("summarize this recording") == "recording_summary"
     assert MasterOrchestratorAgent.detect_task_type("lecture recording notes") == "recording_summary"
+    assert MasterOrchestratorAgent.detect_task_type("Create a project plan for a multi-agent AI app") == "goal_planning"
     assert (
         MasterOrchestratorAgent.detect_task_type(
             "Explain what EvolveAgent AI is doing and how the multi-agent workflow works"
@@ -40,7 +41,11 @@ def test_master_agent_returns_final_output(tmp_path):
 
     assert response.final_output
     assert response.judge_result.overall_score >= 75
-    assert "Research Agent" in response.agents_used
+    assert response.task_type == "goal_planning"
+    assert "Goal Planner Agent" in response.agents_used
+    assert response.goal_created is True
+    assert response.goal is not None
+    assert response.task_graph is not None
     assert response.agent_outputs[0].provider
     assert response.agent_outputs[0].model
     assert response.judge_result.per_agent_scores

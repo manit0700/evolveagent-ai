@@ -228,3 +228,115 @@ export async function rollbackPromptVersion(payload) {
   if (!response.ok) throw new Error(`Prompt rollback failed with status ${response.status}`)
   return response.json()
 }
+
+export async function getGoals() {
+  try {
+    const response = await fetch(`${API_BASE}/api/goals`)
+    if (!response.ok) return []
+    return response.json()
+  } catch {
+    return []
+  }
+}
+
+export async function getGoal(goalId) {
+  const response = await fetch(`${API_BASE}/api/goals/${goalId}`)
+  if (!response.ok) throw new Error(`Goal load failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function createGoal(payload) {
+  const response = await fetch(`${API_BASE}/api/goals`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Goal creation failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function updateGoal(goalId, payload) {
+  const response = await fetch(`${API_BASE}/api/goals/${goalId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Goal update failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function addGoalTask(goalId, payload) {
+  const response = await fetch(`${API_BASE}/api/goals/${goalId}/tasks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Goal task creation failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function updateGoalTask(goalId, taskId, payload) {
+  const response = await fetch(`${API_BASE}/api/goals/${goalId}/tasks/${taskId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Goal task update failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function runGoalTask(goalId, taskId) {
+  const response = await fetch(`${API_BASE}/api/goals/${goalId}/tasks/${taskId}/run`, {
+    method: 'POST',
+  })
+  if (!response.ok) throw new Error(`Goal task run failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function getAgentTemplates() {
+  try {
+    const response = await fetch(`${API_BASE}/api/agents/templates`)
+    if (!response.ok) return []
+    return response.json()
+  } catch {
+    return []
+  }
+}
+
+export async function getCustomAgents() {
+  try {
+    const response = await fetch(`${API_BASE}/api/agents/custom`)
+    if (!response.ok) return []
+    return response.json()
+  } catch {
+    return []
+  }
+}
+
+export async function createCustomAgent(payload) {
+  const response = await fetch(`${API_BASE}/api/agents/custom`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Custom agent creation failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function updateCustomAgent(agentId, payload) {
+  const response = await fetch(`${API_BASE}/api/agents/custom/${agentId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Custom agent update failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function deleteCustomAgent(agentId) {
+  const response = await fetch(`${API_BASE}/api/agents/custom/${agentId}`, {
+    method: 'DELETE',
+  })
+  if (!response.ok) throw new Error(`Custom agent delete failed with status ${response.status}`)
+  return response.json()
+}

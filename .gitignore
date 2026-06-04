@@ -27,5 +27,8 @@ backend/app/data/workflow_strategies.json
 backend/app/data/user_preferences.json
 backend/app/data/prompt_versions.json
 backend/app/data/governance_log.json
+backend/app/data/goals.json
+backend/app/data/task_graphs.json
+backend/app/data/custom_agents.json
 *.log
 logs/

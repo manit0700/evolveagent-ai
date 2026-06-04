@@ -13,8 +13,10 @@ import {
   Download,
   Edit3,
   FileText,
+  Flag,
   Gauge,
   GitBranch,
+  Layers3,
   MoreHorizontal,
   Paperclip,
   Mic,
@@ -34,28 +36,37 @@ import {
 import remarkGfm from 'remark-gfm'
 import {
   API_BASE,
+  createCustomAgent,
+  createGoal,
   applyAutomation,
   approvePromptVersion,
   createChat,
   deleteChat,
   deleteMessage,
   getAnalytics,
+  getAgentTemplates,
   getChat,
   getChats,
+  getCustomAgents,
+  getGoal,
+  getGoals,
   getHistory,
   getLearningReport,
   getProviderStatus,
   rejectPromptVersion,
   renameChat,
   rollbackPromptVersion,
+  runGoalTask,
   runWorkflow,
   sendFeedback,
+  updateGoalTask,
   uploadFiles,
   uploadRecordings,
 } from './api'
 
 const taskTypes = [
   'auto',
+  'goal_planning',
   'resume',
   'coding',
   'business',
@@ -86,6 +97,8 @@ const promptCards = [
   'Upload a resume and ask for improvements',
   'Upload a CSV and analyze patterns',
   'Upload a code file and explain it',
+  'Build an AI resume analyzer app',
+  'Create a full implementation plan for a SaaS app',
 ]
 
 const progressSteps = [
@@ -185,6 +198,12 @@ function App() {
   const [voiceTranscript, setVoiceTranscript] = useState('')
   const [listening, setListening] = useState(false)
   const [automationResults, setAutomationResults] = useState({})
+  const [goals, setGoals] = useState([])
+  const [selectedGoal, setSelectedGoal] = useState(null)
+  const [customAgents, setCustomAgents] = useState([])
+  const [agentTemplates, setAgentTemplates] = useState([])
+  const [showMissionControl, setShowMissionControl] = useState(false)
+  const [showAgentBuilder, setShowAgentBuilder] = useState(false)
 
   useEffect(() => {
     refreshHistory()
@@ -192,6 +211,8 @@ function App() {
     refreshProviderStatus()
     refreshAnalytics()
     refreshLearningReport()
+    refreshMissionControl()
+    refreshCustomAgents()
   }, [])
 
   useEffect(() => {
@@ -222,6 +243,82 @@ function App() {
 
   async function refreshLearningReport() {
     setLearningReport(await getLearningReport())
+  }
+
+  async function refreshMissionControl() {
+    setGoals(await getGoals())
+  }
+
+  async function refreshCustomAgents() {
+    setCustomAgents(await getCustomAgents())
+    setAgentTemplates(await getAgentTemplates())
+  }
+
+  async function handleCreateGoalFromPrompt(prompt) {
+    try {
+      const result = await createGoal({ prompt })
+      setSelectedGoal(result)
+      setShowMissionControl(true)
+      await refreshMissionControl()
+      await refreshAnalytics()
+      setCopied('Goal created')
+      window.setTimeout(() => setCopied(''), 1300)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function handleSelectGoal(goalId) {
+    try {
+      const result = await getGoal(goalId)
+      setSelectedGoal(result)
+      setShowMissionControl(true)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function handleRunGoalTask(goalId, taskId) {
+    try {
+      const result = await runGoalTask(goalId, taskId)
+      const assistantMessage = {
+        id: result.message_id,
+        message_id: result.message_id,
+        role: 'assistant',
+        content: formatSimpleAnswer(result),
+        result,
+      }
+      setMessages((current) => [...current, assistantMessage])
+      setSessionId(result.session_id)
+      setSelectedRunId(result.message_id)
+      await refreshMissionControl()
+      await refreshAnalytics()
+      await refreshLearningReport()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function handleMarkGoalTaskDone(goalId, taskId) {
+    try {
+      await updateGoalTask(goalId, taskId, { status: 'done' })
+      await handleSelectGoal(goalId)
+      await refreshMissionControl()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function handleCreateAgentFromTemplate(templateName) {
+    try {
+      await createCustomAgent({ template_name: templateName })
+      await refreshCustomAgents()
+      await refreshAnalytics()
+      setCopied('Custom agent created')
+      window.setTimeout(() => setCopied(''), 1300)
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
   async function decidePromptVersion(version, action) {
@@ -331,6 +428,7 @@ function App() {
       await refreshProviderStatus()
       await refreshAnalytics()
       await refreshLearningReport()
+      await refreshMissionControl()
       setAttachedFiles([])
       setAttachedRecordings([])
       setVoiceUsed(false)
@@ -646,6 +744,18 @@ function App() {
                 <strong>{analytics.recording_task_count || 0}</strong>
               </div>
               <div>
+                <span>Goals</span>
+                <strong>{analytics.active_goals || 0}/{analytics.total_goals || 0}</strong>
+              </div>
+              <div>
+                <span>Goal tasks done</span>
+                <strong>{analytics.completed_goal_tasks || 0}/{analytics.total_goal_tasks || 0}</strong>
+              </div>
+              <div>
+                <span>Custom agents</span>
+                <strong>{analytics.custom_agents_count || 0}</strong>
+              </div>
+              <div>
                 <span>Feedback</span>
                 <strong>
                   {analytics.feedback_summary?.helpful || 0}/{analytics.feedback_summary?.not_helpful || 0}/{analytics.feedback_summary?.saved || 0}
@@ -659,6 +769,94 @@ function App() {
                   </p>
                 ))}
               </div>
+            </div>
+          )}
+        </section>
+
+        <section className="sidebar-section">
+          <button className="analytics-toggle" type="button" onClick={() => setShowMissionControl((current) => !current)}>
+            <span>
+              <Flag size={15} />
+              Mission Control
+            </span>
+            <ChevronDown size={15} />
+          </button>
+          {showMissionControl && (
+            <div className="mission-panel">
+              <button
+                className="secondary-button full-width"
+                type="button"
+                onClick={() => handleCreateGoalFromPrompt(input.trim() || 'Build an AI resume analyzer app')}
+              >
+                Create goal from prompt
+              </button>
+              {goals.length === 0 && <p className="muted">No goals yet.</p>}
+              {goals.slice(0, 6).map((goal) => (
+                <button className="goal-card" type="button" key={goal.goal_id} onClick={() => handleSelectGoal(goal.goal_id)}>
+                  <strong>{goal.title}</strong>
+                  <span>{goal.status} · {goal.progress_percent || 0}% · {goal.risk_level} risk</span>
+                </button>
+              ))}
+              {selectedGoal?.goal && (
+                <div className="goal-detail">
+                  <h3>{selectedGoal.goal.title}</h3>
+                  <p>{selectedGoal.goal.description}</p>
+                  <div className="progress-bar">
+                    <span style={{ width: `${selectedGoal.goal.progress_percent || 0}%` }} />
+                  </div>
+                  {(selectedGoal.task_graph?.tasks || []).map((task) => (
+                    <div className="task-card" key={task.task_id}>
+                      <div>
+                        <strong>{task.title}</strong>
+                        <span>{task.phase} · {task.priority} · {task.status}</span>
+                      </div>
+                      <p>{task.description}</p>
+                      <div className="inline-actions">
+                        <button type="button" onClick={() => handleRunGoalTask(selectedGoal.goal.goal_id, task.task_id)}>
+                          Run task
+                        </button>
+                        <button type="button" onClick={() => handleMarkGoalTaskDone(selectedGoal.goal.goal_id, task.task_id)}>
+                          Mark done
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
+        <section className="sidebar-section">
+          <button className="analytics-toggle" type="button" onClick={() => setShowAgentBuilder((current) => !current)}>
+            <span>
+              <Layers3 size={15} />
+              Agent Builder
+            </span>
+            <ChevronDown size={15} />
+          </button>
+          {showAgentBuilder && (
+            <div className="mission-panel">
+              <h3>Custom agents</h3>
+              {customAgents.length === 0 && <p className="muted">No custom agents yet.</p>}
+              {customAgents.slice(0, 6).map((agent) => (
+                <div className="agent-template-card" key={agent.agent_id}>
+                  <strong>{agent.name}</strong>
+                  <span>{agent.enabled ? 'enabled' : 'disabled'} · {agent.approval_level}</span>
+                  <p>{agent.description}</p>
+                </div>
+              ))}
+              <h3>Templates</h3>
+              {agentTemplates.slice(0, 8).map((template) => (
+                <div className="agent-template-card" key={template.name}>
+                  <strong>{template.name}</strong>
+                  <span>{template.approval_level}</span>
+                  <p>{template.description}</p>
+                  <button type="button" onClick={() => handleCreateAgentFromTemplate(template.name)}>
+                    Create from template
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </section>
@@ -750,6 +948,8 @@ function App() {
             const displayContent = message.result ? formatSimpleAnswer(message.result, message.content) : message.content
             const imageResult = message.result?.image_result
             const automationPlan = message.result?.automation_plan
+            const goalResult = message.result?.goal
+            const taskGraph = message.result?.task_graph
             const automationResult = message.result?.run_id ? automationResults[message.result.run_id] : null
             const files = message.attached_files || []
             const recordings = message.attached_recordings || []
@@ -847,6 +1047,38 @@ function App() {
                           {automationResult.summary}
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {goalResult && taskGraph && (
+                    <div className="goal-result-card">
+                      <div className="automation-plan-header">
+                        <span>Mission Control</span>
+                        <strong>{goalResult.progress_percent || 0}%</strong>
+                      </div>
+                      <h3>{goalResult.title}</h3>
+                      <p>{goalResult.description}</p>
+                      <div className="progress-bar">
+                        <span style={{ width: `${goalResult.progress_percent || 0}%` }} />
+                      </div>
+                      <div className="task-preview-list">
+                        {(taskGraph.tasks || []).slice(0, 8).map((task) => (
+                          <div className="task-preview" key={task.task_id}>
+                            <strong>{task.title}</strong>
+                            <span>{task.phase} · {task.priority} · {task.status}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          setSelectedGoal({ goal: goalResult, task_graph: taskGraph })
+                          setShowMissionControl(true)
+                        }}
+                      >
+                        Open Mission Control
+                      </button>
                     </div>
                   )}
 
@@ -1114,6 +1346,64 @@ function App() {
                 </div>
               </div>
             </details>
+
+            {(selectedRun.goal || selectedRun.goal_id || selectedRun.custom_agent) && (
+              <details className="inspector-section" open>
+                <summary>
+                  <Flag size={15} />
+                  Mission / Custom Agent
+                  <ChevronDown size={15} />
+                </summary>
+                {selectedRun.goal && (
+                  <div className="developer-prompt-block">
+                    <span>Goal</span>
+                    <p>{selectedRun.goal.title}</p>
+                    <div className="model-meta">
+                      <span>{selectedRun.goal.goal_id}</span>
+                      <span>{selectedRun.goal.status}</span>
+                      <span>{selectedRun.goal.progress_percent || 0}%</span>
+                      <span>{selectedRun.goal.risk_level} risk</span>
+                    </div>
+                  </div>
+                )}
+                {selectedRun.goal_id && !selectedRun.goal && (
+                  <div className="developer-prompt-block">
+                    <span>Goal metadata</span>
+                    <p>goal_id: {selectedRun.goal_id}</p>
+                    {selectedRun.goal_task_id && <p>task_id: {selectedRun.goal_task_id}</p>}
+                  </div>
+                )}
+                {selectedRun.task_graph && (
+                  <div className="agent-list">
+                    {(selectedRun.task_graph.tasks || []).map((task) => (
+                      <div className="provider-row" key={task.task_id}>
+                        <strong>{task.title}</strong>
+                        <div className="model-meta">
+                          <span>{task.phase}</span>
+                          <span>{task.status}</span>
+                          <span>{task.priority}</span>
+                          <span>{task.recommended_agent}</span>
+                          {task.requires_approval && <span>approval</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {selectedRun.custom_agent && (
+                  <div className="developer-prompt-block">
+                    <span>Custom agent</span>
+                    <p>{selectedRun.custom_agent.name}: {selectedRun.custom_agent.description}</p>
+                    <div className="model-meta">
+                      <span>{selectedRun.custom_agent.agent_id}</span>
+                      <span>{selectedRun.custom_agent.model_preference}</span>
+                      <span>{selectedRun.custom_agent.memory_scope}</span>
+                      <span>{selectedRun.custom_agent.approval_level}</span>
+                    </div>
+                    <p>{selectedRun.custom_agent.prompt}</p>
+                  </div>
+                )}
+              </details>
+            )}
 
             {selectedRun.quality_gates && (
               <details className="inspector-section" open>
@@ -1589,6 +1879,12 @@ function App() {
                 <ul>{(learningReport.recurring_failure_reasons || []).map((item) => <li key={item.reason}>{item.reason}: {item.count}</li>)}</ul>
                 <h3>Recommended next actions</h3>
                 <ul>{(learningReport.recommended_next_actions || []).map((item) => <li key={item}>{item}</li>)}</ul>
+                <h3>Goal workflow improvements</h3>
+                <ul>{(learningReport.workflow_improvements_for_goals || []).map((item) => <li key={item}>{item}</li>)}</ul>
+                <h3>Custom agent recommendations</h3>
+                <ul>{(learningReport.recommended_custom_agents || []).map((item) => <li key={`${item.agent_name}-${item.recommendation}`}>{item.agent_name || 'Agent Builder'}: {item.recommendation}</li>)}</ul>
+                <h3>Goal blockers</h3>
+                <ul>{(learningReport.recurring_goal_blockers || []).map((item) => <li key={item.task_id || item.reason}>{item.title || item.reason}</li>)}</ul>
                 <h3>Prompt versions</h3>
                 {(learningReport.active_prompt_versions || []).map((version) => (
                   <div className="detail-card" key={version.version_id}>

@@ -1,4 +1,4 @@
-# EvolveAgent AI MVP v2.3 — Final Checklist
+# EvolveAgent AI MVP v2.5 — Final Checklist
 
 ## Verification Commands
 
@@ -29,6 +29,9 @@ npm run build
 - `Generate an image prompt for a futuristic AI assistant.`
 - `Review my FastAPI backend architecture.`
 - `Create a 2-minute project demo script.`
+- `Build an AI resume analyzer app.`
+- `Create a full implementation plan for a SaaS app.`
+- `Break this goal into tasks.`
 
 ## Manual Demo Checks
 
@@ -51,6 +54,10 @@ npm run build
 - Feedback buttons save helpful/not helpful/saved ratings.
 - Analytics panel shows run and feedback metrics.
 - Export Markdown/JSON works.
+- Mission Control shows goals, progress, task cards, run task, and mark done controls.
+- Goal planning creates a saved task graph.
+- Custom Agent Builder lists templates and can create an agent from a template.
+- Developer Mode shows goal/task metadata and custom agent metadata.
 
 ## Automation Safety Checklist
 
@@ -84,6 +91,9 @@ npm run build
 - `backend/app/data/automation_logs.json`
 - `backend/app/data/learning_memory.json`
 - `backend/app/data/model_performance.json`
+- `backend/app/data/goals.json`
+- `backend/app/data/task_graphs.json`
+- `backend/app/data/custom_agents.json`
 - local logs
 - private uploaded documents
 
@@ -92,7 +102,7 @@ npm run build
 - Confirm `.env` is ignored.
 - Do not commit API keys.
 - Use `.env.example` or README examples for configuration.
-- Keep `IMAGE_MODE=mock` for MVP v2.3.
+- Keep `IMAGE_MODE=mock` for MVP v2.5.
 - Use `TRANSCRIPTION_MODE=mock` for demos without real transcription cost.
 - Use `TRANSCRIPTION_MODE=openai` only when `OPENAI_API_KEY` is configured.
 - Use `LLM_MODE=mock` for demos without API keys.
@@ -101,11 +111,12 @@ npm run build
 
 ## Final GitHub Cleanup Checklist
 
-- README is updated to MVP v2.3.
+- README is updated to MVP v2.5.
 - DEMO.md includes voice and app automation demo flow.
 - DEMO.md includes recording intelligence demo flow.
-- FINAL_PROJECT_SUMMARY.md exists and reflects v2.3.
-- FINAL_CHECKLIST.md exists and reflects v2.3.
+- DEMO.md includes Mission Control and Custom Agent Builder demo flow.
+- FINAL_PROJECT_SUMMARY.md exists and reflects v2.5.
+- FINAL_CHECKLIST.md exists and reflects v2.5.
 - screenshots/README.md includes screenshot instructions if screenshots are not committed.
 - Backend tests pass.
 - Frontend build passes.

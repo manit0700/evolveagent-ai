@@ -29,6 +29,9 @@ class StorageService:
             "user_preferences.json",
             "recordings.json",
             "governance_log.json",
+            "goals.json",
+            "task_graphs.json",
+            "custom_agents.json",
         ):
             self._ensure_file(filename)
 

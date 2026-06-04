@@ -505,3 +505,121 @@ def test_file_task_detection_for_code_and_csv():
     ).json()
     assert csv_run["task_type"] == "data_analysis"
     assert csv_run["file_summary"]["recommended_workflow"] == "data_analysis"
+
+
+def test_goal_mode_api_lifecycle_and_task_run():
+    create_response = client.post("/api/goals", json={"prompt": "Build an AI resume analyzer app"})
+    create_body = create_response.json()
+
+    assert create_response.status_code == 200
+    assert create_body["goal"]["goal_id"]
+    assert create_body["task_graph"]["tasks"]
+
+    goal_id = create_body["goal"]["goal_id"]
+    task_id = create_body["task_graph"]["tasks"][0]["task_id"]
+    list_response = client.get("/api/goals")
+    assert any(goal["goal_id"] == goal_id for goal in list_response.json())
+
+    get_response = client.get(f"/api/goals/{goal_id}")
+    assert get_response.status_code == 200
+    assert get_response.json()["task_graph"]["goal_id"] == goal_id
+
+    patch_response = client.patch(f"/api/goals/{goal_id}", json={"title": "Resume Analyzer Mission"})
+    assert patch_response.status_code == 200
+    assert patch_response.json()["title"] == "Resume Analyzer Mission"
+
+    add_task_response = client.post(
+        f"/api/goals/{goal_id}/tasks",
+        json={"title": "Review MVP scope", "description": "Check feature boundaries."},
+    )
+    assert add_task_response.status_code == 200
+    assert add_task_response.json()["status"] == "pending"
+
+    update_task_response = client.patch(
+        f"/api/goals/{goal_id}/tasks/{task_id}",
+        json={"status": "done"},
+    )
+    assert update_task_response.status_code == 200
+    assert update_task_response.json()["status"] == "done"
+
+    run_task_response = client.post(f"/api/goals/{goal_id}/tasks/{add_task_response.json()['task_id']}/run")
+    run_body = run_task_response.json()
+    assert run_task_response.status_code == 200
+    assert run_body["goal_id"] == goal_id
+    assert run_body["goal_task_id"] == add_task_response.json()["task_id"]
+
+    archive_response = client.delete(f"/api/goals/{goal_id}")
+    assert archive_response.status_code == 200
+    assert archive_response.json()["archived"] is True
+
+
+def test_goal_planning_through_run_creates_goal():
+    response = client.post(
+        "/api/run",
+        json={"user_input": "Create a full implementation plan for a SaaS app", "task_type": "auto"},
+    )
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["task_type"] == "goal_planning"
+    assert body["goal_created"] is True
+    assert body["goal"]["goal_id"]
+    assert body["task_graph"]["tasks"]
+
+
+def test_custom_agent_builder_api_and_template():
+    templates_response = client.get("/api/agents/templates")
+    templates = templates_response.json()
+    assert templates_response.status_code == 200
+    assert any(template["name"] == "Resume Agent" for template in templates)
+
+    create_response = client.post("/api/agents/custom", json={"template_name": "Resume Agent"})
+    agent = create_response.json()
+    assert create_response.status_code == 200
+    assert agent["agent_id"]
+    assert agent["name"] == "Resume Agent"
+    assert agent["approval_level"] == "read_only"
+
+    list_response = client.get("/api/agents/custom")
+    assert any(item["agent_id"] == agent["agent_id"] for item in list_response.json())
+
+    update_response = client.patch(
+        f"/api/agents/custom/{agent['agent_id']}",
+        json={"description": "Updated resume specialist", "enabled": True},
+    )
+    assert update_response.status_code == 200
+    assert update_response.json()["description"] == "Updated resume specialist"
+
+    run_response = client.post(
+        "/api/run",
+        json={
+            "user_input": "Improve my resume for a software engineering internship",
+            "task_type": "auto",
+            "custom_agent_id": agent["agent_id"],
+        },
+    )
+    run_body = run_response.json()
+    assert run_response.status_code == 200
+    assert run_body["custom_agent_used"] is True
+    assert run_body["custom_agent"]["agent_id"] == agent["agent_id"]
+    assert any(output["agent_name"] == "Resume Agent" for output in run_body["agent_outputs"])
+
+    delete_response = client.delete(f"/api/agents/custom/{agent['agent_id']}")
+    assert delete_response.status_code == 200
+    assert delete_response.json()["disabled"] is True
+
+
+def test_v25_analytics_and_learning_fields():
+    analytics_response = client.get("/api/analytics")
+    analytics = analytics_response.json()
+    assert analytics_response.status_code == 200
+    assert "total_goals" in analytics
+    assert "custom_agents_count" in analytics
+    assert "task_completion_rate" in analytics
+
+    learning_response = client.get("/api/learning/report")
+    learning = learning_response.json()
+    assert learning_response.status_code == 200
+    assert "recommended_custom_agents" in learning
+    assert "workflow_improvements_for_goals" in learning
+    assert "recurring_goal_blockers" in learning

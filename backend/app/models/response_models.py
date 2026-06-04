@@ -209,6 +209,61 @@ class AutomationApplyResult(BaseModel):
     summary: str = ""
 
 
+class GoalTask(BaseModel):
+    task_id: str
+    title: str
+    description: str = ""
+    phase: str = "Planning"
+    status: str = "pending"
+    priority: str = "medium"
+    depends_on: list[str] = []
+    recommended_agent: str = "Strategy Agent"
+    estimated_effort: str = "medium"
+    requires_approval: bool = False
+    automation_supported: bool = False
+    created_at: str
+    updated_at: str
+    last_run_id: str | None = None
+    last_result_summary: str | None = None
+
+
+class GoalResult(BaseModel):
+    goal_id: str
+    title: str
+    description: str = ""
+    status: str = "active"
+    created_at: str
+    updated_at: str
+    source_session_id: str | None = None
+    source_message_id: str | None = None
+    progress_percent: int = 0
+    risk_level: str = "low"
+    recommended_agents: list[str] = []
+    tags: list[str] = []
+    next_best_task: str | None = None
+
+
+class TaskGraph(BaseModel):
+    goal_id: str
+    tasks: list[GoalTask] = []
+
+
+class CustomAgentResult(BaseModel):
+    agent_id: str
+    name: str
+    description: str = ""
+    role: str = ""
+    prompt: str = ""
+    tools_allowed: list[str] = []
+    model_preference: str = "default"
+    memory_scope: str = "session"
+    approval_level: str = "read_only"
+    created_at: str
+    updated_at: str
+    enabled: bool = True
+    template_name: str | None = None
+
+
 class RunResponse(BaseModel):
     task_id: str
     run_id: str
@@ -242,6 +297,13 @@ class RunResponse(BaseModel):
     automation_plan: AutomationPlan | None = None
     automation_status: str | None = None
     automation_apply_result: AutomationApplyResult | None = None
+    goal_created: bool = False
+    goal: GoalResult | None = None
+    task_graph: TaskGraph | None = None
+    goal_id: str | None = None
+    goal_task_id: str | None = None
+    custom_agent_used: bool = False
+    custom_agent: CustomAgentResult | None = None
     quality_gates: QualityGates = Field(default_factory=QualityGates)
     security_report: SecurityReport = Field(default_factory=SecurityReport)
     governance_events: list[GovernanceEvent] = Field(default_factory=list)

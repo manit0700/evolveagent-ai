@@ -7,6 +7,7 @@ from app.agents.file_analysis_agent import FileAnalysisAgent
 from app.agents.image_agent import ImageAgent
 from app.agents.implementation_planner_agent import ImplementationPlannerAgent
 from app.agents.judge_agent import JudgeAgent
+from app.agents.goal_planner_agent import GoalPlannerAgent
 from app.agents.logic_agent import LogicAgent
 from app.agents.memory_agent import MemoryAgent
 from app.agents.prompt_injection_firewall_agent import PromptInjectionFirewallAgent
@@ -31,6 +32,8 @@ from app.models.response_models import (
 )
 from app.config import settings
 from app.services.file_service import CODE_EXTENSIONS, FileService
+from app.services.custom_agent_service import CustomAgentService
+from app.services.goal_service import GoalService
 from app.services.governance_service import GovernanceService
 from app.services.llm_router import llm_router
 from app.services.permission_service import PermissionService
@@ -46,6 +49,9 @@ class MasterOrchestratorAgent:
         self.memory_agent = memory_agent
         self.dynamic_creator = DynamicAgentCreator()
         self.image_agent = ImageAgent()
+        self.goal_planner = GoalPlannerAgent()
+        self.goal_service = GoalService(storage)
+        self.custom_agents = CustomAgentService(storage)
         self.file_service = FileService(storage)
         self.file_analysis = FileAnalysisAgent()
         self.recording_service = RecordingService(storage)
@@ -102,6 +108,18 @@ class MasterOrchestratorAgent:
             )
         if task_type == "app_automation":
             return self.run_app_automation_workflow(
+                request,
+                task_id,
+                session_id,
+                assistant_message_id,
+                created_at,
+                confidence,
+                quality_gates,
+                security_report,
+                governance_events,
+            )
+        if task_type == "goal_planning":
+            return self.run_goal_planning_workflow(
                 request,
                 task_id,
                 session_id,
@@ -250,6 +268,39 @@ class MasterOrchestratorAgent:
                 f"\nFile summary:\n{file_summary.model_dump_json()}"
                 f"\n\nUploaded file extracted text, capped at 20,000 characters:\n{file_context}"
             )
+        custom_agent_config = None
+        if request.custom_agent_id:
+            custom_agent_output, custom_agent_config = self.custom_agents.run(
+                request.custom_agent_id,
+                request.user_input,
+                context=shared_context,
+            )
+            if custom_agent_output:
+                agent_outputs.append(custom_agent_output)
+                workflow_trace.append(
+                    WorkflowStep(
+                        step=len(workflow_trace) + 1,
+                        stage="Custom agent execution",
+                        agent_name=custom_agent_output.agent_name,
+                        status="complete" if custom_agent_output.success else "blocked",
+                        summary=self.summarize_step(custom_agent_output.output),
+                    )
+                )
+                shared_context += f"\n\n{custom_agent_output.agent_name} output:\n{custom_agent_output.output}"
+                governance_events.append(
+                    self.log_governance_event(
+                        task_id,
+                        session_id,
+                        task_type,
+                        action_type="custom_agent_used",
+                        tool_used="CustomAgentService",
+                        permission_level=(custom_agent_config or {}).get("approval_level", "read_only"),
+                        approved=False,
+                        blocked=not custom_agent_output.success,
+                        risk_score=0 if custom_agent_output.success else 55,
+                        reason=f"Custom agent {(custom_agent_config or {}).get('name', request.custom_agent_id)} participated in the workflow.",
+                    )
+                )
         for agent in self.specialists:
             agent_output = agent.run_with_metadata(request.user_input, context=shared_context)
             agent_outputs.append(agent_output)
@@ -403,6 +454,10 @@ class MasterOrchestratorAgent:
             recording_summary=recording_summary,
             action_items=recording_summary.action_items if recording_summary else [],
             decisions=recording_summary.decisions if recording_summary else [],
+            goal_id=request.goal_id,
+            goal_task_id=request.task_id,
+            custom_agent_used=bool(request.custom_agent_id and custom_agent_config),
+            custom_agent=custom_agent_config,
             quality_gates=quality_gates,
             security_report=security_report,
             governance_events=governance_events,
@@ -427,6 +482,9 @@ class MasterOrchestratorAgent:
                 "recordings_used": [item.get("filename") for item in recordings_used],
                 "recording_context_used": recording_context_used,
                 "recording_summary": recording_summary.model_dump() if recording_summary else None,
+                "goal_id": request.goal_id,
+                "goal_task_id": request.task_id,
+                "custom_agent_id": request.custom_agent_id,
                 "judge_score": judge_result.overall_score,
                 "final_output_summary": final_output[:280],
                 "created_at": created_at,
@@ -736,6 +794,18 @@ class MasterOrchestratorAgent:
                 "transcribe this",
                 "voice note summary",
             ],
+            "goal_planning": [
+                "build me an app",
+                "create a project plan",
+                "make a roadmap",
+                "plan this project",
+                "break this goal into tasks",
+                "help me finish this by tomorrow",
+                "create a full implementation plan",
+                "build an ai resume analyzer",
+                "create a saas app plan",
+                "make me a task graph",
+            ],
             "system_explanation": [
                 "evolveagent ai",
                 "multi-agent workflow",
@@ -768,6 +838,8 @@ class MasterOrchestratorAgent:
             return best_type, min(96, 86 + best_matches * 4)
         if best_type == "recording_summary":
             return best_type, min(94, 84 + best_matches * 4)
+        if best_type == "goal_planning":
+            return best_type, min(96, 86 + best_matches * 4)
         if best_type == "system_explanation":
             return best_type, min(98, 84 + best_matches * 4)
         return best_type, min(95, 72 + best_matches * 8)
@@ -960,6 +1032,167 @@ class MasterOrchestratorAgent:
                 "recommendations": response.evolution_notes,
                 "created_at": created_at,
             },
+        )
+        self.persist_agent_analytics(response)
+        self.persist_chat_session(request, response)
+        return response
+
+    def run_goal_planning_workflow(
+        self,
+        request: RunRequest,
+        task_id: str,
+        session_id: str,
+        assistant_message_id: str,
+        created_at: str,
+        confidence: int,
+        quality_gates: QualityGates | None = None,
+        security_report: SecurityReport | None = None,
+        governance_events: list[GovernanceEvent] | None = None,
+    ) -> RunResponse:
+        quality_gates = quality_gates or QualityGates()
+        security_report = security_report or SecurityReport()
+        governance_events = governance_events or []
+        task_type = "goal_planning"
+        goal_output, planner_result = self.goal_planner.run(request.user_input)
+        goal, task_graph = self.goal_service.create_from_plan(
+            planner_result,
+            source_session_id=session_id,
+            source_message_id=assistant_message_id,
+        )
+        governance_events.append(
+            self.log_governance_event(
+                task_id,
+                session_id,
+                task_type,
+                action_type="goal_created",
+                tool_used="GoalPlannerAgent",
+                permission_level="plan_only",
+                approved=False,
+                blocked=False,
+                risk_score=security_report.risk_score,
+                reason=f"Created Mission Control goal {goal.goal_id} with {len(task_graph.tasks)} task(s).",
+            )
+        )
+        agents_used = ["Goal Planner Agent", "Judge Agent", "Memory Agent"]
+        suggested_agents = planner_result.get("recommended_agents", [])
+        task_lines = "\n".join(
+            f"- [{task.status}] {task.phase}: {task.title} ({task.priority})"
+            for task in task_graph.tasks
+        )
+        final_output = (
+            f"## Mission Plan: {goal.title}\n\n"
+            f"{goal.description}\n\n"
+            f"### Tasks\n{task_lines}\n\n"
+            f"**Next best task:** {goal.next_best_task or 'Review the mission plan.'}"
+        )
+        workflow_trace = [
+            WorkflowStep(
+                step=1,
+                stage="Task received",
+                agent_name="Master Orchestrator Agent",
+                status="complete",
+                summary="Received a large-goal planning request.",
+            ),
+            WorkflowStep(
+                step=2,
+                stage="Classification",
+                agent_name="Master Orchestrator Agent",
+                status="complete",
+                summary=f"Classified request as goal_planning with {confidence}% confidence.",
+            ),
+            WorkflowStep(
+                step=3,
+                stage="Goal planning",
+                agent_name="Goal Planner Agent",
+                status="complete",
+                summary=goal.description,
+            ),
+            WorkflowStep(
+                step=4,
+                stage="Mission Control persistence",
+                agent_name="Goal Service",
+                status="complete",
+                summary=f"Saved goal and task graph with {len(task_graph.tasks)} task(s).",
+            ),
+            WorkflowStep(
+                step=5,
+                stage="Persistence",
+                agent_name=self.memory_agent.name,
+                status="complete",
+                summary="Saved goal-planning run to task history and memory.",
+            ),
+        ]
+        master_plan = MasterPlan(
+            detected_task_type=task_type,
+            confidence=confidence,
+            selected_agents=agents_used,
+            suggested_future_agents=suggested_agents,
+            execution_order=[
+                "Classify goal request",
+                "Goal Planner Agent",
+                "Goal Service",
+                "Judge Agent",
+                "Memory Agent",
+            ],
+            selection_reason="The request asks for a roadmap or task graph, so the Master Agent created a Mission Control plan.",
+            retry_policy="If the plan is too broad, ask the user to narrow the goal and regenerate the task graph.",
+        )
+        judge_result = self.judge.evaluate([goal_output], final_output=final_output).model_copy(
+            update={
+                "recommendation": "Mission plan is ready for review in Mission Control.",
+                "classification_correct": True,
+                "capability_supported": True,
+                "reason": "Goal Mode creates a task graph only; it does not execute code changes automatically.",
+            }
+        )
+        response = RunResponse(
+            task_id=task_id,
+            run_id=task_id,
+            session_id=session_id,
+            message_id=assistant_message_id,
+            task_type=task_type,
+            agents_used=agents_used,
+            suggested_agents=suggested_agents,
+            master_plan=master_plan,
+            workflow_trace=workflow_trace,
+            agent_outputs=[goal_output],
+            consensus_candidates=[],
+            judge_result=judge_result,
+            evolution_notes=[
+                "Use Mission Control to run goal tasks one at a time.",
+                "Tasks that edit files or run commands still require approval.",
+            ],
+            memory_saved=True,
+            goal_created=True,
+            goal=goal,
+            task_graph=task_graph,
+            goal_id=goal.goal_id,
+            quality_gates=quality_gates,
+            security_report=security_report,
+            governance_events=governance_events,
+            voice_used=request.voice_used,
+            voice_transcript=request.voice_transcript,
+            final_output=final_output,
+            created_at=created_at,
+        )
+        self.storage.append("tasks.json", response.model_dump())
+        self.memory_agent.remember(
+            {
+                "task_id": task_id,
+                "task_type": task_type,
+                "user_input": request.user_input,
+                "agents_used": agents_used,
+                "goal_id": goal.goal_id,
+                "goal_title": goal.title,
+                "task_count": len(task_graph.tasks),
+                "judge_score": judge_result.overall_score,
+                "final_output_summary": final_output[:280],
+                "created_at": created_at,
+            }
+        )
+        self.storage.append(
+            "evolution_logs.json",
+            {"task_id": task_id, "task_type": task_type, "recommendations": response.evolution_notes, "created_at": created_at},
         )
         self.persist_agent_analytics(response)
         self.persist_chat_session(request, response)
@@ -1289,6 +1522,12 @@ class MasterOrchestratorAgent:
                 "recording_context_used": response.recording_context_used,
                 "recording_task": response.recording_context_used,
                 "image_task": response.image_result is not None,
+                "goal_id": response.goal_id,
+                "goal_task_id": response.goal_task_id,
+                "goal_created": response.goal_created,
+                "custom_agent_used": response.custom_agent_used,
+                "custom_agent_id": response.custom_agent.agent_id if response.custom_agent else None,
+                "custom_agent_name": response.custom_agent.name if response.custom_agent else None,
                 "created_at": response.created_at,
             },
         )
@@ -1347,6 +1586,9 @@ class MasterOrchestratorAgent:
             "attached_recordings": attached_recordings,
             "voice_used": request.voice_used,
             "voice_transcript": request.voice_transcript,
+            "goal_id": request.goal_id,
+            "goal_task_id": request.task_id,
+            "custom_agent_id": request.custom_agent_id,
             "created_at": now,
         }
         assistant_message = {

@@ -14,6 +14,9 @@ class LearningAgent:
         feedback = self.storage.read_list("feedback.json")
         strategies = self.storage.read_list("workflow_strategies.json")
         model_stats = self.storage.read_list("model_performance.json")
+        goals = self.storage.read_list("goals.json")
+        task_graphs = self.storage.read_list("task_graphs.json")
+        custom_agents = self.storage.read_list("custom_agents.json")
         user_preferences = sorted(
             self.storage.read_list("user_preferences.json"),
             key=lambda item: item.get("score", 0),
@@ -69,6 +72,9 @@ class LearningAgent:
             ],
             "user_preference_patterns": user_preferences[:8],
             "recommended_next_actions": self.next_actions(worst_workflows, model_stats, user_preferences),
+            "recommended_custom_agents": self.custom_agent_recommendations(runs, custom_agents),
+            "workflow_improvements_for_goals": self.goal_workflow_suggestions(goals, task_graphs),
+            "recurring_goal_blockers": self.goal_blockers(task_graphs),
             "active_prompt_versions": [
                 item for item in self.storage.read_list("prompt_versions.json") if item.get("status") == "active"
             ],
@@ -199,3 +205,58 @@ class LearningAgent:
             actions.append(f"Consider formatting future answers around the observed preference: {top}.")
         actions.append("Keep prompt changes in proposed status until manually approved.")
         return actions
+
+    @staticmethod
+    def custom_agent_recommendations(runs: list[dict], custom_agents: list[dict]) -> list[dict]:
+        if not custom_agents:
+            return [{"recommendation": "Create custom agents from templates for repeated workflows.", "agent_name": None}]
+        usage = Counter(item.get("custom_agent_name") for item in runs if item.get("custom_agent_used"))
+        enabled = [item for item in custom_agents if item.get("enabled", True)]
+        rows = []
+        for agent in enabled[:6]:
+            count = usage.get(agent.get("name"), 0)
+            rows.append(
+                {
+                    "agent_name": agent.get("name"),
+                    "usage_count": count,
+                    "recommendation": (
+                        f"Keep using {agent.get('name')} for related goal tasks."
+                        if count
+                        else f"Try {agent.get('name')} on a suitable Mission Control task to collect performance data."
+                    ),
+                }
+            )
+        return rows
+
+    @staticmethod
+    def goal_workflow_suggestions(goals: list[dict], task_graphs: list[dict]) -> list[str]:
+        tasks = [task for graph in task_graphs for task in graph.get("tasks", [])]
+        if not goals:
+            return ["No goals created yet. Use Goal Mode to build a task graph from a larger objective."]
+        suggestions = []
+        pending = sum(1 for task in tasks if task.get("status") == "pending")
+        blocked = sum(1 for task in tasks if task.get("status") == "blocked")
+        if pending:
+            suggestions.append(f"{pending} Mission Control task(s) are pending; run the highest-priority next task.")
+        if blocked:
+            suggestions.append(f"{blocked} task(s) are blocked; review dependencies or approval requirements.")
+        completed_goals = sum(1 for goal in goals if goal.get("status") == "completed")
+        if completed_goals:
+            suggestions.append(f"{completed_goals} completed goal(s) can be used as examples for future task graph structure.")
+        return suggestions or ["Goal workflows look healthy. Continue collecting task outcomes and feedback."]
+
+    @staticmethod
+    def goal_blockers(task_graphs: list[dict]) -> list[dict]:
+        blocked = [
+            {
+                "goal_id": graph.get("goal_id"),
+                "task_id": task.get("task_id"),
+                "title": task.get("title"),
+                "phase": task.get("phase"),
+                "reason": "Task status is blocked.",
+            }
+            for graph in task_graphs
+            for task in graph.get("tasks", [])
+            if task.get("status") == "blocked"
+        ]
+        return blocked[:8] or [{"reason": "No recurring goal blockers detected yet.", "count": 0}]
