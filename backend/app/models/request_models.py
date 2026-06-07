@@ -10,6 +10,7 @@ class RunRequest(BaseModel):
     recording_ids: list[str] = Field(default_factory=list, description="Uploaded recording IDs to include as transcript context.")
     voice_used: bool = Field(default=False, description="Whether the request came from browser voice transcription.")
     voice_transcript: str | None = Field(default=None, description="Browser-transcribed voice command text, if used.")
+    workspace_id: str | None = Field(default=None, description="Optional workspace ID. Omit to use the default workspace.")
     goal_id: str | None = Field(default=None, description="Optional Mission Control goal ID associated with this run.")
     task_id: str | None = Field(default=None, description="Optional Mission Control task ID associated with this run.")
     custom_agent_id: str | None = Field(default=None, description="Optional custom agent ID to include in the workflow.")
@@ -21,12 +22,14 @@ class RenameChatRequest(BaseModel):
 
 class CreateChatRequest(BaseModel):
     title: str | None = Field(default=None, max_length=80)
+    workspace_id: str | None = None
 
 
 class FeedbackRequest(BaseModel):
     session_id: str
     message_id: str
     run_id: str
+    workspace_id: str | None = None
     rating: str = Field(..., pattern="^(helpful|not_helpful|saved)$")
     comment: str | None = Field(default=None, max_length=1000)
 
@@ -51,6 +54,7 @@ class CreateGoalRequest(BaseModel):
     prompt: str | None = Field(default=None, max_length=4000)
     title: str | None = Field(default=None, max_length=120)
     description: str | None = Field(default=None, max_length=4000)
+    workspace_id: str | None = None
     source_session_id: str | None = None
     source_message_id: str | None = None
     tags: list[str] = Field(default_factory=list)
@@ -89,6 +93,7 @@ class UpdateGoalTaskRequest(BaseModel):
 
 
 class CreateCustomAgentRequest(BaseModel):
+    workspace_id: str | None = None
     name: str | None = Field(default=None, max_length=100)
     description: str | None = Field(default="", max_length=1000)
     role: str | None = Field(default="", max_length=1000)
@@ -111,3 +116,34 @@ class UpdateCustomAgentRequest(BaseModel):
     memory_scope: str | None = Field(default=None, pattern="^(none|session|workspace|global)$")
     approval_level: str | None = Field(default=None, pattern="^(read_only|plan_only|approve_to_edit|approve_to_run|blocked)$")
     enabled: bool | None = None
+
+
+class CreateWorkspaceRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    description: str | None = Field(default="", max_length=1000)
+    tags: list[str] = Field(default_factory=list)
+
+
+class UpdateWorkspaceRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    description: str | None = Field(default=None, max_length=1000)
+    status: str | None = Field(default=None, pattern="^(active|archived)$")
+    tags: list[str] | None = None
+
+
+class CreateWorkspaceMemoryRequest(BaseModel):
+    type: str = Field(default="summary", pattern="^(preference|project_fact|decision|summary|task_result|learned_pattern)$")
+    title: str = Field(..., min_length=1, max_length=160)
+    content: str = Field(..., min_length=1, max_length=5000)
+    source: str = Field(default="manual", pattern="^(chat|file|recording|goal|feedback|manual)$")
+    importance: str = Field(default="medium", pattern="^(low|medium|high)$")
+    tags: list[str] = Field(default_factory=list)
+
+
+class UpdateWorkspaceMemoryRequest(BaseModel):
+    type: str | None = Field(default=None, pattern="^(preference|project_fact|decision|summary|task_result|learned_pattern)$")
+    title: str | None = Field(default=None, min_length=1, max_length=160)
+    content: str | None = Field(default=None, min_length=1, max_length=5000)
+    source: str | None = Field(default=None, pattern="^(chat|file|recording|goal|feedback|manual)$")
+    importance: str | None = Field(default=None, pattern="^(low|medium|high)$")
+    tags: list[str] | None = None

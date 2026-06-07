@@ -20,6 +20,7 @@ class UserPreferenceService:
         content = (message or {}).get("content", "") or result.get("final_output", "")
         comment = (feedback.get("comment") or "").lower()
         task_type = result.get("task_type", "unknown")
+        workspace_id = feedback.get("workspace_id") or result.get("workspace_id")
         inferred = self.infer_preferences(content, comment, task_type)
         if not inferred:
             return self.storage.read_list("user_preferences.json")
@@ -27,10 +28,18 @@ class UserPreferenceService:
         preferences = self.storage.read_list("user_preferences.json")
         now = datetime.now(UTC).isoformat()
         for name, evidence in inferred:
-            record = next((item for item in preferences if item.get("preference") == name), None)
+            record = next(
+                (
+                    item
+                    for item in preferences
+                    if item.get("preference") == name and item.get("workspace_id") == workspace_id
+                ),
+                None,
+            )
             if record is None:
                 record = {
                     "preference": name,
+                    "workspace_id": workspace_id,
                     "score": 0,
                     "evidence": [],
                     "last_updated": now,

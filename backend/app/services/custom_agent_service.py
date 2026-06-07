@@ -128,6 +128,7 @@ class CustomAgentService:
                 }
         agent = CustomAgentResult(
             agent_id=str(uuid4()),
+            workspace_id=data.get("workspace_id"),
             name=data.get("name") or "Custom Agent",
             description=data.get("description") or "",
             role=data.get("role") or "",
@@ -146,8 +147,11 @@ class CustomAgentService:
         self.storage.write_list("custom_agents.json", items)
         return agent
 
-    def list(self) -> list[dict]:
-        return sorted(self.storage.read_list("custom_agents.json"), key=lambda item: item.get("updated_at") or "", reverse=True)
+    def list(self, workspace_id: str | None = None) -> list[dict]:
+        items = self.storage.read_list("custom_agents.json")
+        if workspace_id:
+            items = [item for item in items if item.get("workspace_id") == workspace_id]
+        return sorted(items, key=lambda item: item.get("updated_at") or "", reverse=True)
 
     def get(self, agent_id: str) -> dict | None:
         return next((item for item in self.storage.read_list("custom_agents.json") if item.get("agent_id") == agent_id), None)

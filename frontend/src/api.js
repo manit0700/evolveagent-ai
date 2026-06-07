@@ -29,10 +29,20 @@ export async function runWorkflow(payload) {
   return response.json()
 }
 
-export async function uploadFiles(files, sessionId) {
+function query(params = {}) {
+  const search = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') search.set(key, value)
+  })
+  const text = search.toString()
+  return text ? `?${text}` : ''
+}
+
+export async function uploadFiles(files, sessionId, workspaceId) {
   const formData = new FormData()
   Array.from(files).forEach((file) => formData.append('files', file))
   if (sessionId) formData.append('session_id', sessionId)
+  if (workspaceId) formData.append('workspace_id', workspaceId)
 
   let response
   try {
@@ -51,10 +61,11 @@ export async function uploadFiles(files, sessionId) {
   return response.json()
 }
 
-export async function uploadRecordings(files, sessionId) {
+export async function uploadRecordings(files, sessionId, workspaceId) {
   const formData = new FormData()
   Array.from(files).forEach((file) => formData.append('files', file))
   if (sessionId) formData.append('session_id', sessionId)
+  if (workspaceId) formData.append('workspace_id', workspaceId)
 
   let response
   try {
@@ -93,9 +104,9 @@ export async function getProviderStatus() {
   }
 }
 
-export async function getAnalytics() {
+export async function getAnalytics(workspaceId) {
   try {
-    const response = await fetch(`${API_BASE}/api/analytics`)
+    const response = await fetch(`${API_BASE}/api/analytics${query({ workspace_id: workspaceId })}`)
     if (!response.ok) return null
     return response.json()
   } catch {
@@ -115,9 +126,9 @@ export async function sendFeedback(payload) {
   return response.json()
 }
 
-export async function getChats() {
+export async function getChats(workspaceId) {
   try {
-    const response = await fetch(`${API_BASE}/api/chats`)
+    const response = await fetch(`${API_BASE}/api/chats${query({ workspace_id: workspaceId })}`)
     if (!response.ok) return []
     return response.json()
   } catch {
@@ -133,11 +144,11 @@ export async function getChat(sessionId) {
   return response.json()
 }
 
-export async function createChat(title = 'New Chat') {
+export async function createChat(title = 'New Chat', workspaceId = null) {
   const response = await fetch(`${API_BASE}/api/chats`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title }),
+    body: JSON.stringify({ title, workspace_id: workspaceId }),
   })
   if (!response.ok) {
     throw new Error(`Chat creation failed with status ${response.status}`)
@@ -189,9 +200,9 @@ export async function applyAutomation(payload) {
   return response.json()
 }
 
-export async function getLearningReport() {
+export async function getLearningReport(workspaceId) {
   try {
-    const response = await fetch(`${API_BASE}/api/learning/report`)
+    const response = await fetch(`${API_BASE}/api/learning/report${query({ workspace_id: workspaceId })}`)
     if (!response.ok) return null
     return response.json()
   } catch {
@@ -229,9 +240,9 @@ export async function rollbackPromptVersion(payload) {
   return response.json()
 }
 
-export async function getGoals() {
+export async function getGoals(workspaceId) {
   try {
-    const response = await fetch(`${API_BASE}/api/goals`)
+    const response = await fetch(`${API_BASE}/api/goals${query({ workspace_id: workspaceId })}`)
     if (!response.ok) return []
     return response.json()
   } catch {
@@ -303,9 +314,9 @@ export async function getAgentTemplates() {
   }
 }
 
-export async function getCustomAgents() {
+export async function getCustomAgents(workspaceId) {
   try {
-    const response = await fetch(`${API_BASE}/api/agents/custom`)
+    const response = await fetch(`${API_BASE}/api/agents/custom${query({ workspace_id: workspaceId })}`)
     if (!response.ok) return []
     return response.json()
   } catch {
@@ -338,5 +349,82 @@ export async function deleteCustomAgent(agentId) {
     method: 'DELETE',
   })
   if (!response.ok) throw new Error(`Custom agent delete failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function getWorkspaces() {
+  try {
+    const response = await fetch(`${API_BASE}/api/workspaces`)
+    if (!response.ok) return []
+    return response.json()
+  } catch {
+    return []
+  }
+}
+
+export async function createWorkspace(payload) {
+  const response = await fetch(`${API_BASE}/api/workspaces`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Workspace creation failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function updateWorkspace(workspaceId, payload) {
+  const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Workspace update failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function deleteWorkspace(workspaceId) {
+  const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}`, {
+    method: 'DELETE',
+  })
+  if (!response.ok) throw new Error(`Workspace archive failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function getWorkspaceMemory(workspaceId, params = {}) {
+  if (!workspaceId) return []
+  try {
+    const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/memory${query(params)}`)
+    if (!response.ok) return []
+    return response.json()
+  } catch {
+    return []
+  }
+}
+
+export async function createWorkspaceMemory(workspaceId, payload) {
+  const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/memory`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Memory creation failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function updateWorkspaceMemory(workspaceId, memoryId, payload) {
+  const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/memory/${memoryId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Memory update failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function deleteWorkspaceMemory(workspaceId, memoryId) {
+  const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/memory/${memoryId}`, {
+    method: 'DELETE',
+  })
+  if (!response.ok) throw new Error(`Memory delete failed with status ${response.status}`)
   return response.json()
 }

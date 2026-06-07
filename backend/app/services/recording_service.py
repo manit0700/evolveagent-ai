@@ -23,12 +23,18 @@ class RecordingService:
         self.transcription = TranscriptionService()
         RECORDINGS_DIR.mkdir(parents=True, exist_ok=True)
 
-    async def process_uploads(self, files: list[UploadFile], session_id: str | None = None) -> list[dict]:
+    async def process_uploads(
+        self,
+        files: list[UploadFile],
+        session_id: str | None = None,
+        workspace_id: str | None = None,
+    ) -> list[dict]:
         if len(files) > MAX_RECORDINGS_PER_UPLOAD:
             return [
                 {
                     "recording_id": str(uuid4()),
                     "session_id": session_id,
+                    "workspace_id": workspace_id,
                     "filename": "recording batch",
                     "content_type": None,
                     "extension": "",
@@ -39,9 +45,17 @@ class RecordingService:
                     "error": f"Upload limit is {MAX_RECORDINGS_PER_UPLOAD} recordings per request.",
                 }
             ]
-        return [await self.process_recording(file, session_id=session_id) for file in files]
+        return [
+            await self.process_recording(file, session_id=session_id, workspace_id=workspace_id)
+            for file in files
+        ]
 
-    async def process_recording(self, file: UploadFile, session_id: str | None = None) -> dict:
+    async def process_recording(
+        self,
+        file: UploadFile,
+        session_id: str | None = None,
+        workspace_id: str | None = None,
+    ) -> dict:
         recording_id = str(uuid4())
         original_filename = file.filename or "uploaded-recording"
         safe_filename = self.safe_filename(original_filename)
@@ -54,6 +68,7 @@ class RecordingService:
         metadata = {
             "recording_id": recording_id,
             "session_id": session_id,
+            "workspace_id": workspace_id,
             "filename": original_filename,
             "safe_filename": safe_filename,
             "stored_path": str(stored_path),
@@ -110,6 +125,7 @@ class RecordingService:
         return {
             "recording_id": metadata["recording_id"],
             "session_id": metadata.get("session_id"),
+            "workspace_id": metadata.get("workspace_id"),
             "filename": metadata["filename"],
             "content_type": metadata.get("content_type"),
             "extension": metadata["extension"],
@@ -156,6 +172,7 @@ class RecordingService:
             recordings_used.append(
                 {
                     "recording_id": metadata["recording_id"],
+                    "workspace_id": metadata.get("workspace_id"),
                     "filename": metadata["filename"],
                     "content_type": metadata.get("content_type"),
                     "extension": metadata["extension"],

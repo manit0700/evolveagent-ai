@@ -32,6 +32,8 @@ class StorageService:
             "goals.json",
             "task_graphs.json",
             "custom_agents.json",
+            "workspaces.json",
+            "workspace_memory.json",
         ):
             self._ensure_file(filename)
 

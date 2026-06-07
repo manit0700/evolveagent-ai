@@ -1,12 +1,12 @@
 # EvolveAgent AI Demo Guide
 
-Use this guide for a 2-minute portfolio, class, or interview demo of **EvolveAgent AI MVP v2.5**.
+Use this guide for a 2-minute portfolio, class, or interview demo of **EvolveAgent AI MVP v2.6**.
 
 ## 2-Minute Demo Script
 
 **0:00-0:15 — Introduce the project**
 
-EvolveAgent AI is a voice-capable multi-agent AI workspace with real multi-LLM consensus and an advanced adaptive learning layer. Instead of sending every request directly to one chatbot, it uses a Master Orchestrator Agent to classify the task, route it through specialist agents, compare Deep Mode candidates when requested, evaluate the output, store memory and analytics, and return one clean final answer.
+EvolveAgent AI is a workspace-aware, voice-capable multi-agent AI workspace with project memory, real multi-LLM consensus, and an advanced adaptive learning layer. Instead of sending every request directly to one chatbot, it uses a Master Orchestrator Agent to classify the task, retrieve relevant workspace memory, route it through specialist agents, compare Deep Mode candidates when requested, evaluate the output, store memory and analytics, and return one clean final answer.
 
 **0:15-0:35 — Show Simple Mode**
 
@@ -34,6 +34,10 @@ Click **View details** or switch to **Developer Mode**. Show:
 
 Explain that Developer Mode proves the orchestration behind the clean chat UI.
 
+**Workspace moment — Show project context**
+
+In the left sidebar, create or select a workspace. Open the Memory panel, add a short project fact, then ask a related prompt. In Developer Mode, show that workspace memory was used as scoped context. Explain that v2.6 separates chats, goals, agents, files, recordings, analytics, learning, and memory by project.
+
 **0:55-1:15 — Show file upload**
 
 Upload a resume, README, CSV, or code file and ask:
@@ -52,7 +56,7 @@ Run:
 Generate an image prompt for a futuristic AI assistant.
 ```
 
-Explain that MVP v2.5 uses a mock image provider, cleans prompt wording, rewrites protected-character requests safely, and returns a preview without calling a real image API.
+Explain that MVP v2.6 uses a mock image provider, cleans prompt wording, rewrites protected-character requests safely, and returns a preview without calling a real image API.
 
 **1:30-1:45 — Show recording intelligence**
 
@@ -62,7 +66,7 @@ Upload an MP3, M4A, WAV, MP4, or WEBM recording and ask:
 Summarize this recording and list action items.
 ```
 
-Explain that v2.5 stores the recording, transcribes it in mock or OpenAI mode, runs the Recording Analysis Agent, and returns summaries, action items, decisions, study notes, and Q&A.
+Explain that v2.6 stores the recording, transcribes it in mock or OpenAI mode, runs the Recording Analysis Agent, and returns summaries, action items, decisions, study notes, and Q&A.
 
 **1:45-2:00 — Show safe app automation**
 
@@ -91,6 +95,7 @@ Also show the Developer Mode Learning Report if time permits.
 **Close with value**
 
 This project demonstrates a realistic multi-agent architecture with task routing, model fallback, file analysis, recording intelligence, mock image generation, voice input, Mission Control goal/task graphs, custom agent templates, approval-gated automation planning, per-agent evaluation, feedback, analytics, and orchestration-level learning reports.
+MVP v2.6 adds workspace-scoped project memory so each project can keep its own chats, files, goals, custom agents, analytics, and learning context.
 
 ## What to Show First
 
@@ -108,20 +113,21 @@ Then switch to Developer Mode to show the system depth.
 ## Best Demo Prompt Order
 
 1. `Explain how EvolveAgent AI works.`
-2. `Create a 2-minute project demo script.`
-3. Upload a resume or README and ask: `Review this file and give improvements.`
-4. `Generate an image prompt for a futuristic AI assistant.`
-5. Upload a recording and ask: `Summarize this recording and list action items.`
-6. Turn on Deep Mode and ask: `Compare the best plan for improving this project demo.`
-7. `Build an AI resume analyzer app.`
-8. Open Mission Control and run one task.
-9. Create a custom `Resume Agent` from the template list.
-10. `Add dark mode to this app.`
-11. `Run tests for this project.`
-12. `Explain the current app architecture.`
-13. Upload a document and ask: `Summarize this uploaded document.`
-14. Click feedback buttons and open Analytics.
-15. Switch to Developer Mode and show consensus, per-agent evaluation, goals, custom agents, and learning report.
+2. Create a workspace named `Resume Projects` and add memory: `This workspace prefers concise bullet points and software engineering internship examples.`
+3. `Create a 2-minute project demo script.`
+4. Upload a resume or README and ask: `Review this file and give improvements.`
+5. `Generate an image prompt for a futuristic AI assistant.`
+6. Upload a recording and ask: `Summarize this recording and list action items.`
+7. Turn on Deep Mode and ask: `Compare the best plan for improving this project demo.`
+8. `Build an AI resume analyzer app.`
+9. Open Mission Control and run one task.
+10. Create a custom `Resume Agent` from the template list.
+11. `Add dark mode to this app.`
+12. `Run tests for this project.`
+13. `Explain the current app architecture.`
+14. Upload a document and ask: `Summarize this uploaded document.`
+15. Click feedback buttons and open Analytics.
+16. Switch to Developer Mode and show consensus, workspace memory, per-agent evaluation, goals, custom agents, and learning report.
 
 ## How to Explain Mission Control
 
@@ -190,13 +196,13 @@ Specialist agents divide the work:
 
 ## How to Explain Real Multi-LLM Consensus
 
-The app can use real OpenAI text mode when `OPENAI_API_KEY` is configured. In Deep Mode, MVP v2.5 asks the LLM Router for configured consensus providers, such as OpenAI, Claude, Gemini, and Mistral. Each provider creates an independent candidate answer, the Judge Agent compares them, and the Writing Agent synthesizes one final answer.
+The app can use real OpenAI text mode when `OPENAI_API_KEY` is configured. In Deep Mode, MVP v2.6 asks the LLM Router for configured consensus providers, such as OpenAI, Claude, Gemini, and Mistral. Each provider creates an independent candidate answer, the Judge Agent compares them, and the Writing Agent synthesizes one final answer.
 
 If only OpenAI is configured, Deep Mode compares OpenAI with mock. If no keys are present, or if a provider call fails, candidates fall back to mock mode. This keeps the demo stable and lets the full workflow run without paid API access.
 
 Developer Mode shows each candidate, provider/model metadata, fallback status, selected winner, and judge comparison notes. Simple Mode only shows the final answer.
 
-Image generation intentionally stays on `mock_image` in MVP v2.5.
+Image generation intentionally stays on `mock_image` in MVP v2.6.
 
 ## How to Explain File Upload
 
@@ -215,7 +221,7 @@ Limitations:
 
 Say:
 
-EvolveAgent AI v2.5 supports recording upload for MP3, M4A, WAV, MP4, and WEBM files. The backend validates the recording, stores it locally, transcribes it using mock mode or OpenAI transcription mode, and runs a Recording Analysis Agent. The output includes a short summary, detailed summary, key points, action items, decisions, follow-up tasks, study notes, and Q&A.
+EvolveAgent AI v2.6 supports recording upload for MP3, M4A, WAV, MP4, and WEBM files. The backend validates the recording, stores it locally, transcribes it using mock mode or OpenAI transcription mode, and runs a Recording Analysis Agent. The output includes a short summary, detailed summary, key points, action items, decisions, follow-up tasks, study notes, and Q&A.
 
 Limitations:
 

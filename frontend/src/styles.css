@@ -187,6 +187,88 @@ h2 {
   padding: 12px;
 }
 
+.workspace-card,
+.memory-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: #171b22;
+  padding: 12px;
+}
+
+.workspace-card select,
+.memory-controls input,
+.memory-controls select {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: #11161d;
+  color: #edf1f5;
+  padding: 0 9px;
+}
+
+.workspace-card p,
+.memory-card p {
+  color: #aab5be;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.workspace-actions,
+.memory-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.memory-controls {
+  grid-template-columns: 1fr;
+}
+
+.workspace-actions button,
+.secondary-button {
+  min-height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.055);
+  color: #d7e1e8;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.workspace-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.memory-card {
+  display: grid;
+  gap: 5px;
+  border: 1px solid rgba(154, 210, 141, 0.14);
+  border-radius: 9px;
+  background: rgba(154, 210, 141, 0.045);
+  padding: 10px;
+}
+
+.memory-card strong {
+  color: #eef5ed;
+  font-size: 13px;
+}
+
+.memory-card span {
+  color: #9ad28d;
+  font-size: 11px;
+  font-weight: 850;
+}
+
 .analytics-toggle {
   display: flex;
   align-items: center;

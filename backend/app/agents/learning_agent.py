@@ -9,16 +9,16 @@ class LearningAgent:
     def __init__(self, storage: StorageService):
         self.storage = storage
 
-    def report(self) -> dict:
-        runs = self.storage.read_list("agent_analytics.json")
-        feedback = self.storage.read_list("feedback.json")
-        strategies = self.storage.read_list("workflow_strategies.json")
-        model_stats = self.storage.read_list("model_performance.json")
-        goals = self.storage.read_list("goals.json")
-        task_graphs = self.storage.read_list("task_graphs.json")
-        custom_agents = self.storage.read_list("custom_agents.json")
+    def report(self, workspace_id: str | None = None) -> dict:
+        runs = self.filter_workspace(self.storage.read_list("agent_analytics.json"), workspace_id)
+        feedback = self.filter_workspace(self.storage.read_list("feedback.json"), workspace_id)
+        strategies = self.filter_workspace(self.storage.read_list("workflow_strategies.json"), workspace_id)
+        model_stats = self.filter_workspace(self.storage.read_list("model_performance.json"), workspace_id)
+        goals = self.filter_workspace(self.storage.read_list("goals.json"), workspace_id)
+        task_graphs = self.filter_workspace(self.storage.read_list("task_graphs.json"), workspace_id)
+        custom_agents = self.filter_workspace(self.storage.read_list("custom_agents.json"), workspace_id)
         user_preferences = sorted(
-            self.storage.read_list("user_preferences.json"),
+            self.filter_workspace(self.storage.read_list("user_preferences.json"), workspace_id),
             key=lambda item: item.get("score", 0),
             reverse=True,
         )
@@ -55,6 +55,7 @@ class LearningAgent:
         worst_workflows = sorted(strategies, key=lambda item: item.get("average_score", 100))[:5]
 
         return {
+            "workspace_id": workspace_id,
             "total_runs_analyzed": len(runs),
             "strongest_agents": averaged_agents[:5],
             "weakest_agents": list(reversed(averaged_agents[-5:])),
@@ -82,6 +83,12 @@ class LearningAgent:
                 item for item in self.storage.read_list("prompt_versions.json") if item.get("status") == "proposed"
             ],
         }
+
+    @staticmethod
+    def filter_workspace(items: list[dict], workspace_id: str | None = None) -> list[dict]:
+        if not workspace_id:
+            return items
+        return [item for item in items if item.get("workspace_id") == workspace_id]
 
     @staticmethod
     def task_agent_rankings(agent_scores_by_task: dict, strongest: bool) -> list[dict]:

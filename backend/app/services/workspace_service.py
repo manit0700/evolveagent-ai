@@ -1,0 +1,194 @@
+from __future__ import annotations
+
+from collections import Counter
+from datetime import UTC, datetime
+from uuid import uuid4
+
+from app.services.storage_service import StorageService
+
+
+class WorkspaceService:
+    default_name = "Default Workspace"
+
+    def __init__(self, storage: StorageService):
+        self.storage = storage
+        self.ensure_default_workspace()
+
+    def ensure_default_workspace(self) -> dict:
+        workspaces = self.storage.read_list("workspaces.json")
+        default = next((item for item in workspaces if item.get("default")), None)
+        if default:
+            return default
+        now = datetime.now(UTC).isoformat()
+        workspace = {
+            "workspace_id": str(uuid4()),
+            "name": self.default_name,
+            "description": "Default project context for existing chats, files, goals, agents, and memory.",
+            "created_at": now,
+            "updated_at": now,
+            "status": "active",
+            "tags": [],
+            "default": True,
+        }
+        workspaces.append(workspace)
+        self.storage.write_list("workspaces.json", workspaces)
+        return workspace
+
+    def default_workspace_id(self) -> str:
+        return self.ensure_default_workspace()["workspace_id"]
+
+    def resolve_workspace_id(self, workspace_id: str | None = None) -> str:
+        if workspace_id and self.get_workspace(workspace_id):
+            return workspace_id
+        return self.default_workspace_id()
+
+    def create_workspace(self, data: dict) -> dict:
+        now = datetime.now(UTC).isoformat()
+        workspace = {
+            "workspace_id": str(uuid4()),
+            "name": data.get("name") or "New Workspace",
+            "description": data.get("description") or "",
+            "created_at": now,
+            "updated_at": now,
+            "status": "active",
+            "tags": data.get("tags", []),
+            "default": False,
+        }
+        workspaces = self.storage.read_list("workspaces.json")
+        workspaces.append(workspace)
+        self.storage.write_list("workspaces.json", workspaces)
+        return workspace
+
+    def list_workspaces(self, include_archived: bool = False) -> list[dict]:
+        self.ensure_default_workspace()
+        workspaces = self.storage.read_list("workspaces.json")
+        if not include_archived:
+            workspaces = [item for item in workspaces if item.get("status") != "archived"]
+        return sorted(workspaces, key=lambda item: item.get("updated_at") or "", reverse=True)
+
+    def get_workspace(self, workspace_id: str) -> dict | None:
+        return next((item for item in self.storage.read_list("workspaces.json") if item.get("workspace_id") == workspace_id), None)
+
+    def update_workspace(self, workspace_id: str, updates: dict) -> dict | None:
+        workspaces = self.storage.read_list("workspaces.json")
+        workspace = next((item for item in workspaces if item.get("workspace_id") == workspace_id), None)
+        if workspace is None:
+            return None
+        for key in ("name", "description", "status", "tags"):
+            if key in updates and updates[key] is not None:
+                workspace[key] = updates[key]
+        workspace["updated_at"] = datetime.now(UTC).isoformat()
+        self.storage.write_list("workspaces.json", workspaces)
+        return workspace
+
+    def archive_workspace(self, workspace_id: str) -> dict | None:
+        workspace = self.get_workspace(workspace_id)
+        if workspace and workspace.get("default"):
+            return workspace
+        return self.update_workspace(workspace_id, {"status": "archived"})
+
+    def create_memory(self, workspace_id: str, data: dict) -> dict:
+        now = datetime.now(UTC).isoformat()
+        memory = {
+            "memory_id": str(uuid4()),
+            "workspace_id": self.resolve_workspace_id(workspace_id),
+            "type": data.get("type") or "summary",
+            "title": data.get("title") or "Workspace memory",
+            "content": data.get("content") or "",
+            "source": data.get("source") or "manual",
+            "created_at": now,
+            "updated_at": now,
+            "importance": data.get("importance") or "medium",
+            "tags": data.get("tags", []),
+        }
+        self.storage.append("workspace_memory.json", memory)
+        return memory
+
+    def list_memory(self, workspace_id: str, query: str | None = None, memory_type: str | None = None) -> list[dict]:
+        resolved = self.resolve_workspace_id(workspace_id)
+        items = [item for item in self.storage.read_list("workspace_memory.json") if item.get("workspace_id") == resolved]
+        if memory_type:
+            items = [item for item in items if item.get("type") == memory_type]
+        if query:
+            lowered = query.lower()
+            items = [
+                item
+                for item in items
+                if lowered in f"{item.get('title', '')} {item.get('content', '')} {' '.join(item.get('tags', []))}".lower()
+            ]
+        return sorted(items, key=lambda item: item.get("updated_at") or item.get("created_at") or "", reverse=True)
+
+    def get_memory(self, workspace_id: str, memory_id: str) -> dict | None:
+        resolved = self.resolve_workspace_id(workspace_id)
+        return next(
+            (
+                item
+                for item in self.storage.read_list("workspace_memory.json")
+                if item.get("workspace_id") == resolved and item.get("memory_id") == memory_id
+            ),
+            None,
+        )
+
+    def update_memory(self, workspace_id: str, memory_id: str, updates: dict) -> dict | None:
+        resolved = self.resolve_workspace_id(workspace_id)
+        memories = self.storage.read_list("workspace_memory.json")
+        memory = next((item for item in memories if item.get("workspace_id") == resolved and item.get("memory_id") == memory_id), None)
+        if memory is None:
+            return None
+        for key in ("type", "title", "content", "source", "importance", "tags"):
+            if key in updates and updates[key] is not None:
+                memory[key] = updates[key]
+        memory["updated_at"] = datetime.now(UTC).isoformat()
+        self.storage.write_list("workspace_memory.json", memories)
+        return memory
+
+    def delete_memory(self, workspace_id: str, memory_id: str) -> bool:
+        resolved = self.resolve_workspace_id(workspace_id)
+        memories = self.storage.read_list("workspace_memory.json")
+        next_memories = [
+            item
+            for item in memories
+            if not (item.get("workspace_id") == resolved and item.get("memory_id") == memory_id)
+        ]
+        if len(next_memories) == len(memories):
+            return False
+        self.storage.write_list("workspace_memory.json", next_memories)
+        return True
+
+    def relevant_memory(self, workspace_id: str, user_input: str, limit: int = 6, char_limit: int = 4000) -> tuple[str, list[dict]]:
+        words = {
+            token.strip(".,:;!?()[]{}").lower()
+            for token in user_input.split()
+            if len(token.strip(".,:;!?()[]{}")) > 3
+        }
+        importance_weight = {"high": 4, "medium": 2, "low": 1}
+        scored = []
+        for item in self.list_memory(workspace_id):
+            haystack = f"{item.get('title', '')} {item.get('content', '')} {' '.join(item.get('tags', []))}".lower()
+            score = importance_weight.get(item.get("importance", "medium"), 2)
+            if words:
+                score += sum(1 for word in words if word in haystack)
+            if score > 1 or item.get("importance") == "high":
+                scored.append((score, item))
+        scored.sort(key=lambda row: row[0], reverse=True)
+        selected = [item for _, item in scored[:limit]]
+        parts = []
+        remaining = char_limit
+        for item in selected:
+            text = f"{item.get('type')}: {item.get('title')}\n{item.get('content')}"
+            clipped = text[:remaining]
+            if not clipped:
+                break
+            parts.append(clipped)
+            remaining -= len(clipped)
+        return "\n\n".join(parts), selected
+
+    def summarize_workspace(self, workspace_id: str) -> dict:
+        resolved = self.resolve_workspace_id(workspace_id)
+        memories = self.list_memory(resolved)
+        types = Counter(item.get("type", "summary") for item in memories)
+        return {
+            "workspace_id": resolved,
+            "memory_count": len(memories),
+            "memory_types": [{"type": name, "count": count} for name, count in types.most_common()],
+        }

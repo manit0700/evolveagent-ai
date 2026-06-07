@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from collections import Counter
 from uuid import uuid4
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 
 from app.agents.learning_agent import LearningAgent
 from app.agents.master_agent import MasterOrchestratorAgent
@@ -13,6 +13,8 @@ from app.models.request_models import (
     CreateCustomAgentRequest,
     CreateGoalRequest,
     CreateGoalTaskRequest,
+    CreateWorkspaceMemoryRequest,
+    CreateWorkspaceRequest,
     FeedbackRequest,
     PromptDecisionRequest,
     PromptProposalRequest,
@@ -21,6 +23,8 @@ from app.models.request_models import (
     UpdateCustomAgentRequest,
     UpdateGoalRequest,
     UpdateGoalTaskRequest,
+    UpdateWorkspaceMemoryRequest,
+    UpdateWorkspaceRequest,
 )
 from app.models.response_models import AutomationApplyResult, GovernanceEvent, ProviderStatus, RunResponse
 from app.services.governance_service import GovernanceService
@@ -34,6 +38,7 @@ from app.services.recording_service import RecordingService
 from app.services.safe_command_runner import SafeCommandRunner
 from app.services.safe_file_editor import SafeFileEditor
 from app.services.storage_service import StorageService
+from app.services.workspace_service import WorkspaceService
 from app.services.user_preference_service import UserPreferenceService
 from app.services.workflow_strategy_service import WorkflowStrategyService
 
@@ -53,6 +58,84 @@ workflow_strategy = WorkflowStrategyService(storage)
 user_preferences = UserPreferenceService(storage)
 goal_service = GoalService(storage)
 custom_agent_service = CustomAgentService(storage)
+workspace_service = WorkspaceService(storage)
+
+
+def filter_by_workspace(items: list[dict], workspace_id: str | None = None) -> list[dict]:
+    if not workspace_id:
+        return items
+    return [item for item in items if item.get("workspace_id") == workspace_id]
+
+
+@router.post("/workspaces")
+def create_workspace(request: CreateWorkspaceRequest) -> dict:
+    return workspace_service.create_workspace(request.model_dump())
+
+
+@router.get("/workspaces")
+def list_workspaces(include_archived: bool = Query(default=False)) -> list[dict]:
+    return workspace_service.list_workspaces(include_archived=include_archived)
+
+
+@router.get("/workspaces/{workspace_id}")
+def get_workspace(workspace_id: str) -> dict:
+    workspace = workspace_service.get_workspace(workspace_id)
+    if workspace is None:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    return {**workspace, "summary": workspace_service.summarize_workspace(workspace_id)}
+
+
+@router.patch("/workspaces/{workspace_id}")
+def update_workspace(workspace_id: str, request: UpdateWorkspaceRequest) -> dict:
+    workspace = workspace_service.update_workspace(workspace_id, request.model_dump(exclude_unset=True))
+    if workspace is None:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    return workspace
+
+
+@router.delete("/workspaces/{workspace_id}")
+def archive_workspace(workspace_id: str) -> dict:
+    workspace = workspace_service.archive_workspace(workspace_id)
+    if workspace is None:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    return {"archived": workspace.get("status") == "archived", "workspace": workspace}
+
+
+@router.post("/workspaces/{workspace_id}/memory")
+def create_workspace_memory(workspace_id: str, request: CreateWorkspaceMemoryRequest) -> dict:
+    return workspace_service.create_memory(workspace_id, request.model_dump())
+
+
+@router.get("/workspaces/{workspace_id}/memory")
+def list_workspace_memory(
+    workspace_id: str,
+    q: str | None = Query(default=None),
+    memory_type: str | None = Query(default=None),
+) -> list[dict]:
+    return workspace_service.list_memory(workspace_id, query=q, memory_type=memory_type)
+
+
+@router.get("/workspaces/{workspace_id}/memory/{memory_id}")
+def get_workspace_memory(workspace_id: str, memory_id: str) -> dict:
+    memory = workspace_service.get_memory(workspace_id, memory_id)
+    if memory is None:
+        raise HTTPException(status_code=404, detail="Workspace memory not found")
+    return memory
+
+
+@router.patch("/workspaces/{workspace_id}/memory/{memory_id}")
+def update_workspace_memory(workspace_id: str, memory_id: str, request: UpdateWorkspaceMemoryRequest) -> dict:
+    memory = workspace_service.update_memory(workspace_id, memory_id, request.model_dump(exclude_unset=True))
+    if memory is None:
+        raise HTTPException(status_code=404, detail="Workspace memory not found")
+    return memory
+
+
+@router.delete("/workspaces/{workspace_id}/memory/{memory_id}")
+def delete_workspace_memory(workspace_id: str, memory_id: str) -> dict[str, bool]:
+    if not workspace_service.delete_memory(workspace_id, memory_id):
+        raise HTTPException(status_code=404, detail="Workspace memory not found")
+    return {"deleted": True}
 
 
 @router.post("/run", response_model=RunResponse)
@@ -61,13 +144,35 @@ def run_workflow(request: RunRequest) -> RunResponse:
 
 
 @router.post("/files/upload")
-async def upload_files(files: list[UploadFile] = File(...), session_id: str | None = Form(default=None)) -> dict:
-    return {"files": await file_service.process_uploads(files, session_id=session_id)}
+async def upload_files(
+    files: list[UploadFile] = File(...),
+    session_id: str | None = Form(default=None),
+    workspace_id: str | None = Form(default=None),
+) -> dict:
+    resolved_workspace_id = workspace_service.resolve_workspace_id(workspace_id)
+    return {
+        "files": await file_service.process_uploads(
+            files,
+            session_id=session_id,
+            workspace_id=resolved_workspace_id,
+        )
+    }
 
 
 @router.post("/recordings/upload")
-async def upload_recordings(files: list[UploadFile] = File(...), session_id: str | None = Form(default=None)) -> dict:
-    return {"recordings": await recording_service.process_uploads(files, session_id=session_id)}
+async def upload_recordings(
+    files: list[UploadFile] = File(...),
+    session_id: str | None = Form(default=None),
+    workspace_id: str | None = Form(default=None),
+) -> dict:
+    resolved_workspace_id = workspace_service.resolve_workspace_id(workspace_id)
+    return {
+        "recordings": await recording_service.process_uploads(
+            files,
+            session_id=session_id,
+            workspace_id=resolved_workspace_id,
+        )
+    }
 
 
 @router.get("/history")
@@ -97,6 +202,7 @@ def get_evolution_logs() -> list[dict]:
 @router.post("/feedback")
 def save_feedback(request: FeedbackRequest) -> dict:
     item = request.model_dump()
+    item["workspace_id"] = workspace_service.resolve_workspace_id(item.get("workspace_id"))
     item["feedback_id"] = str(uuid4())
     item["created_at"] = datetime.now(UTC).isoformat()
     storage.append("feedback.json", item)
@@ -120,6 +226,7 @@ def apply_automation(request: AutomationApplyRequest) -> AutomationApplyResult:
             GovernanceEvent(
                 run_id=request.run_id,
                 session_id=run.get("session_id"),
+                workspace_id=run.get("workspace_id"),
                 task_type="app_automation",
                 agent_name="Safety Permission Agent",
                 action_type="automation_rejected",
@@ -148,8 +255,9 @@ def apply_automation(request: AutomationApplyRequest) -> AutomationApplyResult:
     automation_plan = AutomationPlan(**plan)
     governance_service.log_event(
         GovernanceEvent(
-            run_id=request.run_id,
+            run_id=request.run_id, 
             session_id=run.get("session_id"),
+            workspace_id=run.get("workspace_id"),
             task_type="app_automation",
             agent_name="Safety Permission Agent",
             action_type="automation_approved",
@@ -168,6 +276,7 @@ def apply_automation(request: AutomationApplyRequest) -> AutomationApplyResult:
                 GovernanceEvent(
                     run_id=request.run_id,
                     session_id=run.get("session_id"),
+                    workspace_id=run.get("workspace_id"),
                     task_type="app_automation",
                     agent_name="Safe File Editor",
                     action_type="file_edit",
@@ -189,6 +298,7 @@ def apply_automation(request: AutomationApplyRequest) -> AutomationApplyResult:
                 GovernanceEvent(
                     run_id=request.run_id,
                     session_id=run.get("session_id"),
+                    workspace_id=run.get("workspace_id"),
                     task_type="app_automation",
                     agent_name="Safe Command Runner",
                     action_type="command_run",
@@ -216,8 +326,9 @@ def apply_automation(request: AutomationApplyRequest) -> AutomationApplyResult:
 
 
 @router.get("/learning/report")
-def get_learning_report() -> dict:
-    return learning_agent.report()
+def get_learning_report(workspace_id: str | None = Query(default=None)) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    return learning_agent.report(workspace_id=resolved)
 
 
 @router.get("/learning/prompt-versions")
@@ -255,12 +366,15 @@ def rollback_prompt(request: PromptDecisionRequest) -> dict:
 
 
 @router.get("/analytics")
-def get_analytics() -> dict:
-    runs = storage.read_list("agent_analytics.json")
-    feedback = storage.read_list("feedback.json")
-    goals = storage.read_list("goals.json")
-    task_graphs = storage.read_list("task_graphs.json")
-    custom_agents = storage.read_list("custom_agents.json")
+def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    runs = filter_by_workspace(storage.read_list("agent_analytics.json"), resolved)
+    feedback = filter_by_workspace(storage.read_list("feedback.json"), resolved)
+    goals = filter_by_workspace(storage.read_list("goals.json"), resolved)
+    task_graphs = filter_by_workspace(storage.read_list("task_graphs.json"), resolved)
+    custom_agents = filter_by_workspace(storage.read_list("custom_agents.json"), resolved)
+    files = filter_by_workspace(storage.read_list("files.json"), resolved)
+    recordings = filter_by_workspace(storage.read_list("recordings.json"), resolved)
     total_runs = len(runs)
     scores = [item.get("overall_judge_score", 0) for item in runs if item.get("overall_judge_score") is not None]
     latencies = [item.get("latency_ms", 0) for item in runs if item.get("latency_ms") is not None]
@@ -274,6 +388,7 @@ def get_analytics() -> dict:
     custom_agent_counts = Counter(item.get("custom_agent_name") for item in runs if item.get("custom_agent_used"))
     return {
         "total_runs": total_runs,
+        "workspace_id": resolved,
         "average_judge_score": round(sum(scores) / len(scores), 2) if scores else 0,
         "average_latency_ms": round(sum(latencies) / len(latencies), 2) if latencies else 0,
         "most_common_task_type": task_counts.most_common(1)[0][0] if task_counts else None,
@@ -289,6 +404,8 @@ def get_analytics() -> dict:
         "completed_goal_tasks": completed_goal_tasks,
         "blocked_goal_tasks": sum(1 for task in goal_tasks if task.get("status") == "blocked"),
         "custom_agents_count": len([item for item in custom_agents if item.get("enabled", True)]),
+        "files_count": len(files),
+        "recordings_count": len(recordings),
         "most_used_custom_agent": custom_agent_counts.most_common(1)[0][0] if custom_agent_counts else None,
         "task_completion_rate": round((completed_goal_tasks / len(goal_tasks)) * 100, 2) if goal_tasks else 0,
         "goal_success_rate": round((len(completed_goals) / len(goals)) * 100, 2) if goals else 0,
@@ -303,12 +420,25 @@ def get_analytics() -> dict:
 
 
 @router.get("/governance")
-def get_governance() -> dict:
-    return governance_service.summary()
+def get_governance(workspace_id: str | None = Query(default=None)) -> dict:
+    summary = governance_service.summary()
+    if not workspace_id:
+        return summary
+    resolved = workspace_service.resolve_workspace_id(workspace_id)
+    events = filter_by_workspace(storage.read_list("governance_log.json"), resolved)
+    blocked = [event for event in events if event.get("blocked")]
+    return {
+        **summary,
+        "workspace_id": resolved,
+        "total_events": len(events),
+        "blocked_actions": len(blocked),
+        "recent_events": list(reversed(events[-20:])),
+    }
 
 
 @router.post("/goals")
 def create_goal(request: CreateGoalRequest) -> dict:
+    workspace_id = workspace_service.resolve_workspace_id(request.workspace_id)
     if request.prompt:
         _, planner_result = master_agent.goal_planner.run(request.prompt)
         if request.title:
@@ -320,15 +450,22 @@ def create_goal(request: CreateGoalRequest) -> dict:
             source_session_id=request.source_session_id,
             source_message_id=request.source_message_id,
             tags=request.tags,
+            workspace_id=workspace_id,
         )
     elif request.title:
-        goal, task_graph = goal_service.create_manual(request.title, request.description or "", tags=request.tags)
+        goal, task_graph = goal_service.create_manual(
+            request.title,
+            request.description or "",
+            tags=request.tags,
+            workspace_id=workspace_id,
+        )
     else:
         raise HTTPException(status_code=422, detail="Provide either prompt or title.")
     governance_service.log_event(
         GovernanceEvent(
             run_id=None,
             session_id=request.source_session_id,
+            workspace_id=workspace_id,
             task_type="goal_planning",
             agent_name="Mission Control",
             action_type="goal_created",
@@ -344,8 +481,9 @@ def create_goal(request: CreateGoalRequest) -> dict:
 
 
 @router.get("/goals")
-def list_goals() -> list[dict]:
-    return goal_service.list_goals()
+def list_goals(workspace_id: str | None = Query(default=None)) -> list[dict]:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    return goal_service.list_goals(workspace_id=resolved)
 
 
 @router.get("/goals/{goal_id}")
@@ -395,9 +533,11 @@ def run_goal_task(goal_id: str, task_id: str) -> RunResponse:
     if task is None:
         raise HTTPException(status_code=404, detail="Goal task not found")
     goal_service.update_task(goal_id, task_id, {"status": "running"})
+    goal_record, _ = goal_service.get_goal(goal_id) or ({}, {})
     request = RunRequest(
         user_input=f"{task.get('title')}\n\n{task.get('description', '')}".strip(),
         task_type="auto",
+        workspace_id=goal_record.get("workspace_id"),
         goal_id=goal_id,
         task_id=task_id,
     )
@@ -416,6 +556,7 @@ def run_goal_task(goal_id: str, task_id: str) -> RunResponse:
         GovernanceEvent(
             run_id=response.run_id,
             session_id=response.session_id,
+            workspace_id=response.workspace_id,
             task_type=response.task_type,
             agent_name="Mission Control",
             action_type="goal_task_run",
@@ -437,9 +578,12 @@ def list_agent_templates() -> list[dict]:
 
 @router.post("/agents/custom")
 def create_custom_agent(request: CreateCustomAgentRequest) -> dict:
-    agent = custom_agent_service.create(request.model_dump())
+    data = request.model_dump()
+    data["workspace_id"] = workspace_service.resolve_workspace_id(data.get("workspace_id"))
+    agent = custom_agent_service.create(data)
     governance_service.log_event(
         GovernanceEvent(
+            workspace_id=agent.workspace_id,
             agent_name="Custom Agent Builder",
             action_type="custom_agent_created",
             tool_used="CustomAgentService",
@@ -453,8 +597,9 @@ def create_custom_agent(request: CreateCustomAgentRequest) -> dict:
 
 
 @router.get("/agents/custom")
-def list_custom_agents() -> list[dict]:
-    return custom_agent_service.list()
+def list_custom_agents(workspace_id: str | None = Query(default=None)) -> list[dict]:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    return custom_agent_service.list(workspace_id=resolved)
 
 
 @router.get("/agents/custom/{agent_id}")
@@ -473,6 +618,7 @@ def update_custom_agent(agent_id: str, request: UpdateCustomAgentRequest) -> dic
     governance_service.log_event(
         GovernanceEvent(
             agent_name="Custom Agent Builder",
+            workspace_id=agent.get("workspace_id"),
             action_type="custom_agent_edited",
             tool_used="CustomAgentService",
             permission_level=agent.get("approval_level", "read_only"),
@@ -498,12 +644,14 @@ def get_provider_status() -> ProviderStatus:
 
 
 @router.get("/chats")
-def get_chats() -> list[dict]:
-    sessions = storage.read_list("chat_sessions.json")
-    messages = storage.read_list("messages.json")
+def get_chats(workspace_id: str | None = Query(default=None)) -> list[dict]:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    sessions = filter_by_workspace(storage.read_list("chat_sessions.json"), resolved)
+    messages = filter_by_workspace(storage.read_list("messages.json"), resolved)
     summaries = [
         {
             "session_id": session.get("session_id"),
+            "workspace_id": session.get("workspace_id"),
             "title": session.get("title", "Untitled chat"),
             "created_at": session.get("created_at"),
             "updated_at": session.get("updated_at"),
@@ -518,8 +666,10 @@ def get_chats() -> list[dict]:
 @router.post("/chats")
 def create_chat(request: CreateChatRequest | None = None) -> dict:
     now = datetime.now(UTC).isoformat()
+    workspace_id = workspace_service.resolve_workspace_id(request.workspace_id if request else None)
     session = {
         "session_id": str(uuid4()),
+        "workspace_id": workspace_id,
         "title": (request.title.strip() if request and request.title else "New Chat"),
         "created_at": now,
         "updated_at": now,

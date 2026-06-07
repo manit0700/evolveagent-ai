@@ -1,8 +1,8 @@
 # EvolveAgent AI
 
-**Current version:** MVP v2.5 — Mission Control + Custom Agent Builder
+**Current version:** MVP v2.6 — Workspace Memory + Personal AI Context
 
-**One-line description:** A voice-capable, approval-gated multi-agent AI workspace with Master Agent routing, Mission Control goal/task graphs, Custom Agent Builder, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
+**One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with project memory, Master Agent routing, Mission Control goal/task graphs, Custom Agent Builder, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
 
 ## Project Overview
 
@@ -10,7 +10,9 @@ EvolveAgent AI is a full-stack AI workbench built to demonstrate advanced multi-
 
 The app supports normal text requests, uploaded document analysis, recording/audio transcript summaries, mock image-generation previews, browser voice command input, Mission Control goal planning, custom agents, approval-gated app automation planning, human feedback, and analytics. Simple Mode keeps the user experience clean. Developer Mode exposes the workflow trace, provider metadata, judge results, per-agent evaluation, automation plans, learning reports, recording transcript metadata, file context, goal/task metadata, custom agent metadata, and raw JSON for demos and technical review.
 
-MVP v2.5 adds **Mission Control**, a goal/task operating layer for large objectives. Users can turn a big goal into phases, task cards, dependencies, recommended agents, progress tracking, and runnable subtasks. It also adds a **Custom Agent Builder** with reusable specialist agents and templates that remain governed by the same permissions, prompt-injection checks, secret scanning, and analytics as built-in agents.
+MVP v2.6 adds **Workspace Memory + Personal AI Context**. Users can create separate workspaces for projects, switch between them in the sidebar, keep chats/files/recordings/goals/custom agents scoped to the active workspace, store project-specific memory, search/edit/delete memory entries, and filter analytics and learning reports by workspace. A default workspace is created automatically so existing data and old requests continue to work.
+
+MVP v2.6 also retains **Mission Control**, a goal/task operating layer for large objectives, and the **Custom Agent Builder** for reusable specialist agents and templates that remain governed by the same permissions, prompt-injection checks, secret scanning, and analytics as built-in agents.
 
 ## Feature List
 
@@ -57,6 +59,12 @@ MVP v2.5 adds **Mission Control**, a goal/task operating layer for large objecti
 - Custom Agent Builder with reusable specialist agents
 - Agent Skill Store templates for Resume, Code Review, Meeting Notes, File Summary, Pharmacy PA, Construction Bid, Business Analyst, Startup Strategy, Bug Fix, and Study Notes agents
 - Governance, analytics, and learning integration for goals and custom agents
+- Workspace switcher for organizing projects
+- Default workspace fallback for existing chats and no-workspace requests
+- Workspace-scoped chats, messages, file uploads, recordings, goals, task graphs, custom agents, feedback, analytics, learning, and governance metadata
+- Workspace memory timeline with add, search, filter, edit, and delete controls
+- Memory retrieval before agent runs with capped context and Developer Mode visibility
+- Workspace-filtered analytics and learning reports
 
 ## Tech Stack
 
@@ -86,7 +94,9 @@ MVP v2.5 adds **Mission Control**, a goal/task operating layer for large objecti
 flowchart TD
     U[User] --> UI[React Chat UI]
     UI --> API[FastAPI Backend]
-    API --> Session[Create or Load Chat Session]
+    API --> Workspace[Resolve Workspace]
+    Workspace --> WorkspaceMemory[Retrieve Relevant Workspace Memory]
+    WorkspaceMemory --> Session[Create or Load Chat Session]
     Session --> Master[Master Orchestrator Agent]
     Master --> Detect[Task Type Detection]
 
@@ -135,6 +145,8 @@ flowchart TD
     MissionUI --> TextFlow
 
     Analytics --> Memory[Memory Agent and JSON Storage]
+    Memory --> WorkspaceStore[Workspace Memory and Project Context]
+    WorkspaceStore --> Learning[Adaptive Learning Engine]
     Memory --> Learning[Adaptive Learning Engine]
     Learning --> PromptVersions[Prompt Versions and Workflow Strategy]
     Memory --> Response[Final API Response]
@@ -160,9 +172,34 @@ flowchart TD
 13. Frontend displays a clean answer in Simple Mode or detailed trace in Developer Mode.
 14. User can submit feedback, which is saved and reflected in analytics.
 
+## Workspace Memory Workflow
+
+MVP v2.6 adds a workspace layer so the app can separate projects such as EvolveAgent AI, resume work, school notes, pharmacy PA support, or business planning.
+
+Workspace behavior:
+
+1. A default workspace is created automatically on startup or first use.
+2. `/api/run` accepts `workspace_id`; if omitted, the default workspace is used.
+3. Chat sessions, messages, uploaded files, recordings, goals, task graphs, custom agents, feedback, analytics, learning records, and governance events can store `workspace_id`.
+4. Before a run, the Master Agent retrieves a small capped set of relevant high-value workspace memories.
+5. Simple Mode stays clean and only shows the final answer.
+6. Developer Mode shows whether workspace memory was used, memory IDs, memory type, importance, and memory context size.
+7. Analytics and learning reports can be filtered by `workspace_id`.
+
+Workspace memory entries support:
+
+- `preference`
+- `project_fact`
+- `decision`
+- `summary`
+- `task_result`
+- `learned_pattern`
+
+This is not model training. The system uses workspace memory as controlled context for future orchestration and answers.
+
 ## Mission Control Workflow
 
-MVP v2.5 adds `goal_planning` for larger objectives such as:
+MVP v2.6 adds `goal_planning` for larger objectives such as:
 
 - `Build an AI resume analyzer app`
 - `Create a full implementation plan for a SaaS app`
@@ -182,7 +219,7 @@ Goal Mode does not silently execute code changes. Any task that becomes app auto
 
 ## Custom Agent Builder
 
-MVP v2.5 adds reusable custom agents. Custom agents can be created manually or from templates such as:
+MVP v2.6 adds reusable custom agents. Custom agents can be created manually or from templates such as:
 
 - Resume Agent
 - Code Review Agent
@@ -210,7 +247,7 @@ Custom agents are reusable workflow specialists that operate under the same perm
 
 ## Real Multi-LLM Consensus Workflow
 
-MVP v2.5 keeps optional Deep Mode consensus planning. Normal chat requests still use the existing OpenAI-first text workflow with mock fallback. When Deep Mode is enabled, the Master Agent asks the LLM Router for available consensus providers and compares independent candidates before final synthesis.
+MVP v2.6 keeps optional Deep Mode consensus planning. Normal chat requests still use the existing OpenAI-first text workflow with mock fallback. When Deep Mode is enabled, the Master Agent asks the LLM Router for available consensus providers and compares independent candidates before final synthesis.
 
 Provider behavior:
 
@@ -321,11 +358,11 @@ The Image Agent:
 5. Returns a user-facing mock preview and prompt.
 6. Saves image metadata for Developer Mode and analytics.
 
-Real image APIs are intentionally not included in MVP v2.5.
+Real image APIs are intentionally not included in MVP v2.6.
 
 ## Voice Command Workflow
 
-MVP v2.5 includes a microphone button near the chat input.
+MVP v2.6 includes a microphone button near the chat input.
 
 1. User clicks the microphone.
 2. Browser Web Speech API listens for a short command.
@@ -343,7 +380,7 @@ No paid transcription API is required for v2.0 voice commands.
 
 ## App Automation Workflow
 
-MVP v2.5 includes `app_automation` for requests such as:
+MVP v2.6 includes `app_automation` for requests such as:
 
 - add a page
 - create a component
@@ -395,7 +432,7 @@ Correct wording:
 
 It analyzes judge scores, per-agent scores, task types, provider/model usage, fallback status, latency, human feedback, file/image/recording/automation task metadata, workflow outcomes, and user preference signals.
 
-The v2.5 learning report includes:
+The v2.6 learning report includes:
 
 - strongest and weakest agents by task type
 - best and worst workflows by task type
@@ -614,6 +651,16 @@ npm run build
 
 - `GET /health`
 - `POST /api/run`
+- `POST /api/workspaces`
+- `GET /api/workspaces`
+- `GET /api/workspaces/{workspace_id}`
+- `PATCH /api/workspaces/{workspace_id}`
+- `DELETE /api/workspaces/{workspace_id}`
+- `POST /api/workspaces/{workspace_id}/memory`
+- `GET /api/workspaces/{workspace_id}/memory`
+- `GET /api/workspaces/{workspace_id}/memory/{memory_id}`
+- `PATCH /api/workspaces/{workspace_id}/memory/{memory_id}`
+- `DELETE /api/workspaces/{workspace_id}/memory/{memory_id}`
 - `POST /api/files/upload`
 - `POST /api/recordings/upload`
 - `POST /api/feedback`
@@ -682,7 +729,7 @@ Automation safety rules:
 - Deployment
 - Agent performance dashboard improvements
 - Human feedback trends over time
-- User authentication and workspace separation
+- User authentication and team sharing
 
 ## Resume Bullets
 
@@ -698,3 +745,4 @@ Automation safety rules:
 - Implemented a mock Image Agent with protected-character prompt rewriting and mock preview generation.
 - Added Mission Control with goal planning, task graph storage, progress tracking, runnable subtasks, and goal/task analytics.
 - Built a governed Custom Agent Builder with reusable specialist agents and prebuilt Agent Skill Store templates.
+- Added workspace-scoped project memory with a memory timeline, relevant memory retrieval, workspace-filtered chats/goals/agents, and workspace-specific analytics/learning reports.

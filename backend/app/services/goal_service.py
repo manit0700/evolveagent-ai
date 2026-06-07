@@ -15,6 +15,7 @@ class GoalService:
         source_session_id: str | None = None,
         source_message_id: str | None = None,
         tags: list[str] | None = None,
+        workspace_id: str | None = None,
     ) -> tuple[GoalResult, TaskGraph]:
         now = datetime.now(UTC).isoformat()
         goal_id = str(uuid4())
@@ -30,6 +31,7 @@ class GoalService:
         ]
         goal = GoalResult(
             goal_id=goal_id,
+            workspace_id=workspace_id,
             title=planner_result.get("goal_title") or "New Mission",
             description=planner_result.get("goal_summary") or "",
             status="active",
@@ -43,7 +45,7 @@ class GoalService:
             tags=tags or [],
             next_best_task=planner_result.get("next_best_task"),
         )
-        task_graph = TaskGraph(goal_id=goal_id, tasks=tasks)
+        task_graph = TaskGraph(goal_id=goal_id, workspace_id=workspace_id, tasks=tasks)
         goals = self.storage.read_list("goals.json")
         goals.append(goal.model_dump())
         self.storage.write_list("goals.json", goals)
@@ -52,7 +54,13 @@ class GoalService:
         self.storage.write_list("task_graphs.json", graphs)
         return goal, task_graph
 
-    def create_manual(self, title: str, description: str = "", tags: list[str] | None = None) -> tuple[GoalResult, TaskGraph]:
+    def create_manual(
+        self,
+        title: str,
+        description: str = "",
+        tags: list[str] | None = None,
+        workspace_id: str | None = None,
+    ) -> tuple[GoalResult, TaskGraph]:
         planner_result = {
             "goal_title": title,
             "goal_summary": description,
@@ -61,10 +69,12 @@ class GoalService:
             "risk_level": "low",
             "next_best_task": None,
         }
-        return self.create_from_plan(planner_result, tags=tags)
+        return self.create_from_plan(planner_result, tags=tags, workspace_id=workspace_id)
 
-    def list_goals(self) -> list[dict]:
+    def list_goals(self, workspace_id: str | None = None) -> list[dict]:
         goals = [self.with_progress(item) for item in self.storage.read_list("goals.json")]
+        if workspace_id:
+            goals = [item for item in goals if item.get("workspace_id") == workspace_id]
         return sorted(goals, key=lambda item: item.get("updated_at") or "", reverse=True)
 
     def get_goal(self, goal_id: str) -> tuple[dict, dict] | None:

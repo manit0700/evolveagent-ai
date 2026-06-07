@@ -86,6 +86,7 @@ class QualityGates(BaseModel):
 class GovernanceEvent(BaseModel):
     run_id: str | None = None
     session_id: str | None = None
+    workspace_id: str | None = None
     task_type: str | None = None
     agent_name: str = "Security Governance Layer"
     action_type: str
@@ -133,6 +134,7 @@ class ImageResult(BaseModel):
 
 class FileUsed(BaseModel):
     file_id: str
+    workspace_id: str | None = None
     filename: str
     content_type: str | None = None
     extension: str
@@ -149,6 +151,7 @@ class FileSummary(BaseModel):
 
 class RecordingUsed(BaseModel):
     recording_id: str
+    workspace_id: str | None = None
     filename: str
     content_type: str | None = None
     extension: str
@@ -229,6 +232,7 @@ class GoalTask(BaseModel):
 
 class GoalResult(BaseModel):
     goal_id: str
+    workspace_id: str | None = None
     title: str
     description: str = ""
     status: str = "active"
@@ -245,11 +249,13 @@ class GoalResult(BaseModel):
 
 class TaskGraph(BaseModel):
     goal_id: str
+    workspace_id: str | None = None
     tasks: list[GoalTask] = []
 
 
 class CustomAgentResult(BaseModel):
     agent_id: str
+    workspace_id: str | None = None
     name: str
     description: str = ""
     role: str = ""
@@ -269,6 +275,7 @@ class RunResponse(BaseModel):
     run_id: str
     session_id: str
     message_id: str
+    workspace_id: str | None = None
     task_type: str
     agents_used: list[str]
     suggested_agents: list[str] = []
@@ -282,6 +289,9 @@ class RunResponse(BaseModel):
     judge_result: JudgeResult
     evolution_notes: list[str]
     memory_saved: bool
+    memory_used: bool = False
+    workspace_memory_used: list[dict] = []
+    memory_context_characters: int = 0
     file_context_used: bool = False
     files_used: list[FileUsed] = []
     file_summary: FileSummary | None = None

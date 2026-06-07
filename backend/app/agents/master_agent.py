@@ -40,6 +40,7 @@ from app.services.permission_service import PermissionService
 from app.services.recording_service import RecordingService
 from app.services.secret_scanner import SecretScanner
 from app.services.storage_service import StorageService
+from app.services.workspace_service import WorkspaceService
 from app.services.workflow_strategy_service import WorkflowStrategyService
 
 
@@ -52,6 +53,7 @@ class MasterOrchestratorAgent:
         self.goal_planner = GoalPlannerAgent()
         self.goal_service = GoalService(storage)
         self.custom_agents = CustomAgentService(storage)
+        self.workspace = WorkspaceService(storage)
         self.file_service = FileService(storage)
         self.file_analysis = FileAnalysisAgent()
         self.recording_service = RecordingService(storage)
@@ -71,6 +73,8 @@ class MasterOrchestratorAgent:
     def run(self, request: RunRequest) -> RunResponse:
         task_id = str(uuid4())
         session_id = request.session_id or str(uuid4())
+        workspace_id = self.workspace.resolve_workspace_id(request.workspace_id)
+        request = request.model_copy(update={"workspace_id": workspace_id})
         assistant_message_id = str(uuid4())
         created_at = datetime.now(UTC).isoformat()
         task_type, confidence = (
@@ -163,6 +167,7 @@ class MasterOrchestratorAgent:
                 task_type,
                 quality_gates,
                 security_report,
+                workspace_id,
             )
             governance_events.extend(recording_events)
             if request.task_type == "auto" and recording_context_used:
@@ -178,6 +183,7 @@ class MasterOrchestratorAgent:
                 task_type,
                 quality_gates,
                 security_report,
+                workspace_id,
             )
             governance_events.extend(file_events)
             if request.task_type == "auto" and file_context_used:
@@ -228,7 +234,13 @@ class MasterOrchestratorAgent:
 
         agent_outputs: list[AgentOutput] = []
         conversation_context = self.get_recent_conversation_context(session_id)
+        workspace_memory_context, workspace_memory_used = self.workspace.relevant_memory(
+            workspace_id,
+            request.user_input,
+        )
         shared_context = f"Detected task type: {task_type}. Suggested future agents: {', '.join(suggested_agents)}."
+        if workspace_memory_context:
+            shared_context += f"\n\nRelevant workspace memory:\n{workspace_memory_context}"
         if conversation_context:
             shared_context += f"\n\nRecent conversation context:\n{conversation_context}"
         if recording_context_used:
@@ -297,6 +309,7 @@ class MasterOrchestratorAgent:
                         permission_level=(custom_agent_config or {}).get("approval_level", "read_only"),
                         approved=False,
                         blocked=not custom_agent_output.success,
+                        workspace_id=workspace_id,
                         risk_score=0 if custom_agent_output.success else 55,
                         reason=f"Custom agent {(custom_agent_config or {}).get('name', request.custom_agent_id)} participated in the workflow.",
                     )
@@ -431,6 +444,7 @@ class MasterOrchestratorAgent:
             run_id=task_id,
             session_id=session_id,
             message_id=assistant_message_id,
+            workspace_id=workspace_id,
             task_type=task_type,
             agents_used=agents_used,
             suggested_agents=suggested_agents,
@@ -444,6 +458,9 @@ class MasterOrchestratorAgent:
             judge_result=judge_result,
             evolution_notes=evolution_notes,
             memory_saved=True,
+            memory_used=bool(workspace_memory_context),
+            workspace_memory_used=workspace_memory_used,
+            memory_context_characters=len(workspace_memory_context),
             file_context_used=file_context_used,
             files_used=files_used,
             file_summary=file_summary,
@@ -485,6 +502,8 @@ class MasterOrchestratorAgent:
                 "goal_id": request.goal_id,
                 "goal_task_id": request.task_id,
                 "custom_agent_id": request.custom_agent_id,
+                "workspace_id": workspace_id,
+                "workspace_memory_used": [item.get("memory_id") for item in workspace_memory_used],
                 "judge_score": judge_result.overall_score,
                 "final_output_summary": final_output[:280],
                 "created_at": created_at,
@@ -492,7 +511,13 @@ class MasterOrchestratorAgent:
         )
         self.storage.append(
             "evolution_logs.json",
-            {"task_id": task_id, "task_type": task_type, "recommendations": evolution_notes, "created_at": created_at},
+            {
+                "task_id": task_id,
+                "workspace_id": workspace_id,
+                "task_type": task_type,
+                "recommendations": evolution_notes,
+                "created_at": created_at,
+            },
         )
         self.persist_agent_analytics(response)
         self.persist_chat_session(request, response)
@@ -523,6 +548,7 @@ class MasterOrchestratorAgent:
                     action_type="secret_redaction",
                     tool_used="SecretScanner",
                     permission_level="read_only",
+                    workspace_id=request.workspace_id,
                     risk_score=15,
                     reason="Secret-like content was redacted from user input before agent execution.",
                 )
@@ -539,6 +565,7 @@ class MasterOrchestratorAgent:
                     action_type="prompt_injection_warning",
                     tool_used="PromptInjectionFirewallAgent",
                     permission_level="blocked",
+                    workspace_id=request.workspace_id,
                     blocked=True,
                     risk_score=prompt_result.risk_score,
                     reason=prompt_result.recommendation,
@@ -554,6 +581,7 @@ class MasterOrchestratorAgent:
                     action_type="prompt_injection_warning",
                     tool_used="PromptInjectionFirewallAgent",
                     permission_level=permission_level,
+                    workspace_id=request.workspace_id,
                     risk_score=prompt_result.risk_score,
                     reason=prompt_result.recommendation,
                 )
@@ -584,6 +612,7 @@ class MasterOrchestratorAgent:
         task_type: str,
         quality_gates: QualityGates,
         security_report: SecurityReport,
+        workspace_id: str | None = None,
     ) -> tuple[str, bool, list[GovernanceEvent]]:
         events: list[GovernanceEvent] = []
         if not context:
@@ -601,6 +630,7 @@ class MasterOrchestratorAgent:
                     action_type="secret_redaction",
                     tool_used="SecretScanner",
                     permission_level="read_only",
+                    workspace_id=workspace_id,
                     files_accessed=[context_type],
                     risk_score=20,
                     reason=f"Secret-like content was redacted from {context_type}.",
@@ -629,6 +659,7 @@ class MasterOrchestratorAgent:
                     tool_used="PromptInjectionFirewallAgent",
                     files_accessed=[context_type],
                     permission_level="read_only",
+                    workspace_id=workspace_id,
                     blocked=True,
                     risk_score=injection.risk_score,
                     reason=f"High-risk instructions were found in {context_type}; the context was isolated from LLM use.",
@@ -649,6 +680,7 @@ class MasterOrchestratorAgent:
                     tool_used="PromptInjectionFirewallAgent",
                     files_accessed=[context_type],
                     permission_level="read_only",
+                    workspace_id=workspace_id,
                     risk_score=injection.risk_score,
                     reason=f"Suspicious embedded instructions were found in {context_type}.",
                 )
@@ -656,6 +688,7 @@ class MasterOrchestratorAgent:
         return redacted_context, True, events
 
     def log_governance_event(self, run_id: str, session_id: str, task_type: str, **kwargs) -> GovernanceEvent:
+        kwargs.setdefault("workspace_id", self.workspace.default_workspace_id())
         event = GovernanceEvent(run_id=run_id, session_id=session_id, task_type=task_type, **kwargs)
         return self.governance.log_event(event)
 
@@ -707,6 +740,7 @@ class MasterOrchestratorAgent:
             run_id=task_id,
             session_id=session_id,
             message_id=assistant_message_id,
+            workspace_id=request.workspace_id,
             task_type=task_type,
             agents_used=["Prompt Injection Firewall Agent", "Secret Scanner", "Permission Service"],
             master_plan=master_plan,
@@ -727,9 +761,11 @@ class MasterOrchestratorAgent:
         self.memory_agent.remember(
             {
                 "task_id": task_id,
+                "workspace_id": request.workspace_id,
                 "task_type": task_type,
                 "user_input": request.user_input,
                 "agents_used": response.agents_used,
+                "workspace_id": request.workspace_id,
                 "judge_score": judge_result.overall_score,
                 "final_output_summary": final_output,
                 "created_at": created_at,
@@ -987,6 +1023,7 @@ class MasterOrchestratorAgent:
             run_id=task_id,
             session_id=session_id,
             message_id=assistant_message_id,
+            workspace_id=request.workspace_id,
             task_type=task_type,
             agents_used=agents_used,
             suggested_agents=suggested_agents,
@@ -1015,6 +1052,7 @@ class MasterOrchestratorAgent:
                 "task_type": task_type,
                 "user_input": request.user_input,
                 "agents_used": agents_used,
+                "workspace_id": request.workspace_id,
                 "judge_score": judge_result.overall_score,
                 "final_safe_prompt": image_result.prompt,
                 "image_provider": image_result.provider,
@@ -1028,6 +1066,7 @@ class MasterOrchestratorAgent:
             "evolution_logs.json",
             {
                 "task_id": task_id,
+                "workspace_id": request.workspace_id,
                 "task_type": task_type,
                 "recommendations": response.evolution_notes,
                 "created_at": created_at,
@@ -1058,6 +1097,7 @@ class MasterOrchestratorAgent:
             planner_result,
             source_session_id=session_id,
             source_message_id=assistant_message_id,
+            workspace_id=request.workspace_id,
         )
         governance_events.append(
             self.log_governance_event(
@@ -1069,6 +1109,7 @@ class MasterOrchestratorAgent:
                 permission_level="plan_only",
                 approved=False,
                 blocked=False,
+                workspace_id=request.workspace_id,
                 risk_score=security_report.risk_score,
                 reason=f"Created Mission Control goal {goal.goal_id} with {len(task_graph.tasks)} task(s).",
             )
@@ -1150,6 +1191,7 @@ class MasterOrchestratorAgent:
             run_id=task_id,
             session_id=session_id,
             message_id=assistant_message_id,
+            workspace_id=request.workspace_id,
             task_type=task_type,
             agents_used=agents_used,
             suggested_agents=suggested_agents,
@@ -1182,6 +1224,7 @@ class MasterOrchestratorAgent:
                 "task_type": task_type,
                 "user_input": request.user_input,
                 "agents_used": agents_used,
+                "workspace_id": request.workspace_id,
                 "goal_id": goal.goal_id,
                 "goal_title": goal.title,
                 "task_count": len(task_graph.tasks),
@@ -1192,7 +1235,13 @@ class MasterOrchestratorAgent:
         )
         self.storage.append(
             "evolution_logs.json",
-            {"task_id": task_id, "task_type": task_type, "recommendations": response.evolution_notes, "created_at": created_at},
+            {
+                "task_id": task_id,
+                "workspace_id": request.workspace_id,
+                "task_type": task_type,
+                "recommendations": response.evolution_notes,
+                "created_at": created_at,
+            },
         )
         self.persist_agent_analytics(response)
         self.persist_chat_session(request, response)
@@ -1226,6 +1275,7 @@ class MasterOrchestratorAgent:
                 permission_level="plan_only",
                 approved=False,
                 blocked=False,
+                workspace_id=request.workspace_id,
                 risk_score=security_report.risk_score,
                 reason="Automation request produced an approval-gated plan. No files were changed.",
             )
@@ -1319,6 +1369,7 @@ class MasterOrchestratorAgent:
             run_id=task_id,
             session_id=session_id,
             message_id=assistant_message_id,
+            workspace_id=request.workspace_id,
             task_type=task_type,
             agents_used=agents_used,
             suggested_agents=suggested_agents,
@@ -1349,6 +1400,7 @@ class MasterOrchestratorAgent:
             {
                 "run_id": task_id,
                 "session_id": session_id,
+                "workspace_id": request.workspace_id,
                 "status": "pending_approval",
                 "automation_plan": automation_plan.model_dump(),
                 "created_at": created_at,
@@ -1360,6 +1412,7 @@ class MasterOrchestratorAgent:
                 "task_type": task_type,
                 "user_input": request.user_input,
                 "agents_used": agents_used,
+                "workspace_id": request.workspace_id,
                 "judge_score": judge_result.overall_score,
                 "final_output_summary": final_output[:280],
                 "created_at": created_at,
@@ -1367,7 +1420,13 @@ class MasterOrchestratorAgent:
         )
         self.storage.append(
             "evolution_logs.json",
-            {"task_id": task_id, "task_type": task_type, "recommendations": response.evolution_notes, "created_at": created_at},
+            {
+                "task_id": task_id,
+                "workspace_id": request.workspace_id,
+                "task_type": task_type,
+                "recommendations": response.evolution_notes,
+                "created_at": created_at,
+            },
         )
         self.persist_agent_analytics(response)
         self.persist_chat_session(request, response)
@@ -1447,6 +1506,7 @@ class MasterOrchestratorAgent:
             run_id=task_id,
             session_id=session_id,
             message_id=assistant_message_id,
+            workspace_id=request.workspace_id,
             task_type=task_type,
             agents_used=agents_used,
             suggested_agents=["Audio Transcription Agent", "Meeting Notes Agent"],
@@ -1472,6 +1532,7 @@ class MasterOrchestratorAgent:
                 "task_type": task_type,
                 "user_input": request.user_input,
                 "agents_used": agents_used,
+                "workspace_id": request.workspace_id,
                 "judge_score": judge_result.overall_score,
                 "final_output_summary": final_output[:280],
                 "created_at": created_at,
@@ -1511,6 +1572,7 @@ class MasterOrchestratorAgent:
             {
                 "run_id": response.run_id,
                 "session_id": response.session_id,
+                "workspace_id": response.workspace_id,
                 "task_type": response.task_type,
                 "agents_used": response.agents_used,
                 "per_agent_scores": [item.model_dump() for item in response.judge_result.per_agent_scores],
@@ -1544,6 +1606,7 @@ class MasterOrchestratorAgent:
                     "record_type": "consensus_candidate",
                     "run_id": response.run_id,
                     "session_id": response.session_id,
+                    "workspace_id": response.workspace_id,
                     "task_type": response.task_type,
                     "provider": candidate.provider,
                     "model": candidate.model,
@@ -1565,12 +1628,14 @@ class MasterOrchestratorAgent:
         if session is None:
             session = {
                 "session_id": response.session_id,
+                "workspace_id": response.workspace_id,
                 "title": self.derive_chat_title(request.user_input),
                 "created_at": now,
                 "updated_at": now,
                 "messages": [],
             }
             sessions.append(session)
+        session["workspace_id"] = session.get("workspace_id") or response.workspace_id
         session["updated_at"] = now
         attached_files = [item.model_dump() if hasattr(item, "model_dump") else item for item in response.files_used]
         attached_recordings = [item.model_dump() if hasattr(item, "model_dump") else item for item in response.recordings_used]
@@ -1578,6 +1643,7 @@ class MasterOrchestratorAgent:
             "message_id": str(uuid4()),
             "id": str(uuid4()),
             "session_id": response.session_id,
+            "workspace_id": response.workspace_id,
             "role": "user",
             "content": request.user_input,
             "file_ids": request.file_ids,
@@ -1595,6 +1661,7 @@ class MasterOrchestratorAgent:
             "message_id": response.message_id,
             "id": response.message_id,
             "session_id": response.session_id,
+            "workspace_id": response.workspace_id,
             "role": "assistant",
             "content": response.final_output,
             "created_at": now,
@@ -1611,6 +1678,22 @@ class MasterOrchestratorAgent:
         messages.extend([user_message, assistant_message])
         self.storage.write_list("chat_sessions.json", sessions)
         self.storage.write_list("messages.json", messages)
+        self.persist_workspace_memory(request, response)
+
+    def persist_workspace_memory(self, request: RunRequest, response: RunResponse) -> None:
+        if not response.workspace_id or not response.memory_saved:
+            return
+        self.workspace.create_memory(
+            response.workspace_id,
+            {
+                "type": "task_result",
+                "title": self.derive_chat_title(request.user_input),
+                "content": response.final_output[:1200],
+                "source": "chat",
+                "importance": "high" if response.judge_result.overall_score >= 85 else "medium",
+                "tags": [response.task_type],
+            },
+        )
 
     def get_recent_conversation_context(self, session_id: str, limit: int = 8) -> str:
         messages = [

@@ -39,12 +39,18 @@ class FileService:
         UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
         EXTRACTED_DIR.mkdir(parents=True, exist_ok=True)
 
-    async def process_uploads(self, files: list[UploadFile], session_id: str | None = None) -> list[dict]:
+    async def process_uploads(
+        self,
+        files: list[UploadFile],
+        session_id: str | None = None,
+        workspace_id: str | None = None,
+    ) -> list[dict]:
         if len(files) > MAX_FILES_PER_UPLOAD:
             return [
                 {
                     "file_id": str(uuid4()),
                     "session_id": session_id,
+                    "workspace_id": workspace_id,
                     "filename": "upload batch",
                     "content_type": None,
                     "extension": "",
@@ -57,10 +63,15 @@ class FileService:
             ]
         results = []
         for file in files:
-            results.append(await self.process_file(file, session_id=session_id))
+            results.append(await self.process_file(file, session_id=session_id, workspace_id=workspace_id))
         return results
 
-    async def process_file(self, file: UploadFile, session_id: str | None = None) -> dict:
+    async def process_file(
+        self,
+        file: UploadFile,
+        session_id: str | None = None,
+        workspace_id: str | None = None,
+    ) -> dict:
         file_id = str(uuid4())
         original_filename = file.filename or "uploaded-file"
         safe_filename = self.safe_filename(original_filename)
@@ -74,6 +85,7 @@ class FileService:
         metadata = {
             "file_id": file_id,
             "session_id": session_id,
+            "workspace_id": workspace_id,
             "filename": original_filename,
             "safe_filename": safe_filename,
             "stored_path": str(stored_path),
@@ -116,6 +128,7 @@ class FileService:
         return {
             "file_id": metadata["file_id"],
             "session_id": metadata.get("session_id"),
+            "workspace_id": metadata.get("workspace_id"),
             "filename": metadata["filename"],
             "content_type": metadata.get("content_type"),
             "extension": metadata["extension"],
@@ -237,6 +250,7 @@ class FileService:
             files_used.append(
                 {
                     "file_id": metadata["file_id"],
+                    "workspace_id": metadata.get("workspace_id"),
                     "filename": metadata["filename"],
                     "content_type": metadata.get("content_type"),
                     "extension": metadata["extension"],

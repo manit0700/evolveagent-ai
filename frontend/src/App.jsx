@@ -17,6 +17,7 @@ import {
   Gauge,
   GitBranch,
   Layers3,
+  Library,
   MoreHorizontal,
   Paperclip,
   Mic,
@@ -38,11 +39,15 @@ import {
   API_BASE,
   createCustomAgent,
   createGoal,
+  createWorkspace,
+  createWorkspaceMemory,
   applyAutomation,
   approvePromptVersion,
   createChat,
   deleteChat,
   deleteMessage,
+  deleteWorkspace,
+  deleteWorkspaceMemory,
   getAnalytics,
   getAgentTemplates,
   getChat,
@@ -53,12 +58,16 @@ import {
   getHistory,
   getLearningReport,
   getProviderStatus,
+  getWorkspaceMemory,
+  getWorkspaces,
   rejectPromptVersion,
   renameChat,
   rollbackPromptVersion,
   runGoalTask,
   runWorkflow,
   sendFeedback,
+  updateWorkspace,
+  updateWorkspaceMemory,
   updateGoalTask,
   uploadFiles,
   uploadRecordings,
@@ -204,16 +213,32 @@ function App() {
   const [agentTemplates, setAgentTemplates] = useState([])
   const [showMissionControl, setShowMissionControl] = useState(false)
   const [showAgentBuilder, setShowAgentBuilder] = useState(false)
+  const [workspaces, setWorkspaces] = useState([])
+  const [workspaceId, setWorkspaceId] = useState(null)
+  const [workspaceMemory, setWorkspaceMemory] = useState([])
+  const [showMemoryPanel, setShowMemoryPanel] = useState(false)
+  const [memorySearch, setMemorySearch] = useState('')
+  const [memoryType, setMemoryType] = useState('')
 
   useEffect(() => {
-    refreshHistory()
-    refreshChats()
+    refreshWorkspaces()
     refreshProviderStatus()
-    refreshAnalytics()
-    refreshLearningReport()
-    refreshMissionControl()
-    refreshCustomAgents()
   }, [])
+
+  useEffect(() => {
+    if (!workspaceId) return
+    setSessionId(null)
+    setMessages([])
+    setSelectedRunId(null)
+    setSelectedGoal(null)
+    refreshHistory()
+    refreshChats(workspaceId)
+    refreshAnalytics(workspaceId)
+    refreshLearningReport(workspaceId)
+    refreshMissionControl(workspaceId)
+    refreshCustomAgents(workspaceId)
+    refreshWorkspaceMemory(workspaceId)
+  }, [workspaceId])
 
   useEffect(() => {
     if (!loading) return undefined
@@ -222,6 +247,14 @@ function App() {
     }, 900)
     return () => window.clearInterval(timer)
   }, [loading])
+
+  useEffect(() => {
+    if (!workspaceId) return
+    const timer = window.setTimeout(() => {
+      refreshWorkspaceMemory(workspaceId)
+    }, 250)
+    return () => window.clearTimeout(timer)
+  }, [memorySearch, memoryType, workspaceId])
 
   const selectedRun = useMemo(() => {
     const assistantMessages = messages.filter((message) => message.role === 'assistant' && message.result)
@@ -233,30 +266,128 @@ function App() {
     setHistory(await getHistory())
   }
 
+  async function refreshWorkspaces() {
+    const items = await getWorkspaces()
+    setWorkspaces(items)
+    if (!workspaceId && items.length > 0) {
+      const defaultWorkspace = items.find((item) => item.default) || items[0]
+      setWorkspaceId(defaultWorkspace.workspace_id)
+    }
+  }
+
   async function refreshProviderStatus() {
     setProviderStatus(await getProviderStatus())
   }
 
-  async function refreshAnalytics() {
-    setAnalytics(await getAnalytics())
+  async function refreshAnalytics(nextWorkspaceId = workspaceId) {
+    setAnalytics(await getAnalytics(nextWorkspaceId))
   }
 
-  async function refreshLearningReport() {
-    setLearningReport(await getLearningReport())
+  async function refreshLearningReport(nextWorkspaceId = workspaceId) {
+    setLearningReport(await getLearningReport(nextWorkspaceId))
   }
 
-  async function refreshMissionControl() {
-    setGoals(await getGoals())
+  async function refreshMissionControl(nextWorkspaceId = workspaceId) {
+    setGoals(await getGoals(nextWorkspaceId))
   }
 
-  async function refreshCustomAgents() {
-    setCustomAgents(await getCustomAgents())
+  async function refreshCustomAgents(nextWorkspaceId = workspaceId) {
+    setCustomAgents(await getCustomAgents(nextWorkspaceId))
     setAgentTemplates(await getAgentTemplates())
+  }
+
+  async function refreshWorkspaceMemory(nextWorkspaceId = workspaceId) {
+    if (!nextWorkspaceId) return
+    setWorkspaceMemory(
+      await getWorkspaceMemory(nextWorkspaceId, {
+        q: memorySearch,
+        memory_type: memoryType,
+      }),
+    )
+  }
+
+  async function handleCreateWorkspace() {
+    const name = window.prompt('Workspace name', 'New Workspace')
+    if (!name?.trim()) return
+    try {
+      const workspace = await createWorkspace({ name: name.trim(), description: '' })
+      await refreshWorkspaces()
+      setWorkspaceId(workspace.workspace_id)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function handleRenameWorkspace() {
+    const current = workspaces.find((item) => item.workspace_id === workspaceId)
+    if (!current) return
+    const name = window.prompt('Rename workspace', current.name)
+    if (!name?.trim()) return
+    try {
+      await updateWorkspace(workspaceId, { name: name.trim() })
+      await refreshWorkspaces()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function handleArchiveWorkspace() {
+    const current = workspaces.find((item) => item.workspace_id === workspaceId)
+    if (!current || current.default) return
+    try {
+      await deleteWorkspace(workspaceId)
+      const next = workspaces.find((item) => item.default) || workspaces.find((item) => item.workspace_id !== workspaceId)
+      setWorkspaceId(next?.workspace_id || null)
+      await refreshWorkspaces()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function handleAddMemory() {
+    if (!workspaceId) return
+    const title = window.prompt('Memory title')
+    if (!title?.trim()) return
+    const content = window.prompt('Memory content')
+    if (!content?.trim()) return
+    try {
+      await createWorkspaceMemory(workspaceId, {
+        title: title.trim(),
+        content: content.trim(),
+        type: 'project_fact',
+        source: 'manual',
+        importance: 'medium',
+        tags: [],
+      })
+      await refreshWorkspaceMemory(workspaceId)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function handleEditMemory(memory) {
+    const content = window.prompt('Edit memory content', memory.content)
+    if (!content?.trim()) return
+    try {
+      await updateWorkspaceMemory(workspaceId, memory.memory_id, { content: content.trim() })
+      await refreshWorkspaceMemory(workspaceId)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function handleDeleteMemory(memoryId) {
+    try {
+      await deleteWorkspaceMemory(workspaceId, memoryId)
+      await refreshWorkspaceMemory(workspaceId)
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
   async function handleCreateGoalFromPrompt(prompt) {
     try {
-      const result = await createGoal({ prompt })
+      const result = await createGoal({ prompt, workspace_id: workspaceId })
       setSelectedGoal(result)
       setShowMissionControl(true)
       await refreshMissionControl()
@@ -311,7 +442,7 @@ function App() {
 
   async function handleCreateAgentFromTemplate(templateName) {
     try {
-      await createCustomAgent({ template_name: templateName })
+      await createCustomAgent({ template_name: templateName, workspace_id: workspaceId })
       await refreshCustomAgents()
       await refreshAnalytics()
       setCopied('Custom agent created')
@@ -334,13 +465,13 @@ function App() {
     }
   }
 
-  async function refreshChats() {
-    setChats(await getChats())
+  async function refreshChats(nextWorkspaceId = workspaceId) {
+    setChats(await getChats(nextWorkspaceId))
   }
 
   async function newChat() {
     try {
-      const chat = await createChat()
+      const chat = await createChat('New Chat', workspaceId)
       setSessionId(chat.session_id)
       await refreshChats()
     } catch {
@@ -408,6 +539,7 @@ function App() {
         task_type: taskType,
         deep_mode: deepMode,
         session_id: sessionId,
+        workspace_id: workspaceId,
         file_ids: processedFiles.map((file) => file.file_id),
         recording_ids: processedRecordings.map((recording) => recording.recording_id),
         voice_used: voiceUsed,
@@ -429,6 +561,7 @@ function App() {
       await refreshAnalytics()
       await refreshLearningReport()
       await refreshMissionControl()
+      await refreshWorkspaceMemory(workspaceId)
       setAttachedFiles([])
       setAttachedRecordings([])
       setVoiceUsed(false)
@@ -456,6 +589,7 @@ function App() {
         session_id: result.session_id,
         message_id: result.message_id,
         run_id: result.run_id,
+        workspace_id: result.workspace_id || workspaceId,
         rating,
       })
       setCopied(rating === 'saved' ? 'Saved as good answer' : 'Feedback saved')
@@ -477,7 +611,7 @@ function App() {
     setUploadingFiles(true)
     setError('')
     try {
-      const result = await uploadFiles(files, sessionId)
+      const result = await uploadFiles(files, sessionId, workspaceId)
       setAttachedFiles((current) => [...current, ...(result.files || [])])
     } catch (err) {
       setError(err.message)
@@ -497,7 +631,7 @@ function App() {
     setUploadingRecordings(true)
     setError('')
     try {
-      const result = await uploadRecordings(files, sessionId)
+      const result = await uploadRecordings(files, sessionId, workspaceId)
       setAttachedRecordings((current) => [...current, ...(result.recordings || [])])
     } catch (err) {
       setError(err.message)
@@ -672,6 +806,83 @@ function App() {
           <MessageSquarePlus size={16} />
           New Chat
         </button>
+
+        <section className="sidebar-section">
+          <div className="side-heading">
+            <Library size={15} />
+            <span>Workspace</span>
+          </div>
+          <div className="workspace-card">
+            <select
+              value={workspaceId || ''}
+              onChange={(event) => setWorkspaceId(event.target.value)}
+              aria-label="Select workspace"
+            >
+              {workspaces.map((workspace) => (
+                <option key={workspace.workspace_id} value={workspace.workspace_id}>
+                  {workspace.name}
+                </option>
+              ))}
+            </select>
+            <div className="workspace-actions">
+              <button type="button" onClick={handleCreateWorkspace}>New</button>
+              <button type="button" onClick={handleRenameWorkspace} disabled={!workspaceId}>Rename</button>
+              <button
+                type="button"
+                onClick={handleArchiveWorkspace}
+                disabled={!workspaceId || workspaces.find((item) => item.workspace_id === workspaceId)?.default}
+              >
+                Archive
+              </button>
+            </div>
+            <p>{workspaces.find((item) => item.workspace_id === workspaceId)?.description || 'Project-specific chats, memory, goals, and agents.'}</p>
+          </div>
+        </section>
+
+        <section className="sidebar-section">
+          <button className="analytics-toggle" type="button" onClick={() => setShowMemoryPanel((current) => !current)}>
+            <span>
+              <Database size={15} />
+              Memory
+            </span>
+            <ChevronDown size={15} />
+          </button>
+          {showMemoryPanel && (
+            <div className="memory-panel">
+              <div className="memory-controls">
+                <input
+                  value={memorySearch}
+                  onChange={(event) => setMemorySearch(event.target.value)}
+                  placeholder="Search memory"
+                />
+                <select value={memoryType} onChange={(event) => setMemoryType(event.target.value)}>
+                  <option value="">All types</option>
+                  <option value="preference">Preference</option>
+                  <option value="project_fact">Project fact</option>
+                  <option value="decision">Decision</option>
+                  <option value="summary">Summary</option>
+                  <option value="task_result">Task result</option>
+                  <option value="learned_pattern">Learned pattern</option>
+                </select>
+              </div>
+              <button className="secondary-button full-width" type="button" onClick={handleAddMemory}>
+                Add memory
+              </button>
+              {workspaceMemory.length === 0 && <p className="muted">No workspace memory yet.</p>}
+              {workspaceMemory.slice(0, 8).map((memory) => (
+                <div className="memory-card" key={memory.memory_id}>
+                  <strong>{memory.title}</strong>
+                  <span>{formatType(memory.type)} · {memory.importance}</span>
+                  <p>{previewText(memory.content, 150)}</p>
+                  <div className="chat-row-actions">
+                    <button type="button" onClick={() => handleEditMemory(memory)}>Edit</button>
+                    <button type="button" onClick={() => handleDeleteMemory(memory.memory_id)}>Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         <section className="sidebar-section">
           <div className="side-heading">
@@ -1344,8 +1555,49 @@ function App() {
                   <span>Run</span>
                   <strong>{selectedRun.run_id?.slice(0, 8) || 'n/a'}</strong>
                 </div>
+                <div>
+                  <span>Workspace</span>
+                  <strong>{selectedRun.workspace_id?.slice(0, 8) || 'default'}</strong>
+                </div>
+                <div>
+                  <span>Memory used</span>
+                  <strong>{selectedRun.memory_used ? 'Yes' : 'No'}</strong>
+                </div>
               </div>
             </details>
+
+            {(selectedRun.memory_used || selectedRun.workspace_memory_used?.length > 0) && (
+              <details className="inspector-section" open>
+                <summary>
+                  <Database size={15} />
+                  Workspace Memory
+                  <ChevronDown size={15} />
+                </summary>
+                <div className="mini-grid">
+                  <div>
+                    <span>Entries used</span>
+                    <strong>{selectedRun.workspace_memory_used?.length || 0}</strong>
+                  </div>
+                  <div>
+                    <span>Context chars</span>
+                    <strong>{selectedRun.memory_context_characters || 0}</strong>
+                  </div>
+                </div>
+                <div className="agent-list">
+                  {(selectedRun.workspace_memory_used || []).map((memory) => (
+                    <div className="provider-row" key={memory.memory_id}>
+                      <strong>{memory.title}</strong>
+                      <div className="model-meta">
+                        <span>{formatType(memory.type)}</span>
+                        <span>{memory.importance}</span>
+                        <span>{memory.memory_id}</span>
+                      </div>
+                      <p>{memory.content}</p>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
 
             {(selectedRun.goal || selectedRun.goal_id || selectedRun.custom_agent) && (
               <details className="inspector-section" open>

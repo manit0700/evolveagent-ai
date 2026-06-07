@@ -1,14 +1,14 @@
-# EvolveAgent AI MVP v2.5 — Mission Control + Custom Agent Builder Summary
+# EvolveAgent AI MVP v2.6 — Workspace Memory + Personal AI Context Summary
 
 ## Short Summary
 
-EvolveAgent AI is a voice-controlled, ChatGPT-style multi-agent AI workspace with Mission Control, Custom Agent Builder, real multi-LLM consensus, governance, and an Advanced Adaptive Learning Engine. It routes user requests through a Master Orchestrator Agent, specialist agents, a Judge Agent, an Evolution Agent, memory storage, feedback, analytics, safe automation planning, recording analysis, goal/task planning, reusable custom agents, and learning reports that optimize the orchestration layer.
+EvolveAgent AI is a workspace-aware, voice-controlled, ChatGPT-style multi-agent AI workspace with project memory, Mission Control, Custom Agent Builder, real multi-LLM consensus, governance, and an Advanced Adaptive Learning Engine. It routes user requests through a Master Orchestrator Agent, specialist agents, a Judge Agent, an Evolution Agent, workspace memory, feedback, analytics, safe automation planning, recording analysis, goal/task planning, reusable custom agents, and learning reports that optimize the orchestration layer.
 
 ## Full Technical Summary
 
 EvolveAgent AI is built with a FastAPI backend and Vite React frontend. The backend receives chat requests, creates or loads chat sessions, classifies task type, runs the correct workflow, evaluates results, saves memory and analytics, and returns a structured response. The frontend presents Simple Mode for clean user-facing answers and Developer Mode for workflow inspection.
 
-MVP v2.5 supports real OpenAI text mode, optional Deep Mode consensus across configured OpenAI, Claude, Gemini, and Mistral providers, mock fallback, JSON-based chat/session storage, file upload and document analysis, recording upload and transcript summaries, mock image preview generation, per-agent evaluation, human feedback, analytics, browser voice command input, Mission Control goal/task graphs, Custom Agent Builder templates, approval-gated app automation planning, safe project scanning, allowlisted test/build command execution, prompt versioning, task-specific learning insights, workflow strategy memory, model routing suggestions, and user preference learning.
+MVP v2.6 supports real OpenAI text mode, optional Deep Mode consensus across configured OpenAI, Claude, Gemini, and Mistral providers, mock fallback, JSON-based chat/session storage, file upload and document analysis, recording upload and transcript summaries, mock image preview generation, per-agent evaluation, human feedback, analytics, browser voice command input, Mission Control goal/task graphs, Custom Agent Builder templates, approval-gated app automation planning, safe project scanning, allowlisted test/build command execution, prompt versioning, task-specific learning insights, workflow strategy memory, model routing suggestions, user preference learning, workspace switching, workspace-scoped records, and searchable/editable project memory.
 
 ## Key Features
 
@@ -48,18 +48,25 @@ MVP v2.5 supports real OpenAI text mode, optional Deep Mode consensus across con
 - Custom Agent Builder with governed reusable specialist agents
 - Prebuilt Agent Skill Store templates
 - Goal/custom-agent analytics and learning insights
+- Workspace switcher with automatic default workspace fallback
+- Workspace-scoped chats, files, recordings, goals, task graphs, custom agents, feedback, analytics, learning, and governance metadata
+- Workspace memory timeline with add, search, filter, edit, and delete controls
+- Relevant workspace memory retrieval before agent runs with capped context
+- Workspace-filtered analytics and learning reports
 
 ## Architecture Overview
 
 The user sends text, files, voice-transcribed input, image prompts, or app automation requests through the React chat UI. FastAPI receives the request and sends it to the Master Orchestrator Agent. The Master Agent detects the task type and routes the request to the correct workflow:
 
+- Workspace context is resolved first. If no workspace is provided, the default workspace is used.
+- Relevant workspace memory is retrieved and capped before being added to agent context.
 - Text tasks use Research, Logic, Risk, Strategy, Writing, Judge, Evolution, and Memory agents.
 - File tasks run File Analysis before the normal specialist workflow.
 - Image tasks use the mock Image Agent with safe prompt rewriting.
 - App automation tasks run Project Scanner and Implementation Planner, then ask for approval.
 - Recording summary tasks use uploaded recording transcripts and the Recording Analysis Agent.
 
-Results, feedback, workflow traces, analytics, prompt versions, model performance data, and learning reports are stored locally in JSON.
+Results, feedback, workflow traces, workspace memories, analytics, prompt versions, model performance data, and learning reports are stored locally in JSON.
 
 ## What Problem It Solves
 
@@ -71,6 +78,8 @@ Normal chatbots often produce one opaque answer. EvolveAgent AI separates routin
 - It uses specialist agents instead of one generic answer.
 - It evaluates each agent individually.
 - It stores workflow analytics and human feedback.
+- It organizes context by workspace instead of keeping every project in one global memory.
+- It retrieves relevant project memory before a run while keeping Simple Mode clean.
 - It supports file-aware workflows.
 - It supports recording/audio summary workflows.
 - It supports voice-to-chat input.
@@ -114,6 +123,7 @@ Correct learning description:
 - No unrestricted code editing
 - No autonomous file deletion
 - JSON storage is for MVP/demo use, not production scale
+- Workspace memory is keyword/importance based, not vector search
 
 ## Future Roadmap
 
@@ -125,7 +135,7 @@ Correct learning description:
 - OCR/scanned PDF support
 - Vector search and retrieval
 - Patch preview with second approval
-- User accounts and workspaces
+- User accounts and team workspace sharing
 - Cloud database
 - Deployment
 - Agent performance trends over time
@@ -139,6 +149,7 @@ Correct learning description:
 - `Summarize this recording and list action items`
 - `Turn this lecture recording into study notes`
 - `Generate an image prompt for a futuristic AI assistant`
+- `Create a workspace for Resume Projects and remember that I prefer concise bullet points`
 - `Explain how EvolveAgent AI works`
 - `Review my FastAPI backend architecture`
 - `Build an AI resume analyzer app`
@@ -158,7 +169,8 @@ Correct learning description:
 - Built Simple Mode for clean user-facing responses and Developer Mode for inspecting workflow trace, provider metadata, automation plans, learning reports, judge scores, per-agent scores, file context, image metadata, and raw JSON.
 - Added Mission Control for goal planning, task graph creation, task progress tracking, runnable subtasks, and goal analytics.
 - Built a Custom Agent Builder with governed reusable agents and prebuilt templates for resume review, code review, meetings, files, pharmacy PA, business analysis, bug fixing, and study notes.
+- Added workspace-scoped project memory with a memory timeline, relevant memory retrieval, default workspace fallback, workspace-filtered chats/goals/agents, and workspace-specific analytics/learning reports.
 
 ## Interview Explanation
 
-EvolveAgent AI is a full-stack project I built to demonstrate a voice-controlled multi-agent AI operating workflow. Instead of sending every prompt to one chatbot, the system uses a Master Orchestrator Agent to classify the task and route it through the right workflow. Text tasks go through research, logic, risk, strategy, writing, judging, evolution, and memory agents. In Deep Mode, it can compare candidates from configured OpenAI, Claude, Gemini, Mistral, and mock providers, then synthesize one final answer. File tasks use a File Analysis Agent before the normal workflow. Recording tasks use a Transcription Service and Recording Analysis Agent. Image tasks use a mock Image Agent with safe prompt rewriting. App automation tasks scan the project and create an implementation plan, but require approval before any apply step. MVP v2.5 adds Mission Control for goal/task graphs and a Custom Agent Builder for reusable governed specialists. Simple Mode keeps the UI clean, while Developer Mode shows consensus candidates, selected winner, model metadata, goals, custom agents, and the full agent workflow for technical review.
+EvolveAgent AI is a full-stack project I built to demonstrate a workspace-aware, voice-controlled multi-agent AI operating workflow. Instead of sending every prompt to one chatbot, the system uses a Master Orchestrator Agent to classify the task, retrieve relevant workspace memory, and route the request through the right workflow. Text tasks go through research, logic, risk, strategy, writing, judging, evolution, and memory agents. In Deep Mode, it can compare candidates from configured OpenAI, Claude, Gemini, Mistral, and mock providers, then synthesize one final answer. File tasks use a File Analysis Agent before the normal workflow. Recording tasks use a Transcription Service and Recording Analysis Agent. Image tasks use a mock Image Agent with safe prompt rewriting. App automation tasks scan the project and create an implementation plan, but require approval before any apply step. MVP v2.6 adds workspaces and project memory so chats, files, recordings, goals, custom agents, analytics, learning, and relevant memories can be scoped by project. Simple Mode keeps the UI clean, while Developer Mode shows workspace memory usage, consensus candidates, selected winner, model metadata, goals, custom agents, and the full agent workflow for technical review.

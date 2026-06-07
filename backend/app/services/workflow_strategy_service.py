@@ -10,11 +10,19 @@ class WorkflowStrategyService:
 
     def update_from_run(self, response: RunResponse) -> None:
         strategies = self.storage.read_list("workflow_strategies.json")
-        existing = next((item for item in strategies if item.get("task_type") == response.task_type), None)
+        existing = next(
+            (
+                item
+                for item in strategies
+                if item.get("task_type") == response.task_type and item.get("workspace_id") == response.workspace_id
+            ),
+            None,
+        )
         score = response.judge_result.overall_score
         if existing is None:
             existing = {
                 "task_type": response.task_type,
+                "workspace_id": response.workspace_id,
                 "run_count": 0,
                 "average_score": 0,
                 "best_agents": response.agents_used,
@@ -44,9 +52,22 @@ class WorkflowStrategyService:
         models = self.storage.read_list("model_performance.json")
         for output in response.agent_outputs + response.consensus_candidates:
             key = f"{output.provider}:{output.model}"
-            record = next((item for item in models if item.get("provider_model") == key), None)
+            record = next(
+                (
+                    item
+                    for item in models
+                    if item.get("provider_model") == key and item.get("workspace_id") == response.workspace_id
+                ),
+                None,
+            )
             if record is None:
-                record = {"provider_model": key, "run_count": 0, "average_latency_ms": 0, "fallback_count": 0}
+                record = {
+                    "provider_model": key,
+                    "workspace_id": response.workspace_id,
+                    "run_count": 0,
+                    "average_latency_ms": 0,
+                    "fallback_count": 0,
+                }
                 models.append(record)
             model_count = record["run_count"]
             record["average_latency_ms"] = round(
@@ -66,10 +87,18 @@ class WorkflowStrategyService:
             return
         strategies = self.storage.read_list("workflow_strategies.json")
         task_type = run.get("task_type", "unknown")
-        existing = next((item for item in strategies if item.get("task_type") == task_type), None)
+        existing = next(
+            (
+                item
+                for item in strategies
+                if item.get("task_type") == task_type and item.get("workspace_id") == run.get("workspace_id")
+            ),
+            None,
+        )
         if existing is None:
             existing = {
                 "task_type": task_type,
+                "workspace_id": run.get("workspace_id"),
                 "run_count": 0,
                 "average_score": 0,
                 "best_agents": run.get("agents_used", []),

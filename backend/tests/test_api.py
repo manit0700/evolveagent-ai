@@ -623,3 +623,98 @@ def test_v25_analytics_and_learning_fields():
     assert "recommended_custom_agents" in learning
     assert "workflow_improvements_for_goals" in learning
     assert "recurring_goal_blockers" in learning
+
+
+def test_workspace_memory_and_scoped_run_flow():
+    create_workspace = client.post(
+        "/api/workspaces",
+        json={"name": "Workspace Test", "description": "Scoped project context", "tags": ["test"]},
+    )
+    workspace = create_workspace.json()
+    assert create_workspace.status_code == 200
+    workspace_id = workspace["workspace_id"]
+
+    list_response = client.get("/api/workspaces")
+    assert any(item["workspace_id"] == workspace_id for item in list_response.json())
+
+    memory_response = client.post(
+        f"/api/workspaces/{workspace_id}/memory",
+        json={
+            "type": "project_fact",
+            "title": "Preferred stack",
+            "content": "This workspace prefers FastAPI, React, and concise implementation plans.",
+            "source": "manual",
+            "importance": "high",
+            "tags": ["stack"],
+        },
+    )
+    memory = memory_response.json()
+    assert memory_response.status_code == 200
+    assert memory["workspace_id"] == workspace_id
+
+    listed_memory = client.get(f"/api/workspaces/{workspace_id}/memory?q=FastAPI").json()
+    assert any(item["memory_id"] == memory["memory_id"] for item in listed_memory)
+
+    updated_memory = client.patch(
+        f"/api/workspaces/{workspace_id}/memory/{memory['memory_id']}",
+        json={"content": "This workspace prefers FastAPI, React, concise plans, and test coverage."},
+    )
+    assert updated_memory.status_code == 200
+    assert "test coverage" in updated_memory.json()["content"]
+
+    chat_response = client.post("/api/chats", json={"title": "Workspace chat", "workspace_id": workspace_id})
+    chat = chat_response.json()
+    assert chat_response.status_code == 200
+    assert chat["workspace_id"] == workspace_id
+
+    upload_response = client.post(
+        "/api/files/upload",
+        data={"workspace_id": workspace_id, "session_id": chat["session_id"]},
+        files={"files": ("notes.txt", b"FastAPI workspace notes", "text/plain")},
+    )
+    uploaded = upload_response.json()["files"][0]
+    assert uploaded["workspace_id"] == workspace_id
+
+    recording_response = client.post(
+        "/api/recordings/upload",
+        data={"workspace_id": workspace_id, "session_id": chat["session_id"]},
+        files={"files": ("standup.mp3", b"fake bytes", "audio/mpeg")},
+    )
+    recording = recording_response.json()["recordings"][0]
+    assert recording["workspace_id"] == workspace_id
+
+    run_response = client.post(
+        "/api/run",
+        json={
+            "workspace_id": workspace_id,
+            "session_id": chat["session_id"],
+            "user_input": "Create a concise FastAPI project checklist",
+            "task_type": "auto",
+        },
+    )
+    run = run_response.json()
+    assert run_response.status_code == 200
+    assert run["workspace_id"] == workspace_id
+    assert run["memory_used"] is True
+    assert run["workspace_memory_used"]
+
+    chats = client.get(f"/api/chats?workspace_id={workspace_id}").json()
+    assert any(item["session_id"] == chat["session_id"] for item in chats)
+
+    analytics = client.get(f"/api/analytics?workspace_id={workspace_id}").json()
+    assert analytics["workspace_id"] == workspace_id
+    assert analytics["total_runs"] >= 1
+    assert analytics["files_count"] >= 1
+    assert analytics["recordings_count"] >= 1
+
+    learning = client.get(f"/api/learning/report?workspace_id={workspace_id}").json()
+    assert learning["workspace_id"] == workspace_id
+    assert learning["total_runs_analyzed"] >= 1
+
+    delete_memory = client.delete(f"/api/workspaces/{workspace_id}/memory/{memory['memory_id']}")
+    assert delete_memory.status_code == 200
+    assert delete_memory.json()["deleted"] is True
+
+    archived = client.delete(f"/api/workspaces/{workspace_id}")
+    assert archived.status_code == 200
+    assert archived.json()["workspace"]["status"] == "archived"

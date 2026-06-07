@@ -1,4 +1,4 @@
-# EvolveAgent AI MVP v2.5 — Final Checklist
+# EvolveAgent AI MVP v2.6 — Final Checklist
 
 ## Verification Commands
 
@@ -32,9 +32,20 @@ npm run build
 - `Build an AI resume analyzer app.`
 - `Create a full implementation plan for a SaaS app.`
 - `Break this goal into tasks.`
+- Create a workspace named `Resume Projects`, add memory that says `Prefer concise software engineering internship bullets`, then ask: `Improve my resume summary.`
 
 ## Manual Demo Checks
 
+- Workspace switcher appears in the sidebar.
+- Default workspace exists when no workspace is manually selected.
+- Creating, renaming, and archiving a workspace works.
+- Memory panel can add, search, filter, edit, and delete workspace memory.
+- Running a prompt in a workspace returns `workspace_id` and memory usage metadata in Developer Mode.
+- Sidebar chats are filtered to the selected workspace.
+- Mission Control goals are filtered to the selected workspace.
+- Custom Agent Builder agents are filtered to the selected workspace.
+- Analytics can show workspace-specific counts and metrics.
+- Learning report can show workspace-specific insights and user preferences.
 - Simple Mode shows clean chat answers.
 - Developer Mode shows workflow trace, judge score, per-agent evaluation, automation plan, learning report, and raw JSON.
 - Developer Mode Learning Report shows task-specific agent insights, workflow recommendations, model routing recommendations, user preferences, and prompt version controls.
@@ -91,6 +102,8 @@ npm run build
 - `backend/app/data/automation_logs.json`
 - `backend/app/data/learning_memory.json`
 - `backend/app/data/model_performance.json`
+- `backend/app/data/workspaces.json`
+- `backend/app/data/workspace_memory.json`
 - `backend/app/data/goals.json`
 - `backend/app/data/task_graphs.json`
 - `backend/app/data/custom_agents.json`
@@ -102,7 +115,7 @@ npm run build
 - Confirm `.env` is ignored.
 - Do not commit API keys.
 - Use `.env.example` or README examples for configuration.
-- Keep `IMAGE_MODE=mock` for MVP v2.5.
+- Keep `IMAGE_MODE=mock` for MVP v2.6.
 - Use `TRANSCRIPTION_MODE=mock` for demos without real transcription cost.
 - Use `TRANSCRIPTION_MODE=openai` only when `OPENAI_API_KEY` is configured.
 - Use `LLM_MODE=mock` for demos without API keys.
@@ -111,12 +124,14 @@ npm run build
 
 ## Final GitHub Cleanup Checklist
 
-- README is updated to MVP v2.5.
+- README is updated to MVP v2.6.
+- README explains Workspace Memory and Personal AI Context.
 - DEMO.md includes voice and app automation demo flow.
+- DEMO.md includes workspace memory demo flow.
 - DEMO.md includes recording intelligence demo flow.
 - DEMO.md includes Mission Control and Custom Agent Builder demo flow.
-- FINAL_PROJECT_SUMMARY.md exists and reflects v2.5.
-- FINAL_CHECKLIST.md exists and reflects v2.5.
+- FINAL_PROJECT_SUMMARY.md exists and reflects v2.6.
+- FINAL_CHECKLIST.md exists and reflects v2.6.
 - screenshots/README.md includes screenshot instructions if screenshots are not committed.
 - Backend tests pass.
 - Frontend build passes.
@@ -126,5 +141,6 @@ npm run build
 - No local logs are committed.
 - Simple Mode is clean.
 - Developer Mode shows workflow, automation, and learning details.
+- Developer Mode shows workspace memory usage details.
 - Analytics panel works.
 - Feedback buttons work.
