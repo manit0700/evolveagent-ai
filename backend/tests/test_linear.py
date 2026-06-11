@@ -130,3 +130,63 @@ def test_linear_graphql_not_configured(monkeypatch):
     service = LinearService()
     with pytest.raises(LinearServiceError, match="Linear is not configured"):
         service.linear_graphql("{ viewer { id } }")
+
+
+def test_poll_worker_detects_in_progress_issues(monkeypatch):
+    from app.services.linear_poll_worker import LinearPollWorker
+
+    monkeypatch.setattr(settings, "linear_sync_enabled", True)
+    monkeypatch.setattr(settings, "linear_api_key", "test-key")
+    monkeypatch.setattr(settings, "linear_team_id", "team-1")
+
+    linear = MagicMock()
+    linear.list_linear_issues.return_value = [
+        {"id": "issue-1", "identifier": "EVO-1", "status": "In Progress", "status_type": "started"},
+        {"id": "issue-2", "identifier": "EVO-2", "status": "Backlog", "status_type": "backlog"},
+    ]
+    orchestration = MagicMock()
+    orchestration.links.get_link_by_issue.return_value = None
+    orchestration.prepare_in_progress_issue.return_value = {
+        "branch": {"branch": "linear/evo-1"},
+    }
+
+    worker = LinearPollWorker(linear, orchestration)
+    processed = worker.poll_once()
+
+    assert len(processed) == 1
+    assert processed[0]["identifier"] == "EVO-1"
+    orchestration.prepare_in_progress_issue.assert_called_once_with("issue-1")
+
+
+def test_poll_worker_skips_already_prepared(monkeypatch):
+    from app.services.linear_poll_worker import LinearPollWorker
+
+    monkeypatch.setattr(settings, "linear_sync_enabled", True)
+    monkeypatch.setattr(settings, "linear_api_key", "test-key")
+    monkeypatch.setattr(settings, "linear_team_id", "team-1")
+
+    linear = MagicMock()
+    linear.list_linear_issues.return_value = [
+        {"id": "issue-1", "identifier": "EVO-1", "status": "In Progress", "status_type": "started"},
+    ]
+    orchestration = MagicMock()
+    orchestration.links.get_link_by_issue.return_value = {
+        "linear_status": "In Progress",
+        "branch_name": "linear/evo-1",
+    }
+
+    worker = LinearPollWorker(linear, orchestration)
+    processed = worker.poll_once()
+
+    assert processed == []
+    orchestration.prepare_in_progress_issue.assert_not_called()
+
+
+def test_poll_worker_status_when_disabled(monkeypatch):
+    from app.services.linear_poll_worker import LinearPollWorker
+
+    monkeypatch.setattr(settings, "linear_sync_enabled", False)
+    worker = LinearPollWorker(MagicMock(), MagicMock())
+    status = worker.status()
+    assert status["enabled"] is False
+    assert status["running"] is False

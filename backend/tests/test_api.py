@@ -772,3 +772,40 @@ def test_linear_sync_select_and_links_with_mock(monkeypatch):
     assert "linear_tasks_synced" in learning
     governance = client.get("/api/governance").json()
     assert any("linear" in event.get("action_type", "") for event in governance.get("recent_events", []))
+
+
+def test_linear_poll_status_endpoint():
+    response = client.get("/api/linear/poll/status")
+    assert response.status_code == 200
+    body = response.json()
+    assert "running" in body
+    assert "poll_interval_seconds" in body
+    assert "last_processed" in body
+
+
+def test_linear_poll_run_once_with_mock(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "linear_sync_enabled", True)
+    monkeypatch.setattr(settings, "linear_api_key", "test-key")
+    monkeypatch.setattr(settings, "linear_team_id", "team-1")
+    monkeypatch.setattr(
+        "app.api.routes.linear_service.list_linear_issues",
+        lambda status_filter=None: [
+            {"id": "issue-1", "identifier": "EVO-1", "status": "In Progress", "status_type": "started"},
+        ],
+    )
+    monkeypatch.setattr("app.api.routes.linear_link_service.get_link_by_issue", lambda issue_id: None)
+    monkeypatch.setattr(
+        "app.api.routes.linear_orchestration.prepare_in_progress_issue",
+        lambda issue_id, workspace_id=None: {
+            "branch": {"branch": "linear/evo-1", "success": True},
+            "prepared_for_cursor": True,
+        },
+    )
+
+    response = client.post("/api/linear/poll/run-once")
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["processed"]) == 1
+    assert body["processed"][0]["identifier"] == "EVO-1"

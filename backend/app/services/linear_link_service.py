@@ -55,6 +55,7 @@ class LinearLinkService:
             "status": data.get("status", "synced"),
             "last_synced_at": now,
             "last_run_at": data.get("last_run_at"),
+            "linear_status": data.get("linear_status"),
             "branch_name": data.get("branch_name"),
             "commits": data.get("commits", []),
             "pushes": data.get("pushes", []),

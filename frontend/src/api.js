@@ -474,3 +474,19 @@ export async function runLinearIssue(issueId, workspaceId) {
   if (!response.ok) throw new Error(`Linear run failed with status ${response.status}`)
   return response.json()
 }
+
+export async function getLinearPollStatus() {
+  try {
+    const response = await fetch(`${API_BASE}/api/linear/poll/status`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function runLinearPollOnce() {
+  const response = await fetch(`${API_BASE}/api/linear/poll/run-once`, { method: 'POST' })
+  if (!response.ok) throw new Error(`Linear poll failed with status ${response.status}`)
+  return response.json()
+}

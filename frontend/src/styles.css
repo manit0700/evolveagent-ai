@@ -1357,6 +1357,21 @@ h2 {
   font-weight: 800;
 }
 
+.linear-badge,
+.linear-goal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: #8eb4ff !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+
+.linear-goal-meta a {
+  color: #8eb4ff;
+  text-decoration: underline;
+}
+
 .agent-template-card p,
 .goal-detail p,
 .task-card p {

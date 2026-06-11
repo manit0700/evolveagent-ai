@@ -110,6 +110,47 @@ class LinearOrchestrationService:
         self._log("linear_issue_selected", f"Selected {sync_result['issue'].get('identifier')} for work")
         return {**sync_result, "link": link or sync_result.get("link")}
 
+    def prepare_in_progress_issue(self, issue_id: str, workspace_id: str | None = None) -> dict[str, Any]:
+        """Detect In Progress in Linear: sync, select, create branch, notify Linear. No agent run."""
+        select_result = self.select_issue(issue_id, workspace_id=workspace_id)
+        link = select_result.get("link") or {}
+        issue = select_result.get("issue") or {}
+        branch_name = link.get("branch_name") or f"linear/{(issue.get('identifier') or issue_id).lower()}"
+        branch_result = self.git.create_branch(branch_name)
+        if branch_result["success"]:
+            link = self.links.create_or_update_link(
+                {
+                    **link,
+                    "branch_name": branch_result["branch"],
+                    "linear_status": issue.get("status"),
+                    "last_run_at": datetime.now(UTC).isoformat(),
+                }
+            )
+        self.links.update_status(issue_id, "selected", note="Detected In Progress via Linear poll")
+        self._log(
+            "linear_in_progress_detected",
+            f"Prepared branch for {issue.get('identifier')}",
+            workspace_id=link.get("workspace_id"),
+        )
+        comment_body = (
+            f"**EvolveAgent detected In Progress**\n\n"
+            f"- Mission Control goal synced\n"
+            f"- Local branch: `{branch_result.get('branch', branch_name)}`\n"
+            f"- Ready for Cursor/Codex work on this issue\n\n"
+            f"Run `/api/linear/issues/{issue_id}/run` when a subtask is ready for agent verification, tests, commit, and push."
+        )
+        try:
+            comment = self.linear.add_linear_comment(issue_id, comment_body)
+        except LinearServiceError:
+            comment = {}
+        return {
+            **select_result,
+            "link": link,
+            "branch": branch_result,
+            "linear_comment": comment,
+            "prepared_for_cursor": True,
+        }
+
     def run_issue(self, issue_id: str, workspace_id: str | None = None) -> dict[str, Any]:
         resolved_workspace = self.workspace_service.resolve_workspace_id(workspace_id)
         select_result = self.select_issue(issue_id, workspace_id=resolved_workspace)

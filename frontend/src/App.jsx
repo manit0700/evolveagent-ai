@@ -59,6 +59,7 @@ import {
   getLearningReport,
   getLinearIssues,
   getLinearLinks,
+  getLinearPollStatus,
   getLinearStatus,
   getProviderStatus,
   getWorkspaceMemory,
@@ -68,6 +69,7 @@ import {
   rollbackPromptVersion,
   runGoalTask,
   runLinearIssue,
+  runLinearPollOnce,
   runWorkflow,
   selectLinearIssue,
   sendFeedback,
@@ -228,6 +230,7 @@ function App() {
   const [linearStatus, setLinearStatus] = useState(null)
   const [linearIssues, setLinearIssues] = useState([])
   const [linearLinks, setLinearLinks] = useState([])
+  const [linearPollStatus, setLinearPollStatus] = useState(null)
   const [showLinearPanel, setShowLinearPanel] = useState(false)
   const [linearBusyId, setLinearBusyId] = useState('')
 
@@ -317,6 +320,7 @@ function App() {
     const status = await getLinearStatus()
     setLinearStatus(status)
     setLinearLinks(await getLinearLinks(nextWorkspaceId))
+    setLinearPollStatus(await getLinearPollStatus())
     if (status?.configured) {
       try {
         setLinearIssues(await getLinearIssues())
@@ -348,6 +352,10 @@ function App() {
 
   function linearLinkForIssue(issueId) {
     return linearLinks.find((item) => item.linear_issue_id === issueId)
+  }
+
+  function linearLinkForGoal(goalId) {
+    return linearLinks.find((item) => item.goal_id === goalId)
   }
 
   async function refreshWorkspaceMemory(nextWorkspaceId = workspaceId) {
@@ -1064,16 +1072,46 @@ function App() {
                 Create goal from prompt
               </button>
               {goals.length === 0 && <p className="muted">No goals yet.</p>}
-              {goals.slice(0, 6).map((goal) => (
-                <button className="goal-card" type="button" key={goal.goal_id} onClick={() => handleSelectGoal(goal.goal_id)}>
-                  <strong>{goal.title}</strong>
-                  <span>{goal.status} · {goal.progress_percent || 0}% · {goal.risk_level} risk</span>
-                </button>
-              ))}
+              {goals.slice(0, 6).map((goal) => {
+                const link = linearLinkForGoal(goal.goal_id)
+                return (
+                  <button className="goal-card" type="button" key={goal.goal_id} onClick={() => handleSelectGoal(goal.goal_id)}>
+                    <strong>{goal.title}</strong>
+                    <span>{goal.status} · {goal.progress_percent || 0}% · {goal.risk_level} risk</span>
+                    {link && (
+                      <span className="linear-badge">
+                        {link.linear_identifier}
+                        {link.branch_name ? ` · ${link.branch_name}` : ''}
+                        {link.commits?.length ? ` · ${link.commits[link.commits.length - 1].hash?.slice(0, 7)}` : ''}
+                        {link.pushes?.length ? ' · pushed' : ''}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
               {selectedGoal?.goal && (
                 <div className="goal-detail">
                   <h3>{selectedGoal.goal.title}</h3>
                   <p>{selectedGoal.goal.description}</p>
+                  {(() => {
+                    const link = linearLinkForGoal(selectedGoal.goal.goal_id)
+                    if (!link) return null
+                    return (
+                      <div className="linear-goal-meta">
+                        <span>Linear: {link.linear_identifier} · {link.status}</span>
+                        {link.linear_url && (
+                          <a href={link.linear_url} target="_blank" rel="noreferrer">
+                            Open in Linear
+                          </a>
+                        )}
+                        {link.branch_name && <span>Branch: {link.branch_name}</span>}
+                        {link.commits?.length ? (
+                          <span>Latest commit: {link.commits[link.commits.length - 1].hash}</span>
+                        ) : null}
+                        {link.pushes?.length ? <span>Push: completed</span> : <span>Push: not yet</span>}
+                      </div>
+                    )
+                  })()}
                   <div className="progress-bar">
                     <span style={{ width: `${selectedGoal.goal.progress_percent || 0}%` }} />
                   </div>
@@ -1157,7 +1195,26 @@ function App() {
                   <span>Auto push</span>
                   <strong>{linearStatus?.auto_git_push ? 'yes' : 'no'}</strong>
                 </div>
+                <div>
+                  <span>Poll worker</span>
+                  <strong>{linearPollStatus?.running ? 'running' : 'idle'}</strong>
+                </div>
+                {linearPollStatus?.last_poll_at && (
+                  <div>
+                    <span>Last poll</span>
+                    <strong>{new Date(linearPollStatus.last_poll_at).toLocaleString()}</strong>
+                  </div>
+                )}
               </div>
+              {developerMode && linearPollStatus && (
+                <details className="developer-prompt-block">
+                  <summary>Poll metadata</summary>
+                  <pre>{JSON.stringify(linearPollStatus, null, 2)}</pre>
+                  <button type="button" onClick={async () => { await runLinearPollOnce(); await refreshLinearData(workspaceId) }}>
+                    Run poll once
+                  </button>
+                </details>
+              )}
               {!linearStatus?.configured && (
                 <p className="muted">Add LINEAR_API_KEY and LINEAR_TEAM_ID to backend/.env, then restart the backend.</p>
               )}
@@ -1177,6 +1234,13 @@ function App() {
                         {link.branch_name ? ` · ${link.branch_name}` : ''}
                         {link.commits?.length ? ` · ${link.commits[link.commits.length - 1].hash}` : ''}
                       </p>
+                    )}
+                    {developerMode && (
+                      <details className="developer-prompt-block">
+                        <summary>Raw issue JSON</summary>
+                        <pre>{JSON.stringify(issue, null, 2)}</pre>
+                        {link && <pre>{JSON.stringify(link, null, 2)}</pre>}
+                      </details>
                     )}
                     <div className="inline-actions">
                       <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('sync', issue.id)}>
