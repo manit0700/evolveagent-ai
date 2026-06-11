@@ -147,3 +147,7 @@ class UpdateWorkspaceMemoryRequest(BaseModel):
     source: str | None = Field(default=None, pattern="^(chat|file|recording|goal|feedback|manual)$")
     importance: str | None = Field(default=None, pattern="^(low|medium|high)$")
     tags: list[str] | None = None
+
+
+class LinearCommentRequest(BaseModel):
+    body: str = Field(..., min_length=1, max_length=8000)

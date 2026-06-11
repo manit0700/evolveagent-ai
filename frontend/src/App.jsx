@@ -57,6 +57,9 @@ import {
   getGoals,
   getHistory,
   getLearningReport,
+  getLinearIssues,
+  getLinearLinks,
+  getLinearStatus,
   getProviderStatus,
   getWorkspaceMemory,
   getWorkspaces,
@@ -64,8 +67,11 @@ import {
   renameChat,
   rollbackPromptVersion,
   runGoalTask,
+  runLinearIssue,
   runWorkflow,
+  selectLinearIssue,
   sendFeedback,
+  syncLinearIssue,
   updateWorkspace,
   updateWorkspaceMemory,
   updateGoalTask,
@@ -219,10 +225,16 @@ function App() {
   const [showMemoryPanel, setShowMemoryPanel] = useState(false)
   const [memorySearch, setMemorySearch] = useState('')
   const [memoryType, setMemoryType] = useState('')
+  const [linearStatus, setLinearStatus] = useState(null)
+  const [linearIssues, setLinearIssues] = useState([])
+  const [linearLinks, setLinearLinks] = useState([])
+  const [showLinearPanel, setShowLinearPanel] = useState(false)
+  const [linearBusyId, setLinearBusyId] = useState('')
 
   useEffect(() => {
     refreshWorkspaces()
     refreshProviderStatus()
+    refreshLinearStatus()
   }, [])
 
   useEffect(() => {
@@ -238,6 +250,7 @@ function App() {
     refreshMissionControl(workspaceId)
     refreshCustomAgents(workspaceId)
     refreshWorkspaceMemory(workspaceId)
+    refreshLinearData(workspaceId)
   }, [workspaceId])
 
   useEffect(() => {
@@ -294,6 +307,47 @@ function App() {
   async function refreshCustomAgents(nextWorkspaceId = workspaceId) {
     setCustomAgents(await getCustomAgents(nextWorkspaceId))
     setAgentTemplates(await getAgentTemplates())
+  }
+
+  async function refreshLinearStatus() {
+    setLinearStatus(await getLinearStatus())
+  }
+
+  async function refreshLinearData(nextWorkspaceId = workspaceId) {
+    const status = await getLinearStatus()
+    setLinearStatus(status)
+    setLinearLinks(await getLinearLinks(nextWorkspaceId))
+    if (status?.configured) {
+      try {
+        setLinearIssues(await getLinearIssues())
+      } catch {
+        setLinearIssues([])
+      }
+    } else {
+      setLinearIssues([])
+    }
+  }
+
+  async function handleLinearAction(action, issueId) {
+    setLinearBusyId(issueId)
+    setError('')
+    try {
+      if (action === 'sync') await syncLinearIssue(issueId, workspaceId)
+      if (action === 'select') await selectLinearIssue(issueId, workspaceId)
+      if (action === 'run') await runLinearIssue(issueId, workspaceId)
+      await refreshLinearData(workspaceId)
+      await refreshMissionControl(workspaceId)
+      await refreshAnalytics(workspaceId)
+      await refreshLearningReport(workspaceId)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLinearBusyId('')
+    }
+  }
+
+  function linearLinkForIssue(issueId) {
+    return linearLinks.find((item) => item.linear_issue_id === issueId)
   }
 
   async function refreshWorkspaceMemory(nextWorkspaceId = workspaceId) {
@@ -967,6 +1021,14 @@ function App() {
                 <strong>{analytics.custom_agents_count || 0}</strong>
               </div>
               <div>
+                <span>Linear synced</span>
+                <strong>{analytics.linear_issues_synced || 0}</strong>
+              </div>
+              <div>
+                <span>Linear commits</span>
+                <strong>{analytics.linear_linked_commits || 0}</strong>
+              </div>
+              <div>
                 <span>Feedback</span>
                 <strong>
                   {analytics.feedback_summary?.helpful || 0}/{analytics.feedback_summary?.not_helpful || 0}/{analytics.feedback_summary?.saved || 0}
@@ -1068,6 +1130,73 @@ function App() {
                   </button>
                 </div>
               ))}
+            </div>
+          )}
+        </section>
+
+        <section className="sidebar-section">
+          <button className="analytics-toggle" type="button" onClick={() => setShowLinearPanel((current) => !current)}>
+            <span>
+              <GitBranch size={15} />
+              Linear
+            </span>
+            <ChevronDown size={15} />
+          </button>
+          {showLinearPanel && (
+            <div className="mission-panel">
+              <div className="provider-card">
+                <div>
+                  <span>Configured</span>
+                  <strong>{linearStatus?.configured ? 'yes' : 'no'}</strong>
+                </div>
+                <div>
+                  <span>Sync enabled</span>
+                  <strong>{linearStatus?.sync_enabled ? 'yes' : 'no'}</strong>
+                </div>
+                <div>
+                  <span>Auto push</span>
+                  <strong>{linearStatus?.auto_git_push ? 'yes' : 'no'}</strong>
+                </div>
+              </div>
+              {!linearStatus?.configured && (
+                <p className="muted">Add LINEAR_API_KEY and LINEAR_TEAM_ID to backend/.env, then restart the backend.</p>
+              )}
+              {linearIssues.length === 0 && linearStatus?.configured && (
+                <p className="muted">No Linear issues found for the configured team/project.</p>
+              )}
+              {linearIssues.slice(0, 8).map((issue) => {
+                const link = linearLinkForIssue(issue.id)
+                return (
+                  <div className="agent-template-card" key={issue.id}>
+                    <strong>{issue.identifier}</strong>
+                    <span>{issue.status} · priority {issue.priority ?? 0}</span>
+                    <p>{issue.title}</p>
+                    {link && (
+                      <p className="muted">
+                        Local: {link.status}
+                        {link.branch_name ? ` · ${link.branch_name}` : ''}
+                        {link.commits?.length ? ` · ${link.commits[link.commits.length - 1].hash}` : ''}
+                      </p>
+                    )}
+                    <div className="inline-actions">
+                      <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('sync', issue.id)}>
+                        Sync
+                      </button>
+                      <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('select', issue.id)}>
+                        Select
+                      </button>
+                      <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('run', issue.id)}>
+                        Run task
+                      </button>
+                      {issue.url && (
+                        <a href={issue.url} target="_blank" rel="noreferrer">
+                          Open
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </section>

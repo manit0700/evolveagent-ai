@@ -34,6 +34,7 @@ class StorageService:
             "custom_agents.json",
             "workspaces.json",
             "workspace_memory.json",
+            "linear_links.json",
         ):
             self._ensure_file(filename)
 

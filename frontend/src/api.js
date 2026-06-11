@@ -428,3 +428,49 @@ export async function deleteWorkspaceMemory(workspaceId, memoryId) {
   if (!response.ok) throw new Error(`Memory delete failed with status ${response.status}`)
   return response.json()
 }
+
+export async function getLinearStatus() {
+  try {
+    const response = await fetch(`${API_BASE}/api/linear/status`)
+    if (!response.ok) return { configured: false }
+    return response.json()
+  } catch {
+    return { configured: false }
+  }
+}
+
+export async function getLinearIssues() {
+  const response = await fetch(`${API_BASE}/api/linear/issues`)
+  if (!response.ok) throw new Error(`Linear issues request failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function getLinearLinks(workspaceId) {
+  const response = await fetch(`${API_BASE}/api/linear/links${query({ workspace_id: workspaceId })}`)
+  if (!response.ok) return []
+  return response.json()
+}
+
+export async function syncLinearIssue(issueId, workspaceId) {
+  const response = await fetch(`${API_BASE}/api/linear/issues/${issueId}/sync${query({ workspace_id: workspaceId })}`, {
+    method: 'POST',
+  })
+  if (!response.ok) throw new Error(`Linear sync failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function selectLinearIssue(issueId, workspaceId) {
+  const response = await fetch(`${API_BASE}/api/linear/issues/${issueId}/select${query({ workspace_id: workspaceId })}`, {
+    method: 'POST',
+  })
+  if (!response.ok) throw new Error(`Linear select failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function runLinearIssue(issueId, workspaceId) {
+  const response = await fetch(`${API_BASE}/api/linear/issues/${issueId}/run${query({ workspace_id: workspaceId })}`, {
+    method: 'POST',
+  })
+  if (!response.ok) throw new Error(`Linear run failed with status ${response.status}`)
+  return response.json()
+}

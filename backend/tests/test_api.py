@@ -718,3 +718,57 @@ def test_workspace_memory_and_scoped_run_flow():
     archived = client.delete(f"/api/workspaces/{workspace_id}")
     assert archived.status_code == 200
     assert archived.json()["workspace"]["status"] == "archived"
+
+
+def test_linear_status_endpoint(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "linear_api_key", None)
+    monkeypatch.setattr(settings, "linear_team_id", None)
+    response = client.get("/api/linear/status")
+    body = response.json()
+    assert response.status_code == 200
+    assert body["configured"] is False
+
+
+def test_linear_sync_select_and_links_with_mock(monkeypatch):
+    from app.config import settings
+
+    issue = {
+        "id": "linear-issue-1",
+        "identifier": "EVO-99",
+        "title": "Linear sync test",
+        "description": "Sync this issue into Mission Control",
+        "priority": 2,
+        "url": "https://linear.app/issue/EVO-99",
+        "updatedAt": "2026-06-11T00:00:00.000Z",
+        "status": "Backlog",
+        "status_type": "backlog",
+        "assignee": "Dev",
+    }
+
+    monkeypatch.setattr(settings, "linear_api_key", "test-key")
+    monkeypatch.setattr(settings, "linear_team_id", "team-1")
+    monkeypatch.setattr("app.api.routes.linear_service.get_linear_issue", lambda issue_id: issue)
+    monkeypatch.setattr("app.api.routes.linear_service.add_linear_comment", lambda issue_id, body: {"id": "comment-1", "body": body})
+
+    sync_response = client.post("/api/linear/issues/linear-issue-1/sync")
+    assert sync_response.status_code == 200
+    sync_body = sync_response.json()
+    assert sync_body["goal"]["title"]
+    assert sync_body["link"]["linear_identifier"] == "EVO-99"
+
+    select_response = client.post("/api/linear/issues/linear-issue-1/select")
+    assert select_response.status_code == 200
+    assert select_response.json()["link"]["status"] == "selected"
+
+    links_response = client.get("/api/linear/links")
+    assert links_response.status_code == 200
+    assert any(item["linear_issue_id"] == "linear-issue-1" for item in links_response.json())
+
+    analytics = client.get("/api/analytics").json()
+    assert "linear_issues_synced" in analytics
+    learning = client.get("/api/learning/report").json()
+    assert "linear_tasks_synced" in learning
+    governance = client.get("/api/governance").json()
+    assert any("linear" in event.get("action_type", "") for event in governance.get("recent_events", []))

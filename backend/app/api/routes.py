@@ -25,6 +25,7 @@ from app.models.request_models import (
     UpdateGoalTaskRequest,
     UpdateWorkspaceMemoryRequest,
     UpdateWorkspaceRequest,
+    LinearCommentRequest,
 )
 from app.models.response_models import AutomationApplyResult, GovernanceEvent, ProviderStatus, RunResponse
 from app.services.governance_service import GovernanceService
@@ -41,6 +42,11 @@ from app.services.storage_service import StorageService
 from app.services.workspace_service import WorkspaceService
 from app.services.user_preference_service import UserPreferenceService
 from app.services.workflow_strategy_service import WorkflowStrategyService
+from app.services.linear_service import LinearService, LinearServiceError
+from app.services.linear_link_service import LinearLinkService
+from app.services.linear_orchestration_service import LinearOrchestrationService
+from app.services.git_service import GitService
+from app.services.secret_scanner import SecretScanner
 
 router = APIRouter()
 storage = StorageService()
@@ -59,6 +65,20 @@ user_preferences = UserPreferenceService(storage)
 goal_service = GoalService(storage)
 custom_agent_service = CustomAgentService(storage)
 workspace_service = WorkspaceService(storage)
+linear_service = LinearService(SecretScanner())
+linear_link_service = LinearLinkService(storage)
+git_service = GitService()
+linear_orchestration = LinearOrchestrationService(
+    storage=storage,
+    linear_service=linear_service,
+    link_service=linear_link_service,
+    goal_service=goal_service,
+    governance_service=governance_service,
+    master_agent=master_agent,
+    workspace_service=workspace_service,
+    git_service=git_service,
+    command_runner=safe_command_runner,
+)
 
 
 def filter_by_workspace(items: list[dict], workspace_id: str | None = None) -> list[dict]:
@@ -386,6 +406,8 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
     active_goals = [goal for goal in goals if goal.get("status") == "active"]
     completed_goals = [goal for goal in goals if goal.get("status") == "completed"]
     custom_agent_counts = Counter(item.get("custom_agent_name") for item in runs if item.get("custom_agent_used"))
+    linear_links = filter_by_workspace(storage.read_list("linear_links.json"), resolved)
+    linear_runs = [item for item in runs if item.get("task_type") == "linear_task"]
     return {
         "total_runs": total_runs,
         "workspace_id": resolved,
@@ -415,6 +437,13 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
             "saved": feedback_counts.get("saved", 0),
             "total": len(feedback),
         },
+        "linear_issues_synced": len(linear_links),
+        "linear_tasks_selected": sum(1 for item in linear_links if item.get("status") == "selected"),
+        "linear_tasks_completed": sum(1 for item in linear_links if item.get("status") == "completed"),
+        "linear_linked_commits": sum(len(item.get("commits", [])) for item in linear_links),
+        "linear_pushes": sum(len(item.get("pushes", [])) for item in linear_links),
+        "linear_failures": sum(1 for item in linear_links if item.get("status") == "failed"),
+        "linear_task_runs": len(linear_runs),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -746,3 +775,143 @@ def delete_message(session_id: str, message_id: str) -> dict[str, bool]:
     storage.write_list("chat_sessions.json", sessions)
     storage.write_list("messages.json", next_messages)
     return {"deleted": True}
+
+
+@router.get("/linear/status")
+def get_linear_status() -> dict:
+    return linear_service.get_linear_config()
+
+
+@router.get("/linear/issues")
+def list_linear_issues(status: str | None = Query(default=None)) -> list[dict]:
+    try:
+        return linear_service.list_linear_issues(status_filter=status)
+    except LinearServiceError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/linear/issues/{issue_id}")
+def get_linear_issue(issue_id: str) -> dict:
+    try:
+        issue = linear_service.get_linear_issue(issue_id)
+        link = linear_link_service.get_link_by_issue(issue_id)
+        return {"issue": issue, "link": link}
+    except LinearServiceError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/linear/issues/{issue_id}/sync")
+def sync_linear_issue(
+    issue_id: str,
+    workspace_id: str | None = Query(default=None),
+) -> dict:
+    try:
+        return linear_orchestration.sync_issue(issue_id, workspace_id=workspace_id)
+    except LinearServiceError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/linear/issues/{issue_id}/select")
+def select_linear_issue(
+    issue_id: str,
+    workspace_id: str | None = Query(default=None),
+) -> dict:
+    try:
+        return linear_orchestration.select_issue(issue_id, workspace_id=workspace_id)
+    except LinearServiceError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/linear/issues/{issue_id}/run")
+def run_linear_issue(
+    issue_id: str,
+    workspace_id: str | None = Query(default=None),
+) -> dict:
+    try:
+        return linear_orchestration.run_issue(issue_id, workspace_id=workspace_id)
+    except LinearServiceError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/linear/issues/{issue_id}/comment")
+def comment_linear_issue(issue_id: str, request: LinearCommentRequest) -> dict:
+    try:
+        return linear_orchestration.add_comment(issue_id, request.body)
+    except LinearServiceError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/linear/links")
+def list_linear_links(workspace_id: str | None = Query(default=None)) -> list[dict]:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    return linear_link_service.list_links(resolved)
+
+
+@router.get("/linear/status")
+def get_linear_status() -> dict:
+    return linear_service.get_linear_config()
+
+
+@router.get("/linear/issues")
+def list_linear_issues(status: str | None = Query(default=None)) -> list[dict]:
+    try:
+        return linear_service.list_linear_issues(status_filter=status)
+    except LinearServiceError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/linear/issues/{issue_id}")
+def get_linear_issue(issue_id: str) -> dict:
+    try:
+        issue = linear_service.get_linear_issue(issue_id)
+        link = linear_link_service.get_link_by_issue(issue_id)
+        return {"issue": issue, "link": link}
+    except LinearServiceError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/linear/issues/{issue_id}/sync")
+def sync_linear_issue(
+    issue_id: str,
+    workspace_id: str | None = Query(default=None),
+) -> dict:
+    try:
+        return linear_orchestration.sync_issue(issue_id, workspace_id=workspace_id)
+    except LinearServiceError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/linear/issues/{issue_id}/select")
+def select_linear_issue(
+    issue_id: str,
+    workspace_id: str | None = Query(default=None),
+) -> dict:
+    try:
+        return linear_orchestration.select_issue(issue_id, workspace_id=workspace_id)
+    except LinearServiceError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/linear/issues/{issue_id}/run")
+def run_linear_issue(
+    issue_id: str,
+    workspace_id: str | None = Query(default=None),
+) -> dict:
+    try:
+        return linear_orchestration.run_issue(issue_id, workspace_id=workspace_id)
+    except LinearServiceError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/linear/issues/{issue_id}/comment")
+def comment_linear_issue(issue_id: str, request: LinearCommentRequest) -> dict:
+    try:
+        return linear_orchestration.add_comment(issue_id, request.body)
+    except LinearServiceError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.get("/linear/links")
+def list_linear_links(workspace_id: str | None = Query(default=None)) -> list[dict]:
+    resolved = workspace_service.resolve_workspace_id(workspace_id) if workspace_id else None
+    return linear_link_service.list_links(resolved)

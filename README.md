@@ -682,6 +682,31 @@ npm run build
 - `POST /api/learning/approve-prompt`
 - `POST /api/learning/reject-prompt`
 - `POST /api/learning/rollback-prompt`
+- `GET /api/linear/status`
+- `GET /api/linear/issues`
+- `GET /api/linear/issues/{issue_id}`
+- `POST /api/linear/issues/{issue_id}/sync`
+- `POST /api/linear/issues/{issue_id}/select`
+- `POST /api/linear/issues/{issue_id}/run`
+- `POST /api/linear/issues/{issue_id}/comment`
+- `GET /api/linear/links`
+
+## EvolveAgent + Linear Workflow
+
+EvolveAgent can sync Linear issues into Mission Control and assist with selected tasks using the existing governed automation workflow.
+
+1. Add `LINEAR_API_KEY`, `LINEAR_TEAM_ID`, and optional `LINEAR_PROJECT_ID` to `backend/.env`.
+2. Set `LINEAR_SYNC_ENABLED=true` and keep `AUTO_GIT_PUSH=false` until testing is stable.
+3. Start backend and frontend.
+4. Open the **Linear** sidebar panel.
+5. **Sync** an issue into Mission Control.
+6. **Select** the issue for work.
+7. **Run task** to execute one subtask through the existing agent workflow.
+8. Review any approval plan before apply.
+9. The backend commits safe source changes after each completed subtask.
+10. Enable `AUTO_GIT_PUSH=true` only after commits and tests are stable.
+
+Linear API keys are server-side only and are never exposed in frontend responses or logs.
 
 ## Limitations
 
