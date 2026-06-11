@@ -4,6 +4,7 @@ import pytest
 
 from app.config import settings
 from app.services.git_service import GitService
+from app.services.goal_service import GoalService
 from app.services.linear_link_service import LinearLinkService
 from app.services.linear_service import LinearService, LinearServiceError
 from app.services.secret_scanner import SecretScanner
@@ -209,3 +210,112 @@ def test_resolve_workflow_state_falls_back_to_completed_type():
     ]
     target = LinearService.resolve_workflow_state(states, prefer_completed=True)
     assert target["type"] == "completed"
+
+
+def test_build_completion_summary_includes_task_and_git(tmp_path, monkeypatch):
+    from app.services.linear_orchestration_service import LinearOrchestrationService
+
+    storage = StorageService(data_dir=str(tmp_path))
+    linear = MagicMock()
+    links = LinearLinkService(storage)
+    goals = GoalService(storage)
+    orchestration = LinearOrchestrationService(
+        storage=storage,
+        linear_service=linear,
+        link_service=links,
+        goal_service=goals,
+        governance_service=MagicMock(),
+        master_agent=MagicMock(),
+        workspace_service=MagicMock(),
+        git_service=MagicMock(),
+    )
+    orchestration.git.recent_commits.return_value = [{"hash": "abc1234", "message": "Fix poll worker"}]
+
+    link = {
+        "linear_issue_id": "issue-169",
+        "linear_identifier": "EVO-169",
+        "branch_name": "linear/evo-169",
+        "commits": [{"hash": "def5678", "message": "Linear EVO-169: integration"}],
+        "pushes": [],
+        "task_id": "task-1",
+    }
+    tasks = [
+        {
+            "task_id": "task-1",
+            "title": "v4.0 automation",
+            "description": "Codebase automation assistant",
+            "status": "done",
+            "last_result_summary": "Added Linear poll fix and completion summary.",
+        }
+    ]
+
+    summary = orchestration._build_completion_summary(
+        link,
+        tasks,
+        marked_task=tasks[0],
+        user_note="Verified locally with curl.",
+    )
+
+    assert "EVO-169" in summary
+    assert "Added Linear poll fix" in summary
+    assert "linear/evo-169" in summary
+    assert "Verified locally with curl." in summary
+    assert "def5678" in summary
+
+
+def test_on_goal_task_updated_completes_linear_with_summary(tmp_path, monkeypatch):
+    from app.services.linear_orchestration_service import LinearOrchestrationService
+
+    storage = StorageService(data_dir=str(tmp_path))
+    linear = MagicMock()
+    linear.update_linear_issue_status.return_value = {"status": "Done"}
+    linear.add_linear_comment.return_value = {"id": "comment-1"}
+
+    links = LinearLinkService(storage)
+    goals = GoalService(storage)
+    goal, task_graph = goals.create_from_plan(
+        {
+            "goal_title": "Test goal",
+            "goal_summary": "Summary",
+            "tasks": [{"title": "Do work", "description": "Implement feature", "phase": "Execution"}],
+        }
+    )
+    task_id = task_graph.tasks[0].task_id
+    links.create_or_update_link(
+        {
+            "linear_issue_id": "issue-169",
+            "linear_identifier": "EVO-169",
+            "goal_id": goal.goal_id,
+            "task_id": task_id,
+            "branch_name": "linear/evo-169",
+            "status": "selected",
+        }
+    )
+
+    orchestration = LinearOrchestrationService(
+        storage=storage,
+        linear_service=linear,
+        link_service=links,
+        goal_service=goals,
+        governance_service=MagicMock(),
+        master_agent=MagicMock(),
+        workspace_service=MagicMock(),
+        git_service=MagicMock(),
+    )
+    orchestration.git.recent_commits.return_value = []
+
+    goals.update_task(goal.goal_id, task_id, {"status": "done"})
+    result = orchestration.on_goal_task_updated(
+        goal.goal_id,
+        task_id,
+        {"status": "done"},
+        completion_note="Shipped Linear auto-complete with summary notes.",
+    )
+
+    assert result is not None
+    assert result["completed"] is True
+    linear.update_linear_issue_status.assert_called_once()
+    linear.add_linear_comment.assert_called_once()
+    comment_body = linear.add_linear_comment.call_args[0][1]
+    assert "Shipped Linear auto-complete" in comment_body
+    assert "EVO-169" in comment_body

@@ -559,7 +559,12 @@ def update_goal_task(goal_id: str, task_id: str, request: UpdateGoalTaskRequest)
     linear_sync = None
     if updates.get("status") in {"done", "completed"}:
         try:
-            linear_sync = linear_orchestration.on_goal_task_updated(goal_id, task_id, updates)
+            linear_sync = linear_orchestration.on_goal_task_updated(
+                goal_id,
+                task_id,
+                updates,
+                completion_note=updates.get("completion_note"),
+            )
         except LinearServiceError as error:
             linear_sync = {"completed": False, "error": str(error)}
     payload = task.model_dump()

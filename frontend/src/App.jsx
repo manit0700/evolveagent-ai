@@ -496,7 +496,16 @@ function App() {
 
   async function handleMarkGoalTaskDone(goalId, taskId) {
     try {
-      const result = await updateGoalTask(goalId, taskId, { status: 'done' })
+      const completionNote = window.prompt(
+        'Optional completion note (what was done, how it was verified):',
+        '',
+      )
+      const payload = { status: 'done' }
+      if (completionNote && completionNote.trim()) {
+        payload.completion_note = completionNote.trim()
+        payload.last_result_summary = completionNote.trim()
+      }
+      const result = await updateGoalTask(goalId, taskId, payload)
       await handleSelectGoal(goalId)
       await refreshMissionControl()
       await refreshLinearData(workspaceId)
@@ -1129,6 +1138,11 @@ function App() {
                         <span>{task.phase} · {task.priority} · {task.status}</span>
                       </div>
                       <p>{task.description}</p>
+                      {task.last_result_summary && (
+                        <p className="task-notes">
+                          <strong>Notes:</strong> {task.last_result_summary}
+                        </p>
+                      )}
                       <div className="inline-actions">
                         <button type="button" onClick={() => handleRunGoalTask(selectedGoal.goal.goal_id, task.task_id)}>
                           Run task

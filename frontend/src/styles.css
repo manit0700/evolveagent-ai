@@ -1381,6 +1381,16 @@ h2 {
   line-height: 1.4;
 }
 
+.task-notes {
+  margin-top: 0.5rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(114, 192, 255, 0.08);
+  color: #d7e3ee;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .agent-template-card button,
 .task-card button,
 .goal-result-card button {

@@ -120,6 +120,21 @@ class GitService:
         result = self._run("rev-parse", "--short", "HEAD")
         return result.stdout.strip() if result.returncode == 0 else ""
 
+    def recent_commits(self, branch: str | None = None, limit: int = 5) -> list[dict[str, str]]:
+        args = ["log", f"-{max(limit, 1)}", "--pretty=format:%h|%s"]
+        if branch:
+            args.append(branch)
+        result = self._run(*args)
+        if result.returncode != 0:
+            return []
+        commits: list[dict[str, str]] = []
+        for line in result.stdout.splitlines():
+            if "|" not in line:
+                continue
+            commit_hash, _, message = line.partition("|")
+            commits.append({"hash": commit_hash.strip(), "message": message.strip()})
+        return commits
+
     def diff_summary(self) -> str:
         result = self._run("diff", "--stat")
         return result.stdout.strip() if result.returncode == 0 else ""
