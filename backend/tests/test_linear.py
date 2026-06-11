@@ -190,3 +190,22 @@ def test_poll_worker_status_when_disabled(monkeypatch):
     status = worker.status()
     assert status["enabled"] is False
     assert status["running"] is False
+
+
+def test_resolve_workflow_state_prefers_done_name():
+    states = [
+        {"id": "1", "name": "Backlog", "type": "backlog"},
+        {"id": "2", "name": "In Progress", "type": "started"},
+        {"id": "3", "name": "Done", "type": "completed"},
+    ]
+    target = LinearService.resolve_workflow_state(states, prefer_completed=True)
+    assert target["name"] == "Done"
+
+
+def test_resolve_workflow_state_falls_back_to_completed_type():
+    states = [
+        {"id": "1", "name": "Backlog", "type": "backlog"},
+        {"id": "2", "name": "Shipped", "type": "completed"},
+    ]
+    target = LinearService.resolve_workflow_state(states, prefer_completed=True)
+    assert target["type"] == "completed"

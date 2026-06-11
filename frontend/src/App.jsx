@@ -43,6 +43,7 @@ import {
   createWorkspaceMemory,
   applyAutomation,
   approvePromptVersion,
+  completeLinearIssue,
   createChat,
   deleteChat,
   deleteMessage,
@@ -339,6 +340,7 @@ function App() {
       if (action === 'sync') await syncLinearIssue(issueId, workspaceId)
       if (action === 'select') await selectLinearIssue(issueId, workspaceId)
       if (action === 'run') await runLinearIssue(issueId, workspaceId)
+      if (action === 'complete') await completeLinearIssue(issueId)
       await refreshLinearData(workspaceId)
       await refreshMissionControl(workspaceId)
       await refreshAnalytics(workspaceId)
@@ -1252,6 +1254,11 @@ function App() {
                       <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('run', issue.id)}>
                         Run task
                       </button>
+                      {link?.status !== 'completed' && (
+                        <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('complete', issue.id)}>
+                          Mark Done in Linear
+                        </button>
+                      )}
                       {issue.url && (
                         <a href={issue.url} target="_blank" rel="noreferrer">
                           Open
