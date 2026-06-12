@@ -9,6 +9,7 @@ from app.agents.learning_agent import LearningAgent
 from app.agents.master_agent import MasterOrchestratorAgent
 from app.agents.memory_agent import MemoryAgent
 from app.models.request_models import (
+    ApprovalDecisionRequest,
     AutomationApplyRequest,
     AssistantCommandRequest,
     CreateKnowledgeLinkRequest,
@@ -47,6 +48,7 @@ from app.services.storage_service import StorageService
 from app.services.workspace_service import WorkspaceService
 from app.services.knowledge_service import KnowledgeService
 from app.services.assistant_command_service import AssistantCommandService
+from app.services.approval_service import ApprovalService
 from app.services.plugin_loader_service import PluginLoaderService
 from app.services.tool_registry_service import ToolRegistryService
 from app.services.user_preference_service import UserPreferenceService
@@ -70,6 +72,7 @@ safe_file_editor = SafeFileEditor()
 safe_command_runner = SafeCommandRunner()
 permission_service = PermissionService()
 governance_service = GovernanceService(storage)
+approval_service = ApprovalService(storage, governance_service)
 prompt_versions = PromptVersionService(storage)
 learning_agent = LearningAgent(storage)
 workflow_strategy = WorkflowStrategyService(storage)
@@ -372,7 +375,22 @@ def apply_automation(request: AutomationApplyRequest) -> AutomationApplyResult:
     if run is None:
         raise HTTPException(status_code=404, detail="Automation run not found")
 
+    approval = approval_service.find_pending_for_run(request.run_id, "automation_apply")
+    if approval is None:
+        approval = approval_service.create_chain(
+            run_id=request.run_id,
+            session_id=run.get("session_id"),
+            workspace_id=run.get("workspace_id"),
+            task_type="app_automation",
+            action_type="automation_apply",
+            summary="Approve automation apply for safe file validation and allowlisted commands.",
+            risk_level=(run.get("automation_plan") or {}).get("risk_level", "medium"),
+            metadata={"source": "automation_apply_endpoint"},
+        )
+
     if not request.approved:
+        approval_service.decide(approval["approval_id"], "reject", "User rejected automation apply.")
+        approval_service.mark_rolled_back(approval["approval_id"], "Rejected before any file validation or command execution.")
         run["status"] = "rejected"
         run["updated_at"] = datetime.now(UTC).isoformat()
         storage.write_list("automation_runs.json", runs)
@@ -402,6 +420,11 @@ def apply_automation(request: AutomationApplyRequest) -> AutomationApplyResult:
         )
         storage.append("automation_logs.json", {"run_id": request.run_id, "approved": False, "result": result.model_dump()})
         return result
+
+    if approval.get("status") == "pending":
+        approval = approval_service.decide(approval["approval_id"], "approve", "User approved automation apply.")
+    if approval.get("status") != "approved":
+        raise HTTPException(status_code=409, detail="Automation approval is not approved.")
 
     plan = run.get("automation_plan", {})
     from app.models.response_models import AutomationPlan
@@ -477,6 +500,43 @@ def apply_automation(request: AutomationApplyRequest) -> AutomationApplyResult:
     storage.write_list("automation_runs.json", runs)
     storage.append("automation_logs.json", {"run_id": request.run_id, "approved": True, "result": result.model_dump()})
     return result
+
+
+@router.get("/approvals")
+def list_approvals(
+    status: str | None = Query(default=None),
+    workspace_id: str | None = Query(default=None),
+) -> list[dict]:
+    return approval_service.list_chains(status=status, workspace_id=workspace_id)
+
+
+@router.get("/approvals/audit")
+def list_approval_audit(
+    workspace_id: str | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=250),
+) -> list[dict]:
+    return approval_service.audit(limit=limit, workspace_id=workspace_id)
+
+
+@router.get("/approvals/{approval_id}")
+def get_approval(approval_id: str) -> dict:
+    approval = approval_service.get_chain(approval_id)
+    if approval is None:
+        raise HTTPException(status_code=404, detail="Approval not found")
+    return approval
+
+
+@router.post("/approvals/{approval_id}/decision")
+def decide_approval(approval_id: str, request: ApprovalDecisionRequest) -> dict:
+    try:
+        approval = approval_service.decide(approval_id, request.decision, request.comment)
+    except ValueError as exc:
+        message = str(exc)
+        raise HTTPException(status_code=404 if "not found" in message.lower() else 400, detail=message) from exc
+    if request.decision == "reject":
+        approval_service.mark_rolled_back(approval_id, request.comment or "Rejected by user; no action was applied.")
+        approval = approval_service.get_chain(approval_id) or approval
+    return approval
 
 
 @router.get("/learning/report")

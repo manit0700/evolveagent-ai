@@ -22,6 +22,8 @@ class StorageService:
             "feedback.json",
             "automation_runs.json",
             "automation_logs.json",
+            "approval_chains.json",
+            "approval_audit.json",
             "learning_memory.json",
             "prompt_versions.json",
             "workflow_strategies.json",

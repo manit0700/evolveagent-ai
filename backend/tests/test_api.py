@@ -403,6 +403,14 @@ def test_app_automation_api_and_reject_apply():
     assert reject_body["success"] is False
     assert "rejected" in reject_body["summary"].lower()
 
+    approvals = client.get("/api/approvals").json()
+    matching = [item for item in approvals if item["run_id"] == body["run_id"]]
+    assert matching
+    assert matching[0]["status"] == "rolled_back"
+    audit = client.get("/api/approvals/audit").json()
+    assert any(item["run_id"] == body["run_id"] and item["decision"] == "reject" for item in audit)
+    assert any(item["run_id"] == body["run_id"] and item["decision"] == "rollback" for item in audit)
+
 
 def test_unsafe_file_edit_is_blocked_on_automation_apply():
     storage.append(
@@ -431,6 +439,43 @@ def test_unsafe_file_edit_is_blocked_on_automation_apply():
     assert response.status_code == 200
     assert body["success"] is False
     assert "Blocked path" in body["errors"][0]
+
+
+def test_approval_queue_decision_flow():
+    run_id = "approval-flow-run"
+    storage.append(
+        "automation_runs.json",
+        {
+            "run_id": run_id,
+            "session_id": "approval-session",
+            "workspace_id": None,
+            "status": "pending_approval",
+            "automation_plan": {
+                "summary": "Safe no-op approval validation",
+                "files_to_change": [],
+                "files_to_create": [],
+                "commands_to_run": [],
+                "risk_level": "low",
+                "requires_approval": True,
+                "notes": [],
+                "project_scan": None,
+                "consensus_candidates": [],
+                "judge_reason": None,
+            },
+        },
+    )
+
+    apply_response = client.post("/api/automation/apply", json={"run_id": run_id, "approved": True})
+    assert apply_response.status_code == 200
+    approvals = client.get("/api/approvals").json()
+    approval = next(item for item in approvals if item["run_id"] == run_id)
+    assert approval["status"] == "approved"
+    detail_response = client.get(f"/api/approvals/{approval['approval_id']}")
+    assert detail_response.status_code == 200
+    assert detail_response.json()["steps"][0]["status"] == "approved"
+
+    audit = client.get("/api/approvals/audit").json()
+    assert any(item["approval_id"] == approval["approval_id"] and item["decision"] == "approve" for item in audit)
 
 
 def test_learning_endpoints():

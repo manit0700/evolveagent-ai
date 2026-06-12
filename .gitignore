@@ -21,6 +21,8 @@ backend/app/data/feedback.json
 backend/app/data/agent_analytics.json
 backend/app/data/automation_runs.json
 backend/app/data/automation_logs.json
+backend/app/data/approval_chains.json
+backend/app/data/approval_audit.json
 backend/app/data/learning_memory.json
 backend/app/data/model_performance.json
 backend/app/data/workflow_strategies.json

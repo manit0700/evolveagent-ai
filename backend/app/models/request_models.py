@@ -39,6 +39,11 @@ class AutomationApplyRequest(BaseModel):
     approved: bool
 
 
+class ApprovalDecisionRequest(BaseModel):
+    decision: str = Field(..., pattern="^(approve|reject)$")
+    comment: str | None = Field(default=None, max_length=1000)
+
+
 class PromptProposalRequest(BaseModel):
     agent_name: str = Field(..., min_length=1, max_length=80)
     reason: str = Field(..., min_length=1, max_length=1000)
