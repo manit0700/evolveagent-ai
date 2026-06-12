@@ -102,7 +102,7 @@ def test_governance_endpoint_returns_summary():
 def test_workspace_knowledge_search_and_export():
     workspace_response = client.post("/api/workspaces", json={"name": "Knowledge Test"})
     workspace_id = workspace_response.json()["workspace_id"]
-    client.post(
+    memory_response = client.post(
         f"/api/workspaces/{workspace_id}/memory",
         json={
             "type": "project_fact",
@@ -112,6 +112,21 @@ def test_workspace_knowledge_search_and_export():
             "tags": ["fastapi", "linear"],
         },
     )
+    memory = memory_response.json()
+    second_memory = client.post(
+        f"/api/workspaces/{workspace_id}/memory",
+        json={
+            "type": "decision",
+            "title": "Automation boundary",
+            "content": "Codex automation requires tests and safe file staging before Linear is marked Done.",
+            "importance": "medium",
+            "tags": ["codex", "linear"],
+        },
+    ).json()
+
+    pin_response = client.post(f"/api/workspaces/{workspace_id}/memory/{memory['memory_id']}/pin")
+    assert pin_response.status_code == 200
+    assert pin_response.json()["pinned"] is True
 
     summary_response = client.get(f"/api/workspaces/{workspace_id}/knowledge")
     summary = summary_response.json()
@@ -124,10 +139,39 @@ def test_workspace_knowledge_search_and_export():
     assert search_response.status_code == 200
     assert search["result_count"] >= 1
     assert any("Preferred stack" == item["title"] for item in search["results"])
+    preferred = next(item for item in search["results"] if item["title"] == "Preferred stack")
+    assert preferred["metadata"]["pinned"] is True
+    assert preferred["metadata"]["importance_score"] > 100
 
     export_response = client.get(f"/api/workspaces/{workspace_id}/knowledge/export")
     assert export_response.status_code == 200
     assert "Preferred stack" in export_response.text
+
+    link_response = client.post(
+        f"/api/workspaces/{workspace_id}/knowledge/links",
+        json={
+            "source_type": "memory",
+            "source_id": memory["memory_id"],
+            "target_type": "memory",
+            "target_id": second_memory["memory_id"],
+            "reason": "Both describe Linear/Codex automation decisions.",
+        },
+    )
+    assert link_response.status_code == 200
+    link = link_response.json()
+    assert link["source"]["title"] == "Preferred stack"
+    assert link["target"]["title"] == "Automation boundary"
+
+    linked_search = client.get(f"/api/workspaces/{workspace_id}/knowledge/search?q=FastAPI").json()
+    linked_preferred = next(item for item in linked_search["results"] if item["title"] == "Preferred stack")
+    assert linked_preferred["linked_items"][0]["title"] == "Automation boundary"
+
+    links = client.get(f"/api/workspaces/{workspace_id}/knowledge/links").json()
+    assert any(item["link_id"] == link["link_id"] for item in links)
+
+    delete_link = client.delete(f"/api/workspaces/{workspace_id}/knowledge/links/{link['link_id']}")
+    assert delete_link.status_code == 200
+    assert delete_link.json()["deleted"] is True
 
 
 def test_assistant_commands_are_safe_and_workspace_aware():

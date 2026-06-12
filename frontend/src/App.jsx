@@ -73,6 +73,7 @@ import {
   exportWorkspaceKnowledge,
   getAssistantCommands,
   runAssistantCommand,
+  pinWorkspaceMemory,
   getWorkspaces,
   rejectPromptVersion,
   renameChat,
@@ -588,6 +589,16 @@ function App() {
     }
   }
 
+  async function handleToggleMemoryPin(memory) {
+    try {
+      await pinWorkspaceMemory(workspaceId, memory.memory_id, !memory.pinned)
+      await refreshWorkspaceMemory(workspaceId)
+      await refreshKnowledge(workspaceId)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   async function handleCreateGoalFromPrompt(prompt) {
     try {
       const result = await createGoal({ prompt, workspace_id: workspaceId })
@@ -1089,9 +1100,16 @@ function App() {
               {workspaceMemory.slice(0, 8).map((memory) => (
                 <div className="memory-card" key={memory.memory_id}>
                   <strong>{memory.title}</strong>
-                  <span>{formatType(memory.type)} · {memory.importance}</span>
+                  <span>
+                    {formatType(memory.type)} · {memory.importance}
+                    {memory.pinned ? ' · pinned' : ''}
+                    {memory.usage_count ? ` · used ${memory.usage_count}` : ''}
+                  </span>
                   <p>{previewText(memory.content, 150)}</p>
                   <div className="chat-row-actions">
+                    <button type="button" onClick={() => handleToggleMemoryPin(memory)}>
+                      {memory.pinned ? 'Unpin' : 'Pin'}
+                    </button>
                     <button type="button" onClick={() => handleEditMemory(memory)}>Edit</button>
                     <button type="button" onClick={() => handleDeleteMemory(memory.memory_id)}>Delete</button>
                   </div>
@@ -1149,6 +1167,11 @@ function App() {
                   <span>{formatType(item.source_type)} · score {item.score}</span>
                   <p>{previewText(item.content_preview, 150)}</p>
                   {item.tags?.length > 0 && <small>{item.tags.slice(0, 4).join(', ')}</small>}
+                  {item.linked_items?.length > 0 && (
+                    <small>
+                      Linked: {item.linked_items.slice(0, 3).map((linked) => linked.title).join(', ')}
+                    </small>
+                  )}
                 </div>
               ))}
               {knowledgeLinks.length > 0 && (

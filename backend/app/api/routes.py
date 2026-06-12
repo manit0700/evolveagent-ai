@@ -11,6 +11,7 @@ from app.agents.memory_agent import MemoryAgent
 from app.models.request_models import (
     AutomationApplyRequest,
     AssistantCommandRequest,
+    CreateKnowledgeLinkRequest,
     CreateChatRequest,
     CreateCustomAgentRequest,
     CreateGoalRequest,
@@ -176,6 +177,22 @@ def delete_workspace_memory(workspace_id: str, memory_id: str) -> dict[str, bool
     return {"deleted": True}
 
 
+@router.post("/workspaces/{workspace_id}/memory/{memory_id}/pin")
+def pin_workspace_memory(workspace_id: str, memory_id: str) -> dict:
+    memory = workspace_service.update_memory(workspace_id, memory_id, {"pinned": True})
+    if memory is None:
+        raise HTTPException(status_code=404, detail="Workspace memory not found")
+    return memory
+
+
+@router.post("/workspaces/{workspace_id}/memory/{memory_id}/unpin")
+def unpin_workspace_memory(workspace_id: str, memory_id: str) -> dict:
+    memory = workspace_service.update_memory(workspace_id, memory_id, {"pinned": False})
+    if memory is None:
+        raise HTTPException(status_code=404, detail="Workspace memory not found")
+    return memory
+
+
 @router.get("/workspaces/{workspace_id}/knowledge")
 def get_workspace_knowledge(workspace_id: str) -> dict:
     return knowledge_service.summary(workspace_id)
@@ -202,6 +219,30 @@ def export_workspace_knowledge(
         knowledge_service.export_markdown(workspace_id),
         media_type="text/markdown",
     )
+
+
+@router.post("/workspaces/{workspace_id}/knowledge/links")
+def create_knowledge_link(workspace_id: str, request: CreateKnowledgeLinkRequest) -> dict:
+    try:
+        return knowledge_service.create_link(workspace_id, request.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/workspaces/{workspace_id}/knowledge/links")
+def list_knowledge_links(
+    workspace_id: str,
+    record_type: str | None = Query(default=None),
+    record_id: str | None = Query(default=None),
+) -> list[dict]:
+    return knowledge_service.list_links(workspace_id, record_type=record_type, record_id=record_id)
+
+
+@router.delete("/workspaces/{workspace_id}/knowledge/links/{link_id}")
+def delete_knowledge_link(workspace_id: str, link_id: str) -> dict[str, bool]:
+    if not knowledge_service.delete_link(workspace_id, link_id):
+        raise HTTPException(status_code=404, detail="Knowledge link not found")
+    return {"deleted": True}
 
 
 @router.get("/assistant/commands")

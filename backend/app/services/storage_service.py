@@ -34,6 +34,7 @@ class StorageService:
             "custom_agents.json",
             "workspaces.json",
             "workspace_memory.json",
+            "knowledge_links.json",
             "linear_links.json",
             "codex_jobs.json",
         ):

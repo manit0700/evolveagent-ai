@@ -149,6 +149,15 @@ class UpdateWorkspaceMemoryRequest(BaseModel):
     source: str | None = Field(default=None, pattern="^(chat|file|recording|goal|feedback|manual)$")
     importance: str | None = Field(default=None, pattern="^(low|medium|high)$")
     tags: list[str] | None = None
+    pinned: bool | None = None
+
+
+class CreateKnowledgeLinkRequest(BaseModel):
+    source_type: str = Field(..., pattern="^(memory|chat|file|recording|goal|custom_agent)$")
+    source_id: str = Field(..., min_length=1, max_length=160)
+    target_type: str = Field(..., pattern="^(memory|chat|file|recording|goal|custom_agent)$")
+    target_id: str = Field(..., min_length=1, max_length=160)
+    reason: str | None = Field(default=None, max_length=500)
 
 
 class LinearCommentRequest(BaseModel):

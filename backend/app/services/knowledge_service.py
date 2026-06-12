@@ -4,6 +4,7 @@ import json
 from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from typing import Any
+from uuid import uuid4
 
 from app.services.storage_service import StorageService
 from app.services.workspace_service import WorkspaceService
@@ -45,6 +46,7 @@ class KnowledgeService:
             reverse=True,
         )
         selected = scored[: max(1, min(limit, 100))]
+        selected = [self._with_stored_links(resolved, item) for item in selected]
         return {
             "workspace_id": resolved,
             "query": query,
@@ -53,6 +55,7 @@ class KnowledgeService:
             "result_count": len(selected),
             "results": selected,
             "related_links": self.related_links(resolved, selected[:8]),
+            "stored_links": self.list_links(resolved),
         }
 
     def summary(self, workspace_id: str | None) -> dict[str, Any]:
@@ -134,8 +137,72 @@ class KnowledgeService:
             "workspace_id": resolved,
             "summary": self.summary(resolved),
             "records": self._records(resolved),
+            "links": self.list_links(resolved),
             "exported_at": datetime.now(UTC).isoformat(),
         }
+
+    def create_link(self, workspace_id: str | None, data: dict[str, Any]) -> dict[str, Any]:
+        resolved = self.workspace_service.resolve_workspace_id(workspace_id)
+        records = self._record_index(resolved)
+        source_key = self._record_key(data.get("source_type"), data.get("source_id"))
+        target_key = self._record_key(data.get("target_type"), data.get("target_id"))
+        if source_key not in records or target_key not in records:
+            raise ValueError("Knowledge link source or target was not found in this workspace.")
+        if source_key == target_key:
+            raise ValueError("Knowledge link source and target must be different records.")
+
+        links = self.storage.read_list("knowledge_links.json")
+        existing = next(
+            (
+                link
+                for link in links
+                if link.get("workspace_id") == resolved
+                and self._record_key(link.get("source_type"), link.get("source_id")) == source_key
+                and self._record_key(link.get("target_type"), link.get("target_id")) == target_key
+            ),
+            None,
+        )
+        if existing:
+            return self._hydrate_link(resolved, existing, records)
+
+        now = datetime.now(UTC).isoformat()
+        link = {
+            "link_id": str(uuid4()),
+            "workspace_id": resolved,
+            "source_type": data.get("source_type"),
+            "source_id": data.get("source_id"),
+            "target_type": data.get("target_type"),
+            "target_id": data.get("target_id"),
+            "reason": data.get("reason") or "Manually linked knowledge records.",
+            "created_at": now,
+            "updated_at": now,
+        }
+        links.append(link)
+        self.storage.write_list("knowledge_links.json", links)
+        return self._hydrate_link(resolved, link, records)
+
+    def list_links(self, workspace_id: str | None, record_type: str | None = None, record_id: str | None = None) -> list[dict[str, Any]]:
+        resolved = self.workspace_service.resolve_workspace_id(workspace_id)
+        records = self._record_index(resolved)
+        links = [link for link in self.storage.read_list("knowledge_links.json") if link.get("workspace_id") == resolved]
+        if record_type and record_id:
+            key = self._record_key(record_type, record_id)
+            links = [
+                link
+                for link in links
+                if self._record_key(link.get("source_type"), link.get("source_id")) == key
+                or self._record_key(link.get("target_type"), link.get("target_id")) == key
+            ]
+        return [self._hydrate_link(resolved, link, records) for link in links]
+
+    def delete_link(self, workspace_id: str | None, link_id: str) -> bool:
+        resolved = self.workspace_service.resolve_workspace_id(workspace_id)
+        links = self.storage.read_list("knowledge_links.json")
+        next_links = [link for link in links if not (link.get("workspace_id") == resolved and link.get("link_id") == link_id)]
+        if len(next_links) == len(links):
+            return False
+        self.storage.write_list("knowledge_links.json", next_links)
+        return True
 
     def _records(self, workspace_id: str) -> list[dict[str, Any]]:
         records: list[dict[str, Any]] = []
@@ -160,7 +227,14 @@ class KnowledgeService:
                 updated_at=item.get("updated_at"),
                 importance=item.get("importance", "medium"),
                 tags=item.get("tags", []),
-                metadata={"memory_type": item.get("type"), "source": item.get("source")},
+                metadata={
+                    "memory_type": item.get("type"),
+                    "source": item.get("source"),
+                    "pinned": bool(item.get("pinned", False)),
+                    "usage_count": int(item.get("usage_count") or 0),
+                    "last_used_at": item.get("last_used_at"),
+                    "importance_score": self.workspace_service.memory_importance_score(item),
+                },
             )
             for item in items
         ]
@@ -283,7 +357,7 @@ class KnowledgeService:
             "title": title or source_type.replace("_", " ").title(),
             "content_preview": content_preview,
             "importance": importance,
-            "importance_rank": {"high": 3, "medium": 2, "low": 1}.get(importance, 2),
+            "importance_rank": metadata.get("importance_score") or {"high": 3, "medium": 2, "low": 1}.get(importance, 2),
             "tags": clean_tags,
             "created_at": created_at,
             "updated_at": updated_at,
@@ -315,3 +389,40 @@ class KnowledgeService:
         for record in records:
             grouped[record["source_type"]].append(record)
         return dict(grouped)
+
+    def _with_stored_links(self, workspace_id: str, record: dict[str, Any]) -> dict[str, Any]:
+        links = self.list_links(workspace_id, record["source_type"], record["record_id"])
+        linked_items = []
+        record_key = self._record_key(record["source_type"], record["record_id"])
+        for link in links:
+            other = link.get("target") if self._record_key(link.get("source_type"), link.get("source_id")) == record_key else link.get("source")
+            if other:
+                linked_items.append({**other, "link_id": link.get("link_id"), "reason": link.get("reason")})
+        return {**record, "linked_items": linked_items}
+
+    def _record_index(self, workspace_id: str) -> dict[str, dict[str, Any]]:
+        return {self._record_key(record["source_type"], record["record_id"]): record for record in self._records(workspace_id)}
+
+    def _record_key(self, record_type: str | None, record_id: str | None) -> str:
+        return f"{record_type}:{record_id}"
+
+    def _hydrate_link(self, workspace_id: str, link: dict[str, Any], records: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
+        records = records or self._record_index(workspace_id)
+        source = records.get(self._record_key(link.get("source_type"), link.get("source_id")))
+        target = records.get(self._record_key(link.get("target_type"), link.get("target_id")))
+        return {
+            **link,
+            "source": self._link_record_summary(source),
+            "target": self._link_record_summary(target),
+        }
+
+    def _link_record_summary(self, record: dict[str, Any] | None) -> dict[str, Any] | None:
+        if not record:
+            return None
+        return {
+            "record_id": record.get("record_id"),
+            "source_type": record.get("source_type"),
+            "title": record.get("title"),
+            "content_preview": record.get("content_preview"),
+            "importance": record.get("importance"),
+        }

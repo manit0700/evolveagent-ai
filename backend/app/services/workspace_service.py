@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import UTC, datetime
+from math import exp
 from uuid import uuid4
 
 from app.services.storage_service import StorageService
@@ -100,6 +101,9 @@ class WorkspaceService:
             "updated_at": now,
             "importance": data.get("importance") or "medium",
             "tags": data.get("tags", []),
+            "pinned": bool(data.get("pinned", False)),
+            "usage_count": 0,
+            "last_used_at": None,
         }
         self.storage.append("workspace_memory.json", memory)
         return memory
@@ -116,7 +120,14 @@ class WorkspaceService:
                 for item in items
                 if lowered in f"{item.get('title', '')} {item.get('content', '')} {' '.join(item.get('tags', []))}".lower()
             ]
-        return sorted(items, key=lambda item: item.get("updated_at") or item.get("created_at") or "", reverse=True)
+        return sorted(
+            items,
+            key=lambda item: (
+                self.memory_importance_score(item),
+                item.get("updated_at") or item.get("created_at") or "",
+            ),
+            reverse=True,
+        )
 
     def get_memory(self, workspace_id: str, memory_id: str) -> dict | None:
         resolved = self.resolve_workspace_id(workspace_id)
@@ -135,7 +146,7 @@ class WorkspaceService:
         memory = next((item for item in memories if item.get("workspace_id") == resolved and item.get("memory_id") == memory_id), None)
         if memory is None:
             return None
-        for key in ("type", "title", "content", "source", "importance", "tags"):
+        for key in ("type", "title", "content", "source", "importance", "tags", "pinned"):
             if key in updates and updates[key] is not None:
                 memory[key] = updates[key]
         memory["updated_at"] = datetime.now(UTC).isoformat()
@@ -161,17 +172,17 @@ class WorkspaceService:
             for token in user_input.split()
             if len(token.strip(".,:;!?()[]{}")) > 3
         }
-        importance_weight = {"high": 4, "medium": 2, "low": 1}
         scored = []
         for item in self.list_memory(workspace_id):
             haystack = f"{item.get('title', '')} {item.get('content', '')} {' '.join(item.get('tags', []))}".lower()
-            score = importance_weight.get(item.get("importance", "medium"), 2)
+            score = self.memory_importance_score(item)
             if words:
                 score += sum(1 for word in words if word in haystack)
             if score > 1 or item.get("importance") == "high":
                 scored.append((score, item))
         scored.sort(key=lambda row: row[0], reverse=True)
         selected = [item for _, item in scored[:limit]]
+        self._record_memory_usage(workspace_id, [item.get("memory_id") for item in selected if item.get("memory_id")])
         parts = []
         remaining = char_limit
         for item in selected:
@@ -182,6 +193,42 @@ class WorkspaceService:
             parts.append(clipped)
             remaining -= len(clipped)
         return "\n\n".join(parts), selected
+
+    def memory_importance_score(self, memory: dict) -> float:
+        importance_weight = {"high": 50.0, "medium": 25.0, "low": 10.0}
+        score = importance_weight.get(memory.get("importance", "medium"), 25.0)
+        score += min(int(memory.get("usage_count") or 0), 20) * 2.0
+        if memory.get("pinned"):
+            score += 100.0
+        score += self._recency_score(memory.get("updated_at") or memory.get("created_at"))
+        return round(score, 2)
+
+    def _recency_score(self, timestamp: str | None) -> float:
+        if not timestamp:
+            return 0.0
+        try:
+            parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+        except ValueError:
+            return 0.0
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=UTC)
+        age_days = max((datetime.now(UTC) - parsed).total_seconds() / 86400, 0)
+        return 20.0 * exp(-age_days / 30.0)
+
+    def _record_memory_usage(self, workspace_id: str, memory_ids: list[str]) -> None:
+        if not memory_ids:
+            return
+        resolved = self.resolve_workspace_id(workspace_id)
+        memories = self.storage.read_list("workspace_memory.json")
+        now = datetime.now(UTC).isoformat()
+        changed = False
+        for memory in memories:
+            if memory.get("workspace_id") == resolved and memory.get("memory_id") in memory_ids:
+                memory["usage_count"] = int(memory.get("usage_count") or 0) + 1
+                memory["last_used_at"] = now
+                changed = True
+        if changed:
+            self.storage.write_list("workspace_memory.json", memories)
 
     def summarize_workspace(self, workspace_id: str) -> dict:
         resolved = self.resolve_workspace_id(workspace_id)

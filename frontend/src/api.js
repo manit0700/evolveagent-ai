@@ -421,6 +421,15 @@ export async function updateWorkspaceMemory(workspaceId, memoryId, payload) {
   return response.json()
 }
 
+export async function pinWorkspaceMemory(workspaceId, memoryId, pinned = true) {
+  const action = pinned ? 'pin' : 'unpin'
+  const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/memory/${memoryId}/${action}`, {
+    method: 'POST',
+  })
+  if (!response.ok) throw new Error(`Memory ${action} failed with status ${response.status}`)
+  return response.json()
+}
+
 export async function deleteWorkspaceMemory(workspaceId, memoryId) {
   const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/memory/${memoryId}`, {
     method: 'DELETE',
@@ -456,6 +465,24 @@ export async function exportWorkspaceKnowledge(workspaceId, format = 'markdown')
   if (!response.ok) throw new Error(`Knowledge export failed with status ${response.status}`)
   if (format === 'json') return response.json()
   return response.text()
+}
+
+export async function createKnowledgeLink(workspaceId, payload) {
+  const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/knowledge/links`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Knowledge link creation failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function deleteKnowledgeLink(workspaceId, linkId) {
+  const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/knowledge/links/${linkId}`, {
+    method: 'DELETE',
+  })
+  if (!response.ok) throw new Error(`Knowledge link delete failed with status ${response.status}`)
+  return response.json()
 }
 
 export async function getAssistantCommands() {
