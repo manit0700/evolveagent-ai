@@ -2,7 +2,10 @@ from fastapi.testclient import TestClient
 
 from app.config import DATA_DIR
 from app.main import app
+from app.services.governance_service import GovernanceService
+from app.services.plugin_loader_service import PluginLoaderService
 from app.services.storage_service import StorageService
+from app.services.tool_registry_service import ToolRegistryService
 
 client = TestClient(app)
 storage = StorageService(DATA_DIR)
@@ -196,6 +199,83 @@ def test_assistant_commands_are_safe_and_workspace_aware():
     assert unknown_response.status_code == 200
     assert unknown["success"] is False
     assert unknown["error"] == "unknown_command"
+
+
+def test_tool_registry_and_router_trace():
+    tools_response = client.get("/api/tools")
+    tools = tools_response.json()
+    assert tools_response.status_code == 200
+    assert any(tool["name"] == "calculate" for tool in tools)
+
+    register_response = client.post(
+        "/api/tools/register",
+        json={
+            "name": "approval demo",
+            "description": "A test tool that requires approval.",
+            "permission_level": "approve_to_run",
+            "source": "built_in",
+        },
+    )
+    assert register_response.status_code == 200
+    assert register_response.json()["name"] == "approval_demo"
+
+    get_response = client.get("/api/tools/approval_demo")
+    assert get_response.status_code == 200
+    assert get_response.json()["permission_level"] == "approve_to_run"
+
+    run_response = client.post(
+        "/api/run",
+        json={
+            "user_input": "calculate 2 + 3 * 4",
+            "task_type": "general",
+        },
+    )
+    run = run_response.json()
+    assert run_response.status_code == 200
+    assert run["tool_trace"]
+    calculate_trace = next(item for item in run["tool_trace"] if item["tool_name"] == "calculate")
+    assert calculate_trace["executed"] is True
+    assert calculate_trace["permission_level"] == "read_only"
+    assert "14" in calculate_trace["result_summary"]
+
+
+def test_plugin_loader_registers_valid_plugins_and_skips_invalid(tmp_path):
+    plugin_dir = tmp_path / "plugins"
+    plugin_dir.mkdir()
+    (plugin_dir / "good.json").write_text(
+        """
+        {
+          "name": "Demo Plugin",
+          "description": "Test manifest",
+          "version": "0.1.0",
+          "tools": [
+            {
+              "name": "demo_lookup",
+              "description": "Read-only lookup",
+              "permission_level": "read_only",
+              "input_schema": {"type": "string"}
+            }
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
+    (plugin_dir / "bad.json").write_text('{"name": "Bad", "tools": [{"name": "oops", "permission_level": "root"}]}', encoding="utf-8")
+    temp_storage = StorageService(str(tmp_path / "data"))
+    registry = ToolRegistryService(temp_storage)
+    governance = GovernanceService(temp_storage)
+    loader = PluginLoaderService(temp_storage, registry, governance, plugin_dir=plugin_dir)
+
+    loaded = loader.load_plugins()
+
+    assert len(loaded) == 1
+    assert loaded[0]["name"] == "demo_plugin"
+    plugin_tool = registry.get_tool("demo_lookup")
+    assert plugin_tool is not None
+    assert plugin_tool["source"] == "plugin"
+    assert plugin_tool["permission_level"] == "read_only"
+    summary = governance.summary()
+    assert summary["blocked_actions"] >= 1
 
 
 def test_chat_session_lifecycle():

@@ -35,6 +35,8 @@ class StorageService:
             "workspaces.json",
             "workspace_memory.json",
             "knowledge_links.json",
+            "tool_registry.json",
+            "plugin_manifests.json",
             "linear_links.json",
             "codex_jobs.json",
         ):

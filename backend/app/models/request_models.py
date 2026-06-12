@@ -172,3 +172,12 @@ class LinearCursorVerifyRequest(BaseModel):
 class AssistantCommandRequest(BaseModel):
     input_text: str = Field(default="", max_length=2000)
     workspace_id: str | None = None
+
+
+class RegisterToolRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    description: str = Field(default="", max_length=1000)
+    input_schema: dict = Field(default_factory=dict)
+    permission_level: str = Field(default="read_only", pattern="^(read_only|plan_only|approve_to_edit|approve_to_run|blocked)$")
+    enabled: bool = True
+    source: str = Field(default="built_in", pattern="^(built_in|plugin|assistant_command)$")

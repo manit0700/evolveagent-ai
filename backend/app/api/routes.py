@@ -30,6 +30,7 @@ from app.models.request_models import (
     UpdateWorkspaceRequest,
     LinearCommentRequest,
     LinearCursorVerifyRequest,
+    RegisterToolRequest,
 )
 from app.models.response_models import AutomationApplyResult, GovernanceEvent, ProviderStatus, RunResponse
 from app.services.governance_service import GovernanceService
@@ -46,6 +47,8 @@ from app.services.storage_service import StorageService
 from app.services.workspace_service import WorkspaceService
 from app.services.knowledge_service import KnowledgeService
 from app.services.assistant_command_service import AssistantCommandService
+from app.services.plugin_loader_service import PluginLoaderService
+from app.services.tool_registry_service import ToolRegistryService
 from app.services.user_preference_service import UserPreferenceService
 from app.services.workflow_strategy_service import WorkflowStrategyService
 from app.services.linear_service import LinearService, LinearServiceError
@@ -76,6 +79,9 @@ custom_agent_service = CustomAgentService(storage)
 workspace_service = WorkspaceService(storage)
 knowledge_service = KnowledgeService(storage, workspace_service)
 assistant_commands = AssistantCommandService(workspace_service, knowledge_service)
+tool_registry = ToolRegistryService(storage, permission_service)
+plugin_loader = PluginLoaderService(storage, tool_registry, governance_service)
+plugin_loader.load_plugins()
 linear_service = LinearService(SecretScanner())
 linear_link_service = LinearLinkService(storage)
 git_service = GitService()
@@ -257,6 +263,33 @@ def run_assistant_command(command_name: str, request: AssistantCommandRequest) -
         input_text=request.input_text,
         workspace_id=request.workspace_id,
     )
+
+
+@router.get("/tools")
+def list_tools(include_disabled: bool = Query(default=False)) -> list[dict]:
+    plugin_loader.load_plugins()
+    return tool_registry.list_tools(include_disabled=include_disabled)
+
+
+@router.post("/tools/register")
+def register_tool(request: RegisterToolRequest) -> dict:
+    try:
+        return tool_registry.register_tool(request.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/tools/{name}")
+def get_tool(name: str) -> dict:
+    tool = tool_registry.get_tool(name)
+    if tool is None:
+        raise HTTPException(status_code=404, detail="Tool not found")
+    return tool
+
+
+@router.get("/plugins")
+def list_plugins() -> list[dict]:
+    return plugin_loader.load_plugins()
 
 
 @router.post("/run", response_model=RunResponse)
