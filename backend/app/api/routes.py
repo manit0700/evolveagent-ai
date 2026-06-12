@@ -9,9 +9,11 @@ from app.agents.learning_agent import LearningAgent
 from app.agents.master_agent import MasterOrchestratorAgent
 from app.agents.memory_agent import MemoryAgent
 from app.models.request_models import (
+    AgentJobActionRequest,
     ApprovalDecisionRequest,
     AutomationApplyRequest,
     AssistantCommandRequest,
+    CreateAgentJobRequest,
     CreateKnowledgeLinkRequest,
     CreateChatRequest,
     CreateCustomAgentRequest,
@@ -32,6 +34,7 @@ from app.models.request_models import (
     LinearCommentRequest,
     LinearCursorVerifyRequest,
     RegisterToolRequest,
+    UpdateSystemPromptRequest,
 )
 from app.models.response_models import AutomationApplyResult, GovernanceEvent, ProviderStatus, RunResponse
 from app.services.governance_service import GovernanceService
@@ -49,7 +52,10 @@ from app.services.workspace_service import WorkspaceService
 from app.services.knowledge_service import KnowledgeService
 from app.services.assistant_command_service import AssistantCommandService
 from app.services.approval_service import ApprovalService
+from app.services.agent_scheduler_service import AgentSchedulerService
+from app.services.kernel_service import KernelService
 from app.services.plugin_loader_service import PluginLoaderService
+from app.services.system_prompt_registry_service import SystemPromptRegistryService
 from app.services.tool_registry_service import ToolRegistryService
 from app.services.user_preference_service import UserPreferenceService
 from app.services.workflow_strategy_service import WorkflowStrategyService
@@ -74,6 +80,7 @@ permission_service = PermissionService()
 governance_service = GovernanceService(storage)
 approval_service = ApprovalService(storage, governance_service)
 prompt_versions = PromptVersionService(storage)
+system_prompt_registry = SystemPromptRegistryService(storage, prompt_versions)
 learning_agent = LearningAgent(storage)
 workflow_strategy = WorkflowStrategyService(storage)
 user_preferences = UserPreferenceService(storage)
@@ -85,6 +92,8 @@ assistant_commands = AssistantCommandService(workspace_service, knowledge_servic
 tool_registry = ToolRegistryService(storage, permission_service)
 plugin_loader = PluginLoaderService(storage, tool_registry, governance_service)
 plugin_loader.load_plugins()
+agent_scheduler = AgentSchedulerService(storage, governance_service, workspace_service)
+kernel_service = KernelService(master_agent, agent_scheduler)
 linear_service = LinearService(SecretScanner())
 linear_link_service = LinearLinkService(storage)
 git_service = GitService()
@@ -297,7 +306,91 @@ def list_plugins() -> list[dict]:
 
 @router.post("/run", response_model=RunResponse)
 def run_workflow(request: RunRequest) -> RunResponse:
-    return master_agent.run(request)
+    return kernel_service.run_workflow(request)
+
+
+@router.post("/agent-jobs")
+def create_agent_job(request: CreateAgentJobRequest) -> dict:
+    return agent_scheduler.create_job(request.model_dump())
+
+
+@router.get("/agent-jobs")
+def list_agent_jobs(
+    status: str | None = Query(default=None),
+    workspace_id: str | None = Query(default=None),
+) -> list[dict]:
+    return agent_scheduler.list_jobs(status=status, workspace_id=workspace_id)
+
+
+@router.get("/agent-jobs/health")
+def agent_jobs_health() -> dict:
+    return agent_scheduler.health()
+
+
+@router.post("/agent-jobs/start-next")
+def start_next_agent_job() -> dict:
+    job = agent_scheduler.start_next()
+    if job is None:
+        return {"started": False, "reason": "No queued job is available or concurrency limit is reached."}
+    return {"started": True, "job": job}
+
+
+@router.get("/agent-jobs/{job_id}")
+def get_agent_job(job_id: str) -> dict:
+    job = agent_scheduler.get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Agent job not found")
+    return job
+
+
+@router.post("/agent-jobs/{job_id}/pause")
+def pause_agent_job(job_id: str, request: AgentJobActionRequest) -> dict:
+    try:
+        return agent_scheduler.pause(job_id, request.reason)
+    except ValueError as error:
+        raise HTTPException(status_code=404 if "not found" in str(error).lower() else 400, detail=str(error)) from error
+
+
+@router.post("/agent-jobs/{job_id}/resume")
+def resume_agent_job(job_id: str, request: AgentJobActionRequest) -> dict:
+    try:
+        return agent_scheduler.resume(job_id, request.reason)
+    except ValueError as error:
+        raise HTTPException(status_code=404 if "not found" in str(error).lower() else 400, detail=str(error)) from error
+
+
+@router.post("/agent-jobs/{job_id}/cancel")
+def cancel_agent_job(job_id: str, request: AgentJobActionRequest) -> dict:
+    try:
+        return agent_scheduler.cancel(job_id, request.reason)
+    except ValueError as error:
+        raise HTTPException(status_code=404 if "not found" in str(error).lower() else 400, detail=str(error)) from error
+
+
+@router.post("/agent-jobs/{job_id}/heartbeat")
+def heartbeat_agent_job(job_id: str) -> dict:
+    try:
+        return agent_scheduler.heartbeat(job_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404 if "not found" in str(error).lower() else 400, detail=str(error)) from error
+
+
+@router.get("/system-prompts")
+def list_system_prompts() -> list[dict]:
+    return system_prompt_registry.list_prompts()
+
+
+@router.get("/system-prompts/{agent_name}")
+def get_system_prompt(agent_name: str) -> dict:
+    prompt = system_prompt_registry.get_prompt(agent_name)
+    if not prompt:
+        raise HTTPException(status_code=404, detail="System prompt not found")
+    return {"agent_name": agent_name, "prompt": prompt}
+
+
+@router.post("/system-prompts")
+def upsert_system_prompt(request: UpdateSystemPromptRequest) -> dict:
+    return system_prompt_registry.upsert_prompt(request.agent_name, request.prompt, request.reason)
 
 
 @router.post("/files/upload")

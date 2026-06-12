@@ -239,6 +239,64 @@ def test_tool_registry_and_router_trace():
     assert "14" in calculate_trace["result_summary"]
 
 
+def test_agent_job_lifecycle_and_health():
+    create_response = client.post(
+        "/api/agent-jobs",
+        json={"title": "Review task queue", "job_type": "workflow", "payload": {"task": "review"}},
+    )
+    job = create_response.json()
+    assert create_response.status_code == 200
+    assert job["status"] == "queued"
+    assert job["job_id"]
+
+    list_response = client.get("/api/agent-jobs")
+    assert any(item["job_id"] == job["job_id"] for item in list_response.json())
+
+    start_response = client.post("/api/agent-jobs/start-next")
+    started = start_response.json()
+    assert start_response.status_code == 200
+    assert started["started"] is True
+    assert started["job"]["status"] == "running"
+
+    pause_response = client.post(f"/api/agent-jobs/{job['job_id']}/pause", json={"reason": "manual pause"})
+    assert pause_response.status_code == 200
+    assert pause_response.json()["status"] == "paused"
+
+    resume_response = client.post(f"/api/agent-jobs/{job['job_id']}/resume", json={"reason": "resume queue"})
+    assert resume_response.status_code == 200
+    assert resume_response.json()["status"] == "queued"
+
+    cancel_response = client.post(f"/api/agent-jobs/{job['job_id']}/cancel", json={"reason": "test cleanup"})
+    assert cancel_response.status_code == 200
+    assert cancel_response.json()["status"] == "canceled"
+
+    health = client.get("/api/agent-jobs/health").json()
+    assert "total_jobs" in health
+    assert "healthy" in health
+
+
+def test_system_prompt_registry_endpoint():
+    prompt_response = client.post(
+        "/api/system-prompts",
+        json={
+            "agent_name": "Risk Agent",
+            "prompt": "You are a careful risk reviewer.",
+            "reason": "Test prompt registry.",
+        },
+    )
+    assert prompt_response.status_code == 200
+    assert prompt_response.json()["agent_name"] == "Risk Agent"
+
+    list_response = client.get("/api/system-prompts")
+    prompts = list_response.json()
+    assert list_response.status_code == 200
+    assert any(item["agent_name"] == "Risk Agent" for item in prompts)
+
+    get_response = client.get("/api/system-prompts/Risk Agent")
+    assert get_response.status_code == 200
+    assert "careful risk reviewer" in get_response.json()["prompt"]
+
+
 def test_plugin_loader_registers_valid_plugins_and_skips_invalid(tmp_path):
     plugin_dir = tmp_path / "plugins"
     plugin_dir.mkdir()

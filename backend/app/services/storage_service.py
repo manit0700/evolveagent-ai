@@ -41,6 +41,8 @@ class StorageService:
             "plugin_manifests.json",
             "linear_links.json",
             "codex_jobs.json",
+            "agent_jobs.json",
+            "system_prompt_registry.json",
         ):
             self._ensure_file(filename)
 

@@ -186,3 +186,20 @@ class RegisterToolRequest(BaseModel):
     permission_level: str = Field(default="read_only", pattern="^(read_only|plan_only|approve_to_edit|approve_to_run|blocked)$")
     enabled: bool = True
     source: str = Field(default="built_in", pattern="^(built_in|plugin|assistant_command)$")
+
+
+class CreateAgentJobRequest(BaseModel):
+    job_type: str = Field(default="workflow", pattern="^(workflow|tool|maintenance|health_check)$")
+    title: str = Field(..., min_length=1, max_length=160)
+    payload: dict = Field(default_factory=dict)
+    workspace_id: str | None = None
+
+
+class AgentJobActionRequest(BaseModel):
+    reason: str | None = Field(default=None, max_length=1000)
+
+
+class UpdateSystemPromptRequest(BaseModel):
+    agent_name: str = Field(..., min_length=1, max_length=120)
+    prompt: str = Field(..., min_length=1, max_length=8000)
+    reason: str | None = Field(default=None, max_length=1000)
