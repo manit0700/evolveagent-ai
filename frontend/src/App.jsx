@@ -68,6 +68,11 @@ import {
   runCodexForLinearIssue,
   getProviderStatus,
   getWorkspaceMemory,
+  getWorkspaceKnowledge,
+  searchWorkspaceKnowledge,
+  exportWorkspaceKnowledge,
+  getAssistantCommands,
+  runAssistantCommand,
   getWorkspaces,
   rejectPromptVersion,
   renameChat,
@@ -230,6 +235,17 @@ function App() {
   const [workspaceId, setWorkspaceId] = useState(null)
   const [workspaceMemory, setWorkspaceMemory] = useState([])
   const [showMemoryPanel, setShowMemoryPanel] = useState(false)
+  const [showKnowledgePanel, setShowKnowledgePanel] = useState(false)
+  const [knowledgeSummary, setKnowledgeSummary] = useState(null)
+  const [knowledgeSearch, setKnowledgeSearch] = useState('')
+  const [knowledgeSource, setKnowledgeSource] = useState('')
+  const [knowledgeResults, setKnowledgeResults] = useState([])
+  const [knowledgeLinks, setKnowledgeLinks] = useState([])
+  const [showToolsPanel, setShowToolsPanel] = useState(false)
+  const [assistantCommands, setAssistantCommands] = useState([])
+  const [selectedCommand, setSelectedCommand] = useState('help')
+  const [commandInput, setCommandInput] = useState('')
+  const [commandResult, setCommandResult] = useState(null)
   const [memorySearch, setMemorySearch] = useState('')
   const [memoryType, setMemoryType] = useState('')
   const [linearStatus, setLinearStatus] = useState(null)
@@ -244,6 +260,7 @@ function App() {
     refreshWorkspaces()
     refreshProviderStatus()
     refreshLinearStatus()
+    refreshAssistantCommands()
   }, [])
 
   useEffect(() => {
@@ -259,6 +276,7 @@ function App() {
     refreshMissionControl(workspaceId)
     refreshCustomAgents(workspaceId)
     refreshWorkspaceMemory(workspaceId)
+    refreshKnowledge(workspaceId)
     refreshLinearData(workspaceId)
   }, [workspaceId])
 
@@ -277,6 +295,14 @@ function App() {
     }, 250)
     return () => window.clearTimeout(timer)
   }, [memorySearch, memoryType, workspaceId])
+
+  useEffect(() => {
+    if (!workspaceId) return
+    const timer = window.setTimeout(() => {
+      refreshKnowledge(workspaceId)
+    }, 250)
+    return () => window.clearTimeout(timer)
+  }, [knowledgeSearch, knowledgeSource, workspaceId])
 
   const selectedRun = useMemo(() => {
     const assistantMessages = messages.filter((message) => message.role === 'assistant' && message.result)
@@ -299,6 +325,14 @@ function App() {
 
   async function refreshProviderStatus() {
     setProviderStatus(await getProviderStatus())
+  }
+
+  async function refreshAssistantCommands() {
+    const commands = await getAssistantCommands()
+    setAssistantCommands(commands)
+    if (commands.length > 0 && !commands.find((command) => command.name === selectedCommand)) {
+      setSelectedCommand(commands[0].name)
+    }
   }
 
   async function refreshAnalytics(nextWorkspaceId = workspaceId) {
@@ -435,6 +469,44 @@ function App() {
         memory_type: memoryType,
       }),
     )
+  }
+
+  async function refreshKnowledge(nextWorkspaceId = workspaceId) {
+    if (!nextWorkspaceId) return
+    const [summary, search] = await Promise.all([
+      getWorkspaceKnowledge(nextWorkspaceId),
+      searchWorkspaceKnowledge(nextWorkspaceId, {
+        q: knowledgeSearch,
+        source_type: knowledgeSource,
+        limit: 10,
+      }),
+    ])
+    setKnowledgeSummary(summary)
+    setKnowledgeResults(search.results || [])
+    setKnowledgeLinks(search.related_links || [])
+  }
+
+  async function handleExportKnowledge(format) {
+    try {
+      const exported = await exportWorkspaceKnowledge(workspaceId, format)
+      const filename = `workspace-knowledge.${format === 'json' ? 'json' : 'md'}`
+      const text = format === 'json' ? JSON.stringify(exported, null, 2) : exported
+      downloadFile(filename, text, format === 'json' ? 'application/json' : 'text/markdown')
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function handleRunAssistantCommand() {
+    try {
+      const result = await runAssistantCommand(selectedCommand, {
+        input_text: commandInput,
+        workspace_id: workspaceId,
+      })
+      setCommandResult(result)
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
   async function handleCreateWorkspace() {
@@ -1030,6 +1102,109 @@ function App() {
         </section>
 
         <section className="sidebar-section">
+          <button className="analytics-toggle" type="button" onClick={() => setShowKnowledgePanel((current) => !current)}>
+            <span>
+              <Brain size={15} />
+              Knowledge Base
+            </span>
+            <ChevronDown size={15} />
+          </button>
+          {showKnowledgePanel && (
+            <div className="memory-panel knowledge-panel">
+              <div className="knowledge-summary">
+                <div>
+                  <span>Records</span>
+                  <strong>{knowledgeSummary?.total_records || 0}</strong>
+                </div>
+                <div>
+                  <span>High value</span>
+                  <strong>{knowledgeSummary?.high_importance_count || 0}</strong>
+                </div>
+              </div>
+              <div className="memory-controls">
+                <input
+                  value={knowledgeSearch}
+                  onChange={(event) => setKnowledgeSearch(event.target.value)}
+                  placeholder="Search project brain"
+                />
+                <select value={knowledgeSource} onChange={(event) => setKnowledgeSource(event.target.value)}>
+                  <option value="">All sources</option>
+                  <option value="memory">Memory</option>
+                  <option value="chat">Chats</option>
+                  <option value="file">Files</option>
+                  <option value="recording">Recordings</option>
+                  <option value="goal">Goals</option>
+                  <option value="custom_agent">Custom agents</option>
+                </select>
+              </div>
+              <div className="workspace-actions">
+                <button type="button" onClick={() => handleExportKnowledge('markdown')}>Export MD</button>
+                <button type="button" onClick={() => handleExportKnowledge('json')}>Export JSON</button>
+                <button type="button" onClick={() => refreshKnowledge(workspaceId)}>Refresh</button>
+              </div>
+              {knowledgeResults.length === 0 && <p className="muted">No knowledge records match this search.</p>}
+              {knowledgeResults.slice(0, 8).map((item) => (
+                <div className="memory-card knowledge-card" key={`${item.source_type}-${item.record_id}`}>
+                  <strong>{item.title}</strong>
+                  <span>{formatType(item.source_type)} · score {item.score}</span>
+                  <p>{previewText(item.content_preview, 150)}</p>
+                  {item.tags?.length > 0 && <small>{item.tags.slice(0, 4).join(', ')}</small>}
+                </div>
+              ))}
+              {knowledgeLinks.length > 0 && (
+                <details className="developer-prompt-block">
+                  <summary>Related knowledge</summary>
+                  {knowledgeLinks.slice(0, 5).map((link) => (
+                    <p className="muted" key={`${link.source_type}-${link.record_id}`}>
+                      {formatType(link.source_type)} · {link.title}
+                    </p>
+                  ))}
+                </details>
+              )}
+            </div>
+          )}
+        </section>
+
+        <section className="sidebar-section">
+          <button className="analytics-toggle" type="button" onClick={() => setShowToolsPanel((current) => !current)}>
+            <span>
+              <Terminal size={15} />
+              Assistant Tools
+            </span>
+            <ChevronDown size={15} />
+          </button>
+          {showToolsPanel && (
+            <div className="memory-panel tools-panel">
+              <select value={selectedCommand} onChange={(event) => setSelectedCommand(event.target.value)}>
+                {assistantCommands.map((command) => (
+                  <option key={command.name} value={command.name}>
+                    {command.name}
+                  </option>
+                ))}
+              </select>
+              <textarea
+                value={commandInput}
+                onChange={(event) => setCommandInput(event.target.value)}
+                placeholder="Input, e.g. 24 * (7 + 3)"
+                rows={3}
+              />
+              <button className="secondary-button full-width" type="button" onClick={handleRunAssistantCommand}>
+                Run tool
+              </button>
+              {assistantCommands.find((command) => command.name === selectedCommand)?.description && (
+                <p className="muted">{assistantCommands.find((command) => command.name === selectedCommand).description}</p>
+              )}
+              {commandResult && (
+                <div className={`command-result ${commandResult.success ? 'success' : 'failed'}`}>
+                  <strong>{commandResult.command}</strong>
+                  <pre>{commandResult.output}</pre>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
+        <section className="sidebar-section">
           <div className="side-heading">
             <Cpu size={15} />
             <span>Providers</span>
@@ -1256,186 +1431,6 @@ function App() {
                   </button>
                 </div>
               ))}
-            </div>
-          )}
-        </section>
-
-        <section className="sidebar-section">
-          <button className="analytics-toggle" type="button" onClick={() => setShowLinearPanel((current) => !current)}>
-            <span>
-              <GitBranch size={15} />
-              Linear
-            </span>
-            <ChevronDown size={15} />
-          </button>
-          {showLinearPanel && (
-            <div className="mission-panel">
-              <div className="provider-card">
-                <div>
-                  <span>Configured</span>
-                  <strong>{linearStatus?.configured ? 'yes' : 'no'}</strong>
-                </div>
-                <div>
-                  <span>Sync enabled</span>
-                  <strong>{linearStatus?.sync_enabled ? 'yes' : 'no'}</strong>
-                </div>
-                <div>
-                  <span>Auto push</span>
-                  <strong>{linearStatus?.auto_git_push ? 'yes' : 'no'}</strong>
-                </div>
-                <div>
-                  <span>Poll worker</span>
-                  <strong>{linearPollStatus?.running ? 'running' : 'idle'}</strong>
-                </div>
-                <div>
-                  <span>Cursor worker</span>
-                  <strong>{linearStatus?.linear_cursor_worker ? 'enabled' : 'off'}</strong>
-                </div>
-                <div>
-                  <span>Codex worker</span>
-                  <strong>{linearStatus?.codex_worker_enabled ? 'enabled' : 'off'}</strong>
-                </div>
-                <div>
-                  <span>Codex mode</span>
-                  <strong>{linearStatus?.codex_worker_mode || 'manual_trigger'}</strong>
-                </div>
-                <div>
-                  <span>Auto Codex</span>
-                  <strong>{linearStatus?.linear_autonomous_codex_worker ? 'on' : 'off'}</strong>
-                </div>
-                {linearPollStatus?.last_poll_at && (
-                  <div>
-                    <span>Last poll</span>
-                    <strong>{new Date(linearPollStatus.last_poll_at).toLocaleString()}</strong>
-                  </div>
-                )}
-              </div>
-              {developerMode && linearPollStatus && (
-                <details className="developer-prompt-block">
-                  <summary>Poll metadata</summary>
-                  <pre>{JSON.stringify(linearPollStatus, null, 2)}</pre>
-                  <button type="button" onClick={async () => { await runLinearPollOnce(); await refreshLinearData(workspaceId) }}>
-                    Run poll once
-                  </button>
-                </details>
-              )}
-              {!linearStatus?.configured && (
-                <p className="muted">Add LINEAR_API_KEY and LINEAR_TEAM_ID to backend/.env, then restart the backend.</p>
-              )}
-              {linearIssues.length === 0 && linearStatus?.configured && (
-                <p className="muted">No Linear issues found for the configured team/project.</p>
-              )}
-              {codexJobs.length > 0 && (
-                <details className="developer-prompt-block">
-                  <summary>Codex jobs ({codexJobs.length})</summary>
-                  {codexJobs.slice(0, 6).map((job) => (
-                    <div className="agent-template-card" key={job.job_id}>
-                      <strong>{job.issue_identifier || job.issue_id}</strong>
-                      <span>{job.status} · {job.branch_name}</span>
-                      {job.commit_hash && <p className="muted">Commit: {job.commit_hash}</p>}
-                      {job.error && <p className="muted">{job.error}</p>}
-                    </div>
-                  ))}
-                </details>
-              )}
-              {linearIssues.slice(0, 8).map((issue) => {
-                const link = linearLinkForIssue(issue.id)
-                const codexJob = latestCodexJobForIssue(issue.id)
-                return (
-                  <div className="agent-template-card" key={issue.id}>
-                    <strong>{issue.identifier}</strong>
-                    <span>{issue.status} · priority {issue.priority ?? 0}</span>
-                    <p>{issue.title}</p>
-                    {link && (
-                      <p className="muted">
-                        Local: {link.status}
-                        {link.branch_name ? ` · ${link.branch_name}` : ''}
-                        {link.commits?.length ? ` · ${link.commits[link.commits.length - 1].hash}` : ''}
-                      </p>
-                    )}
-                    {codexJob && (
-                      <details className="developer-prompt-block">
-                        <summary>Codex job: {codexJob.status}</summary>
-                        <p className="muted">Branch: {codexJob.branch_name}</p>
-                        <p className="muted">Handoff: {codexJob.handoff_path}</p>
-                        {codexJob.changed_files?.length > 0 && (
-                          <p className="muted">Changed: {codexJob.changed_files.join(', ')}</p>
-                        )}
-                        {codexJob.test_results?.map((item) => (
-                          <p className="muted" key={item.command}>
-                            {item.command}: {item.success ? 'pass' : 'fail'}
-                          </p>
-                        ))}
-                        {codexJob.commit_hash && <p className="muted">Commit: {codexJob.commit_hash}</p>}
-                        <p className="muted">Linear Done: {codexJob.linear_done ? 'yes' : 'no'}</p>
-                        {codexJob.error && <p className="muted">{codexJob.error}</p>}
-                      </details>
-                    )}
-                    {developerMode && (
-                      <details className="developer-prompt-block">
-                        <summary>Raw issue JSON</summary>
-                        <pre>{JSON.stringify(issue, null, 2)}</pre>
-                        {link && <pre>{JSON.stringify(link, null, 2)}</pre>}
-                      </details>
-                    )}
-                    <div className="inline-actions">
-                      <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('sync', issue.id)}>
-                        Sync
-                      </button>
-                      <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('select', issue.id)}>
-                        Select
-                      </button>
-                      {link?.branch_name && (
-                        <>
-                          <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('cursor-handoff', issue.id)}>
-                            Copy Cursor prompt
-                          </button>
-                          <button
-                            type="button"
-                            disabled={linearBusyId === issue.id}
-                            onClick={async () => {
-                              setLinearBusyId(issue.id)
-                              try {
-                                await handleCopyCursorHandoff(issue.id, 'codex')
-                              } catch (err) {
-                                setError(err.message)
-                              } finally {
-                                setLinearBusyId('')
-                              }
-                            }}
-                          >
-                            Copy Codex prompt
-                          </button>
-                          <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('cursor-verify', issue.id)}>
-                            Verify Cursor work
-                          </button>
-                          <button
-                            type="button"
-                            disabled={linearBusyId === issue.id || !linearStatus?.codex_worker_enabled}
-                            onClick={() => handleRunAutonomousCodex(issue.id)}
-                            title={linearStatus?.codex_worker_enabled ? 'Run autonomous Codex worker' : 'Enable CODEX_WORKER_ENABLED in backend/.env'}
-                          >
-                            Run Autonomous Codex
-                          </button>
-                        </>
-                      )}
-                      <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('run', issue.id)}>
-                        Run task (EvolveAgent AI)
-                      </button>
-                      {developerMode && link?.status !== 'completed' && (
-                        <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('complete', issue.id)}>
-                          Force Done in Linear
-                        </button>
-                      )}
-                      {issue.url && (
-                        <a href={issue.url} target="_blank" rel="noreferrer">
-                          Open
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
             </div>
           )}
         </section>

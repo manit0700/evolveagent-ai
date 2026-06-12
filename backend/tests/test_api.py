@@ -99,6 +99,61 @@ def test_governance_endpoint_returns_summary():
     assert "recent_events" in body
 
 
+def test_workspace_knowledge_search_and_export():
+    workspace_response = client.post("/api/workspaces", json={"name": "Knowledge Test"})
+    workspace_id = workspace_response.json()["workspace_id"]
+    client.post(
+        f"/api/workspaces/{workspace_id}/memory",
+        json={
+            "type": "project_fact",
+            "title": "Preferred stack",
+            "content": "The project uses FastAPI, React, Linear, and Codex automation.",
+            "importance": "high",
+            "tags": ["fastapi", "linear"],
+        },
+    )
+
+    summary_response = client.get(f"/api/workspaces/{workspace_id}/knowledge")
+    summary = summary_response.json()
+    assert summary_response.status_code == 200
+    assert summary["total_records"] >= 1
+    assert summary["high_importance_count"] >= 1
+
+    search_response = client.get(f"/api/workspaces/{workspace_id}/knowledge/search?q=FastAPI")
+    search = search_response.json()
+    assert search_response.status_code == 200
+    assert search["result_count"] >= 1
+    assert any("Preferred stack" == item["title"] for item in search["results"])
+
+    export_response = client.get(f"/api/workspaces/{workspace_id}/knowledge/export")
+    assert export_response.status_code == 200
+    assert "Preferred stack" in export_response.text
+
+
+def test_assistant_commands_are_safe_and_workspace_aware():
+    commands_response = client.get("/api/assistant/commands")
+    commands = commands_response.json()
+    assert commands_response.status_code == 200
+    assert any(command["name"] == "calculate" for command in commands)
+
+    calc_response = client.post("/api/assistant/commands/calculate", json={"input_text": "2 + 3 * 4"})
+    calc = calc_response.json()
+    assert calc_response.status_code == 200
+    assert calc["success"] is True
+    assert calc["data"]["value"] == 14
+
+    blocked_response = client.post("/api/assistant/commands/calculate", json={"input_text": "__import__('os').system('rm -rf /')"})
+    blocked = blocked_response.json()
+    assert blocked_response.status_code == 200
+    assert blocked["success"] is False
+
+    unknown_response = client.post("/api/assistant/commands/delete_everything", json={"input_text": ""})
+    unknown = unknown_response.json()
+    assert unknown_response.status_code == 200
+    assert unknown["success"] is False
+    assert unknown["error"] == "unknown_command"
+
+
 def test_chat_session_lifecycle():
     empty_chat_response = client.post("/api/chats", json={"title": "Scratch"})
     empty_chat = empty_chat_response.json()

@@ -429,6 +429,55 @@ export async function deleteWorkspaceMemory(workspaceId, memoryId) {
   return response.json()
 }
 
+export async function getWorkspaceKnowledge(workspaceId) {
+  if (!workspaceId) return null
+  try {
+    const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/knowledge`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function searchWorkspaceKnowledge(workspaceId, params = {}) {
+  if (!workspaceId) return { results: [], related_links: [] }
+  try {
+    const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/knowledge/search${query(params)}`)
+    if (!response.ok) return { results: [], related_links: [] }
+    return response.json()
+  } catch {
+    return { results: [], related_links: [] }
+  }
+}
+
+export async function exportWorkspaceKnowledge(workspaceId, format = 'markdown') {
+  const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/knowledge/export${query({ format })}`)
+  if (!response.ok) throw new Error(`Knowledge export failed with status ${response.status}`)
+  if (format === 'json') return response.json()
+  return response.text()
+}
+
+export async function getAssistantCommands() {
+  try {
+    const response = await fetch(`${API_BASE}/api/assistant/commands`)
+    if (!response.ok) return []
+    return response.json()
+  } catch {
+    return []
+  }
+}
+
+export async function runAssistantCommand(commandName, payload) {
+  const response = await fetch(`${API_BASE}/api/assistant/commands/${commandName}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Assistant command failed with status ${response.status}`)
+  return response.json()
+}
+
 export async function getLinearStatus() {
   try {
     const response = await fetch(`${API_BASE}/api/linear/status`)

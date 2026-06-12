@@ -158,3 +158,8 @@ class LinearCommentRequest(BaseModel):
 class LinearCursorVerifyRequest(BaseModel):
     completion_note: str | None = Field(default=None, max_length=2000)
     auto_commit: bool = Field(default=False, description="Stage and commit safe files after verification passes.")
+
+
+class AssistantCommandRequest(BaseModel):
+    input_text: str = Field(default="", max_length=2000)
+    workspace_id: str | None = None

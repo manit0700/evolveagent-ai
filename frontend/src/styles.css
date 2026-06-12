@@ -199,6 +199,8 @@ h2 {
 }
 
 .workspace-card select,
+.tools-panel select,
+.tools-panel textarea,
 .memory-controls input,
 .memory-controls select {
   width: 100%;
@@ -210,9 +212,64 @@ h2 {
   padding: 0 9px;
 }
 
+.tools-panel textarea {
+  min-height: 86px;
+  padding: 9px;
+  resize: vertical;
+}
+
 .workspace-card p,
 .memory-card p {
   color: #aab5be;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.knowledge-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.knowledge-summary div,
+.command-result {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: #10151c;
+  padding: 9px;
+}
+
+.knowledge-summary span,
+.knowledge-card small {
+  display: block;
+  color: #9ba6b1;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.knowledge-summary strong {
+  color: #edf3ee;
+}
+
+.command-result {
+  display: grid;
+  gap: 7px;
+}
+
+.command-result strong {
+  color: #9ad28d;
+}
+
+.command-result.failed strong {
+  color: #f1a29c;
+}
+
+.command-result pre {
+  overflow: auto;
+  margin: 0;
+  white-space: pre-wrap;
+  color: #d8e1e8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
   line-height: 1.45;
 }

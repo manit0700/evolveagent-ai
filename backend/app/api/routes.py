@@ -3,12 +3,14 @@ from collections import Counter
 from uuid import uuid4
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
+from fastapi.responses import PlainTextResponse
 
 from app.agents.learning_agent import LearningAgent
 from app.agents.master_agent import MasterOrchestratorAgent
 from app.agents.memory_agent import MemoryAgent
 from app.models.request_models import (
     AutomationApplyRequest,
+    AssistantCommandRequest,
     CreateChatRequest,
     CreateCustomAgentRequest,
     CreateGoalRequest,
@@ -41,6 +43,8 @@ from app.services.safe_command_runner import SafeCommandRunner
 from app.services.safe_file_editor import SafeFileEditor
 from app.services.storage_service import StorageService
 from app.services.workspace_service import WorkspaceService
+from app.services.knowledge_service import KnowledgeService
+from app.services.assistant_command_service import AssistantCommandService
 from app.services.user_preference_service import UserPreferenceService
 from app.services.workflow_strategy_service import WorkflowStrategyService
 from app.services.linear_service import LinearService, LinearServiceError
@@ -69,6 +73,8 @@ user_preferences = UserPreferenceService(storage)
 goal_service = GoalService(storage)
 custom_agent_service = CustomAgentService(storage)
 workspace_service = WorkspaceService(storage)
+knowledge_service = KnowledgeService(storage, workspace_service)
+assistant_commands = AssistantCommandService(workspace_service, knowledge_service)
 linear_service = LinearService(SecretScanner())
 linear_link_service = LinearLinkService(storage)
 git_service = GitService()
@@ -168,6 +174,48 @@ def delete_workspace_memory(workspace_id: str, memory_id: str) -> dict[str, bool
     if not workspace_service.delete_memory(workspace_id, memory_id):
         raise HTTPException(status_code=404, detail="Workspace memory not found")
     return {"deleted": True}
+
+
+@router.get("/workspaces/{workspace_id}/knowledge")
+def get_workspace_knowledge(workspace_id: str) -> dict:
+    return knowledge_service.summary(workspace_id)
+
+
+@router.get("/workspaces/{workspace_id}/knowledge/search")
+def search_workspace_knowledge(
+    workspace_id: str,
+    q: str = Query(default=""),
+    source_type: str | None = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=100),
+) -> dict:
+    return knowledge_service.search(workspace_id, query=q, source_type=source_type, limit=limit)
+
+
+@router.get("/workspaces/{workspace_id}/knowledge/export", response_model=None)
+def export_workspace_knowledge(
+    workspace_id: str,
+    format: str = Query(default="markdown", pattern="^(markdown|json)$"),
+):
+    if format == "json":
+        return knowledge_service.export_json(workspace_id)
+    return PlainTextResponse(
+        knowledge_service.export_markdown(workspace_id),
+        media_type="text/markdown",
+    )
+
+
+@router.get("/assistant/commands")
+def list_assistant_commands() -> list[dict]:
+    return assistant_commands.list_commands()
+
+
+@router.post("/assistant/commands/{command_name}")
+def run_assistant_command(command_name: str, request: AssistantCommandRequest) -> dict:
+    return assistant_commands.run(
+        command_name,
+        input_text=request.input_text,
+        workspace_id=request.workspace_id,
+    )
 
 
 @router.post("/run", response_model=RunResponse)
