@@ -75,11 +75,16 @@ class CodexWorkerService:
             }
         )
         job_id = job["job_id"]
+        stage = "initializing"
 
         try:
+            self.jobs.update_job(job_id, {"status_detail": "Validating Codex CLI, handoff, and branch"})
             self._validate_codex_installed()
+            stage = "handoff_validation"
             self._validate_handoff_file(handoff_path)
+            stage = "branch_validation"
             self._validate_branch_exists(branch_name)
+            stage = "checkout"
             checkout = self.git.checkout_branch(branch_name)
             if not checkout.get("success"):
                 raise CodexWorkerError(f"Failed to checkout branch `{branch_name}`: {checkout.get('message')}")
@@ -92,6 +97,8 @@ class CodexWorkerService:
 
             self.jobs.update_job(job_id, {"status": "running", "started_at": datetime.now(UTC).isoformat()})
 
+            stage = "codex_execution"
+            self.jobs.update_job(job_id, {"status_detail": "Running Codex CLI against the handoff brief"})
             prompt = Path(handoff_path).read_text(encoding="utf-8")
             codex_result = self._codex_runner(settings.codex_cli_command, self.git.project_root, prompt)
             stdout = codex_result.stdout or ""
@@ -104,6 +111,8 @@ class CodexWorkerService:
                     f"Install Codex CLI or check CODEX_CLI_COMMAND. stderr: {stderr[-500:]}"
                 )
 
+            stage = "change_safety_check"
+            self.jobs.update_job(job_id, {"status_detail": "Checking changed files against safety rules"})
             changed_files = self.git.list_changed_files()
             unsafe = self._unsafe_changed_files(changed_files)
             if unsafe:
@@ -116,18 +125,33 @@ class CodexWorkerService:
 
             self.jobs.update_job(job_id, {"changed_files": changed_files})
 
+            stage = "verification"
+            self.jobs.update_job(job_id, {"status_detail": "Running pytest and frontend build verification"})
             test_results = self._run_verification()
-            self.jobs.update_job(job_id, {"test_results": test_results})
+            verification_summary = self._verification_summary(test_results)
+            self.jobs.update_job(
+                job_id,
+                {
+                    "test_results": test_results,
+                    "test_result": self._command_result(test_results, "pytest"),
+                    "build_result": self._command_result(test_results, "npm run build"),
+                    "verification_summary": verification_summary,
+                },
+            )
             if not all(item.get("success") for item in test_results):
                 raise CodexWorkerError("Verification failed. Tests or build did not pass.")
 
             commit_hash = None
             if changed_files:
-                stage = self.git.add_safe_files()
-                excluded = stage.get("excluded_files") or []
+                stage = "staging"
+                self.jobs.update_job(job_id, {"status_detail": "Staging safe changed files"})
+                stage_result = self.git.add_safe_files()
+                excluded = stage_result.get("excluded_files") or []
                 if excluded:
                     raise CodexWorkerError(f"Unsafe files blocked from staging: {', '.join(excluded[:8])}")
-                if stage.get("staged_files"):
+                if stage_result.get("staged_files"):
+                    stage = "commit"
+                    self.jobs.update_job(job_id, {"status_detail": "Committing verified Codex changes"})
                     commit_message = f"Linear {identifier}: autonomous Codex implementation"
                     commit_result = self.git.commit(commit_message)
                     if not commit_result.get("success"):
@@ -144,6 +168,8 @@ class CodexWorkerService:
                         },
                     )
 
+            stage = "push"
+            self.jobs.update_job(job_id, {"status_detail": "Optionally pushing branch if AUTO_GIT_PUSH=true"})
             push_result = self.git.push()
             if push_result.get("success"):
                 self.orchestration.links.append_push(
@@ -155,6 +181,8 @@ class CodexWorkerService:
                     },
                 )
 
+            stage = "linear_verification"
+            self.jobs.update_job(job_id, {"status_detail": "Verifying work and updating Linear"})
             completion_note = (
                 f"Autonomous Codex worker completed on `{branch_name}`.\n"
                 f"Changed files: {len(changed_files)}\n"
@@ -172,9 +200,12 @@ class CodexWorkerService:
                 job_id,
                 {
                     "status": final_status,
+                    "status_detail": "Completed" if final_status == "passed" else "Linear verification failed",
                     "completed_at": datetime.now(UTC).isoformat(),
                     "linear_done": linear_done,
                     "error": None if linear_done else "Verification or Linear completion did not succeed",
+                    "manual_review_required": not linear_done,
+                    "summary": self._success_summary(identifier, branch_name, changed_files, commit_hash, linear_done),
                 },
             )
             self.orchestration._log(
@@ -184,22 +215,43 @@ class CodexWorkerService:
             return {"job": job, "verify_result": verify_result}
 
         except (CodexWorkerError, LinearServiceError) as error:
+            error_message = str(error)
+            status = self._failure_status(stage, error_message)
             job = self.jobs.update_job(
                 job_id,
                 {
-                    "status": "blocked" if "Unsafe" in str(error) else "failed",
+                    "status": status,
+                    "status_detail": self._failure_status_detail(stage, error_message),
+                    "failure_stage": stage,
                     "completed_at": datetime.now(UTC).isoformat(),
-                    "error": str(error),
+                    "error": error_message,
                     "linear_done": False,
+                    "manual_review_required": True,
+                    "summary": self._failure_summary(identifier, branch_name, stage, error_message),
                 },
             )
-            self._post_failure_comment(issue_id, identifier, str(error))
-            return {"job": job, "error": str(error)}
+            self._post_failure_comment(issue_id, identifier, error_message, job)
+            return {"job": job, "error": error_message}
 
-    def _post_failure_comment(self, issue_id: str, identifier: str, message: str) -> None:
+    def _post_failure_comment(
+        self,
+        issue_id: str,
+        identifier: str,
+        message: str,
+        job: dict[str, Any] | None = None,
+    ) -> None:
         if self.orchestration is None:
             return
-        body = f"**EvolveAgent Codex worker failed for `{identifier}`**\n\n{message[:2000]}"
+        changed_files = job.get("changed_files") if job else []
+        verification = job.get("verification_summary") if job else ""
+        body = (
+            f"**EvolveAgent Codex worker needs manual review for `{identifier}`**\n\n"
+            f"Stage: `{(job or {}).get('failure_stage') or 'unknown'}`\n"
+            f"Status: `{(job or {}).get('status') or 'failed'}`\n"
+            f"Changed files: {len(changed_files or [])}\n"
+            f"Verification: {verification or 'not completed'}\n\n"
+            f"Error:\n{message[:1800]}"
+        )
         try:
             self.orchestration.linear.add_linear_comment(issue_id, body)
         except LinearServiceError:
@@ -258,6 +310,59 @@ class CodexWorkerService:
                 }
             )
         return results
+
+    @staticmethod
+    def _command_result(results: list[dict[str, Any]], command: str) -> dict[str, Any] | None:
+        return next((item for item in results if item.get("command") == command), None)
+
+    @staticmethod
+    def _verification_summary(results: list[dict[str, Any]]) -> str:
+        if not results:
+            return "not run"
+        parts = []
+        for item in results:
+            label = "passed" if item.get("success") else "failed"
+            parts.append(f"{item.get('command')}: {label}")
+        return "; ".join(parts)
+
+    @staticmethod
+    def _failure_status(stage: str, message: str) -> str:
+        if "Unsafe" in message or stage in {"change_safety_check", "staging"}:
+            return "blocked"
+        if stage == "verification":
+            return "needs_manual_review"
+        return "failed"
+
+    @staticmethod
+    def _failure_status_detail(stage: str, message: str) -> str:
+        if stage == "verification":
+            return "Verification failed; manual review required"
+        if "Unsafe" in message:
+            return "Blocked by worker safety rules"
+        return f"Failed during {stage.replace('_', ' ')}"
+
+    @staticmethod
+    def _success_summary(
+        identifier: str,
+        branch_name: str,
+        changed_files: list[str],
+        commit_hash: str | None,
+        linear_done: bool,
+    ) -> str:
+        done = "Linear marked Done" if linear_done else "Linear completion pending"
+        return (
+            f"{identifier} completed on {branch_name}. "
+            f"Changed files: {len(changed_files)}. "
+            f"Commit: {commit_hash or 'none'}. {done}."
+        )
+
+    @staticmethod
+    def _failure_summary(identifier: str, branch_name: str, stage: str, message: str) -> str:
+        return (
+            f"{identifier} on {branch_name} needs manual review. "
+            f"Failed stage: {stage.replace('_', ' ')}. "
+            f"Reason: {message[:240]}"
+        )
 
     @staticmethod
     def _default_codex_runner(cli_command: str, project_root: Path, prompt: str) -> subprocess.CompletedProcess[str]:
