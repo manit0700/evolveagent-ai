@@ -505,6 +505,36 @@ export async function runAssistantCommand(commandName, payload) {
   return response.json()
 }
 
+export async function getQualityStatus() {
+  try {
+    const response = await fetch(`${API_BASE}/api/quality/status`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function runQualityChecks(payload = {}) {
+  const response = await fetch(`${API_BASE}/api/quality/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Quality run failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function suggestQualityTests(changedFiles = []) {
+  const response = await fetch(`${API_BASE}/api/quality/suggest-tests`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ changed_files: changedFiles }),
+  })
+  if (!response.ok) throw new Error(`Test suggestion request failed with status ${response.status}`)
+  return response.json()
+}
+
 export async function getLinearStatus() {
   try {
     const response = await fetch(`${API_BASE}/api/linear/status`)

@@ -43,6 +43,7 @@ class StorageService:
             "codex_jobs.json",
             "agent_jobs.json",
             "system_prompt_registry.json",
+            "quality_runs.json",
         ):
             self._ensure_file(filename)
 

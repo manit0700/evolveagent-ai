@@ -41,5 +41,6 @@ backend/app/data/linear_links.json
 backend/app/data/codex_jobs.json
 backend/app/data/agent_jobs.json
 backend/app/data/system_prompt_registry.json
+backend/app/data/quality_runs.json
 *.log
 logs/

@@ -8,6 +8,7 @@ from fastapi.responses import PlainTextResponse
 from app.agents.learning_agent import LearningAgent
 from app.agents.master_agent import MasterOrchestratorAgent
 from app.agents.memory_agent import MemoryAgent
+from app.agents.test_generation_agent import TestGenerationAgent
 from app.models.request_models import (
     AgentJobActionRequest,
     ApprovalDecisionRequest,
@@ -27,8 +28,11 @@ from app.models.request_models import (
     GitPushRequest,
     PromptDecisionRequest,
     PromptProposalRequest,
+    QualityLinearSummaryRequest,
+    QualityRunRequest,
     RenameChatRequest,
     RunRequest,
+    TestSuggestionRequest,
     UpdateCustomAgentRequest,
     UpdateGoalRequest,
     UpdateGoalTaskRequest,
@@ -59,6 +63,7 @@ from app.services.agent_scheduler_service import AgentSchedulerService
 from app.services.kernel_service import KernelService
 from app.services.plugin_loader_service import PluginLoaderService
 from app.services.system_prompt_registry_service import SystemPromptRegistryService
+from app.services.test_quality_service import TestQualityService
 from app.services.tool_registry_service import ToolRegistryService
 from app.services.user_preference_service import UserPreferenceService
 from app.services.workflow_strategy_service import WorkflowStrategyService
@@ -100,6 +105,13 @@ kernel_service = KernelService(master_agent, agent_scheduler)
 linear_service = LinearService(SecretScanner())
 linear_link_service = LinearLinkService(storage)
 git_service = GitService()
+test_quality_service = TestQualityService(
+    storage=storage,
+    command_runner=safe_command_runner,
+    git_service=git_service,
+    governance_service=governance_service,
+    test_generation_agent=TestGenerationAgent(),
+)
 linear_orchestration = LinearOrchestrationService(
     storage=storage,
     linear_service=linear_service,
@@ -157,6 +169,61 @@ def commit_git_changes(request: GitCommitRequest) -> dict:
 def push_git_branch(request: GitPushRequest | None = None) -> dict:
     payload = request or GitPushRequest()
     return git_service.push(remote=payload.remote, branch=payload.branch)
+
+
+@router.get("/quality/status")
+def get_quality_status() -> dict:
+    return test_quality_service.summary()
+
+
+@router.post("/quality/suggest-tests")
+def suggest_quality_tests(request: TestSuggestionRequest) -> dict:
+    files = request.changed_files or git_service.list_changed_files()
+    return test_quality_service.suggest_tests(files)
+
+
+@router.post("/quality/run")
+def run_quality_checks(request: QualityRunRequest | None = None) -> dict:
+    payload = request or QualityRunRequest()
+    commands = payload.commands or ["pytest", "npm run build"]
+    if any(not safe_command_runner.is_allowed(command) for command in commands):
+        raise HTTPException(status_code=400, detail="Quality checks can only run allowlisted commands.")
+    return test_quality_service.run_quality_checks(commands=commands, issue_id=payload.issue_id)
+
+
+@router.get("/quality/flaky-tests")
+def get_flaky_tests() -> dict:
+    return {"flaky_tests": test_quality_service.detect_flaky_tests()}
+
+
+@router.get("/quality/gate")
+def get_quality_gate() -> dict:
+    latest = test_quality_service.latest_run()
+    if not latest:
+        return {
+            "passed": False,
+            "blocked": True,
+            "reason": "No quality run has been recorded yet.",
+            "latest_run": None,
+        }
+    return {**latest.get("quality_gate", {}), "latest_run": latest}
+
+
+@router.post("/quality/linear-summary")
+def post_quality_linear_summary(request: QualityLinearSummaryRequest) -> dict:
+    runs = test_quality_service.list_runs(100)
+    run = None
+    if request.quality_run_id:
+        run = next((item for item in runs if item.get("quality_run_id") == request.quality_run_id), None)
+    else:
+        run = test_quality_service.latest_run()
+    if not run:
+        raise HTTPException(status_code=404, detail="Quality run not found")
+    try:
+        comment = linear_service.add_linear_comment(request.issue_id, run.get("regression_summary", "Quality run completed."))
+    except LinearServiceError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return {"posted": True, "issue_id": request.issue_id, "quality_run_id": run.get("quality_run_id"), "comment": comment}
 
 
 @router.post("/workspaces")

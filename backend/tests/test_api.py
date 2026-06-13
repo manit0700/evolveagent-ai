@@ -104,6 +104,56 @@ def test_governance_endpoint_returns_summary():
     assert "recent_events" in body
 
 
+def test_quality_suggest_tests_endpoint():
+    response = client.post(
+        "/api/quality/suggest-tests",
+        json={"changed_files": ["backend/app/services/test_quality_service.py"]},
+    )
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["agent_name"] == "Test Generation Agent"
+    assert body["suggestions"][0]["test_target"] == "backend/tests/test_test_quality_service.py"
+
+
+def test_quality_gate_without_run_is_blocked():
+    original_latest = routes.test_quality_service.latest_run
+    routes.test_quality_service.latest_run = lambda: None
+    try:
+        response = client.get("/api/quality/gate")
+    finally:
+        routes.test_quality_service.latest_run = original_latest
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["blocked"] is True
+    assert body["reason"] == "No quality run has been recorded yet."
+
+
+def test_quality_run_rejects_disallowed_command():
+    response = client.post("/api/quality/run", json={"commands": ["rm -rf ."]})
+
+    assert response.status_code == 400
+
+
+def test_quality_run_endpoint_uses_quality_service():
+    original_run = routes.test_quality_service.run_quality_checks
+    routes.test_quality_service.run_quality_checks = lambda commands, issue_id=None: {
+        "quality_run_id": "quality-test",
+        "quality_gate": {"passed": True, "blocked": False, "reason": "ok"},
+        "command_results": [],
+    }
+    try:
+        response = client.post("/api/quality/run", json={"commands": ["pytest"]})
+    finally:
+        routes.test_quality_service.run_quality_checks = original_run
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["quality_run_id"] == "quality-test"
+    assert body["quality_gate"]["passed"] is True
+
+
 def test_workspace_knowledge_search_and_export():
     workspace_response = client.post("/api/workspaces", json={"name": "Knowledge Test"})
     workspace_id = workspace_response.json()["workspace_id"]
