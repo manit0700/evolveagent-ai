@@ -34,9 +34,17 @@ class FeedbackRequest(BaseModel):
     comment: str | None = Field(default=None, max_length=1000)
 
 
+class FilePatchRequest(BaseModel):
+    path: str = Field(..., min_length=1, max_length=300)
+    content: str | None = Field(default=None, max_length=500_000)
+    find: str | None = Field(default=None, max_length=50_000)
+    replace: str | None = Field(default=None, max_length=50_000)
+
+
 class AutomationApplyRequest(BaseModel):
     run_id: str
     approved: bool
+    patches: list[FilePatchRequest] = Field(default_factory=list, max_length=5)
 
 
 class ApprovalDecisionRequest(BaseModel):

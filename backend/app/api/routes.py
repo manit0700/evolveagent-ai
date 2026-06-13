@@ -574,7 +574,8 @@ def apply_automation(request: AutomationApplyRequest) -> AutomationApplyResult:
             reason="User approved automation plan for conservative safety validation.",
         )
     )
-    result = safe_file_editor.apply_plan_conservatively(automation_plan)
+    patches = [patch.model_dump() for patch in request.patches] if request.patches else run.get("file_patches", [])
+    result = safe_file_editor.apply_patches(patches) if patches else safe_file_editor.apply_plan_conservatively(automation_plan)
     if result.errors:
         for error in result.errors:
             governance_service.log_event(
@@ -593,6 +594,27 @@ def apply_automation(request: AutomationApplyRequest) -> AutomationApplyResult:
                     reason=error,
                 )
             )
+    if result.changed_files or result.created_files:
+        governance_service.log_event(
+            GovernanceEvent(
+                run_id=request.run_id,
+                session_id=run.get("session_id"),
+                workspace_id=run.get("workspace_id"),
+                task_type="app_automation",
+                agent_name="Safe File Editor",
+                action_type="file_patch_applied",
+                tool_used="SafeFileEditor",
+                files_accessed=result.changed_files + result.created_files,
+                permission_level="approve_to_edit",
+                approved=True,
+                blocked=False,
+                risk_score=25,
+                reason=(
+                    f"Applied {len(result.changed_files)} changed file(s) and "
+                    f"{len(result.created_files)} created file(s) after approval."
+                ),
+            )
+        )
     command_results = []
     if result.success:
         for command in automation_plan.commands_to_run:

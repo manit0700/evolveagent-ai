@@ -189,8 +189,12 @@ class ProjectScanResult(BaseModel):
     frameworks_detected: list[str] = []
     package_manager: str | None = None
     relevant_files: list[str] = []
+    key_files: list[str] = []
+    source_roots: list[str] = []
     build_commands: list[str] = []
     test_commands: list[str] = []
+    ignored_paths_count: int = 0
+    scanned_files_count: int = 0
     scan_summary: str = ""
 
 
@@ -221,6 +225,8 @@ class AutomationApplyResult(BaseModel):
     created_files: list[str] = []
     command_results: list[CommandResult] = []
     errors: list[str] = []
+    backup_paths: list[str] = []
+    diff_paths: list[str] = []
     summary: str = ""
 
 

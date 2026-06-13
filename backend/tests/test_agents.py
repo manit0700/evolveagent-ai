@@ -1,3 +1,5 @@
+import subprocess
+
 from app.agents.master_agent import MasterOrchestratorAgent
 from app.agents.memory_agent import MemoryAgent
 from app.agents.judge_agent import JudgeAgent
@@ -113,15 +115,50 @@ def test_project_scanner_ignores_unsafe_folders(tmp_path):
     (tmp_path / ".env").write_text("SECRET=value", encoding="utf-8")
     (tmp_path / "node_modules").mkdir()
     (tmp_path / "node_modules" / "bad.js").write_text("x", encoding="utf-8")
+    (tmp_path / "backend" / "app" / "data").mkdir(parents=True)
+    (tmp_path / "backend" / "app" / "data" / "tasks.json").write_text("[]", encoding="utf-8")
+    (tmp_path / "backend" / "app" / "main.py").write_text("from fastapi import FastAPI\n", encoding="utf-8")
+    (tmp_path / "backend" / "tests").mkdir(parents=True)
     (tmp_path / "frontend" / "src").mkdir(parents=True)
     (tmp_path / "frontend" / "src" / "App.jsx").write_text("export default function App() {}", encoding="utf-8")
-    (tmp_path / "frontend" / "package.json").write_text('{"dependencies":{"react":"latest","vite":"latest"}}', encoding="utf-8")
+    (tmp_path / "frontend" / "src" / "styles.css").write_text(".app {}", encoding="utf-8")
+    (tmp_path / "frontend" / "package.json").write_text(
+        '{"scripts":{"build":"vite build","test":"vitest"},"dependencies":{"react":"latest","vite":"latest"}}',
+        encoding="utf-8",
+    )
 
     result = ProjectScannerAgent(tmp_path).scan("change the ui")
 
+    assert "FastAPI" in result.frameworks_detected
     assert "React" in result.frameworks_detected
+    assert "Vite" in result.frameworks_detected
+    assert result.package_manager == "npm"
+    assert "frontend/src" in result.source_roots
+    assert "backend/app" in result.source_roots
+    assert "frontend/src/App.jsx" in result.relevant_files
+    assert "frontend/src/styles.css" in result.relevant_files
+    assert "npm run build" in result.build_commands
+    assert "pytest" in result.test_commands
+    assert "npm test" in result.test_commands
+    assert result.scanned_files_count >= 3
+    assert result.ignored_paths_count >= 2
     assert all(".env" not in file for file in result.relevant_files)
     assert all("node_modules" not in file for file in result.relevant_files)
+    assert all("backend/app/data" not in file for file in result.relevant_files)
+
+
+def test_project_scanner_ranks_backend_api_files(tmp_path):
+    (tmp_path / "backend" / "app" / "api").mkdir(parents=True)
+    (tmp_path / "backend" / "app" / "api" / "routes.py").write_text("router = None\n", encoding="utf-8")
+    (tmp_path / "backend" / "app" / "services").mkdir(parents=True)
+    (tmp_path / "backend" / "app" / "services" / "git_service.py").write_text("class GitService: pass\n", encoding="utf-8")
+    (tmp_path / "frontend" / "src").mkdir(parents=True)
+    (tmp_path / "frontend" / "src" / "App.jsx").write_text("export default function App() {}", encoding="utf-8")
+
+    result = ProjectScannerAgent(tmp_path).scan("add git api route")
+
+    assert result.relevant_files[0] == "backend/app/api/routes.py"
+    assert "backend/app/services/git_service.py" in result.relevant_files
 
 
 def test_implementation_planner_requires_approval(tmp_path):
@@ -147,13 +184,134 @@ def test_safe_file_editor_blocks_unsafe_paths(tmp_path):
     except ValueError:
         assert True
 
+    try:
+        editor.validate_relative_path("")
+        assert False
+    except ValueError:
+        assert True
+
+
+def test_safe_file_editor_applies_approved_patch_with_backup_and_diff(tmp_path):
+    target = tmp_path / "app.py"
+    target.write_text("print('old')\n", encoding="utf-8")
+    editor = SafeFileEditor(tmp_path, backup_dir=tmp_path / "backend/.logs/file_backups")
+
+    result = editor.apply_patches(
+        [
+            {
+                "path": "app.py",
+                "find": "old",
+                "replace": "new",
+            }
+        ]
+    )
+
+    assert result.success is True
+    assert result.changed_files == ["app.py"]
+    assert result.created_files == []
+    assert target.read_text(encoding="utf-8") == "print('new')\n"
+    assert result.backup_paths
+    assert result.diff_paths
+    assert (tmp_path / result.backup_paths[0]).read_text(encoding="utf-8") == "print('old')\n"
+    assert "-print('old')" in (tmp_path / result.diff_paths[0]).read_text(encoding="utf-8")
+
+
+def test_safe_file_editor_creates_new_file_from_full_content(tmp_path):
+    editor = SafeFileEditor(tmp_path, backup_dir=tmp_path / "backend/.logs/file_backups")
+
+    result = editor.apply_patches([{"path": "notes/todo.md", "content": "# Todo\n"}])
+
+    assert result.success is True
+    assert result.changed_files == []
+    assert result.created_files == ["notes/todo.md"]
+    assert (tmp_path / "notes/todo.md").read_text(encoding="utf-8") == "# Todo\n"
+    assert result.backup_paths == []
+    assert result.diff_paths
+
+
+def test_safe_file_editor_blocks_patch_before_writing_any_file(tmp_path):
+    safe = tmp_path / "app.py"
+    safe.write_text("old\n", encoding="utf-8")
+    editor = SafeFileEditor(tmp_path)
+
+    result = editor.apply_patches(
+        [
+            {"path": "app.py", "find": "old", "replace": "new"},
+            {"path": ".env", "content": "SECRET=true\n"},
+        ]
+    )
+
+    assert result.success is False
+    assert "Blocked path" in result.errors[0]
+    assert safe.read_text(encoding="utf-8") == "old\n"
+
 
 def test_safe_command_runner_allowlist():
     runner = SafeCommandRunner()
 
     assert runner.is_allowed("pytest") is True
     assert runner.is_allowed("npm run build") is True
+    assert runner.is_allowed("npm test") is False
+    assert runner.is_allowed("python -m pytest") is False
     assert runner.is_allowed("rm -rf .") is False
+
+
+def test_safe_command_runner_blocks_disallowed_commands():
+    runner = SafeCommandRunner()
+
+    result = runner.run("npm test")
+
+    assert result.success is False
+    assert result.exit_code == 126
+    assert "Allowed commands" in result.stderr
+
+
+def test_safe_command_runner_uses_fixed_argv_and_cwd(tmp_path, monkeypatch):
+    (tmp_path / "backend").mkdir()
+    (tmp_path / "frontend").mkdir()
+    calls = []
+
+    def fake_run(argv, cwd, capture_output, text, timeout, check):
+        calls.append(
+            {
+                "argv": argv,
+                "cwd": cwd,
+                "capture_output": capture_output,
+                "text": text,
+                "timeout": timeout,
+                "check": check,
+            }
+        )
+        return subprocess.CompletedProcess(argv, 0, stdout="ok", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    runner = SafeCommandRunner(tmp_path, timeout_seconds=12)
+
+    pytest_result = runner.run("  pytest  ")
+    build_result = runner.run("npm   run   build")
+
+    assert pytest_result.success is True
+    assert build_result.success is True
+    assert calls[0]["argv"] == ["pytest"]
+    assert calls[0]["cwd"] == tmp_path / "backend"
+    assert calls[1]["argv"] == ["npm", "run", "build"]
+    assert calls[1]["cwd"] == tmp_path / "frontend"
+    assert calls[1]["timeout"] == 12
+
+
+def test_safe_command_runner_reports_timeout(monkeypatch):
+    def fake_run(*args, **kwargs):
+        raise subprocess.TimeoutExpired(cmd=["pytest"], timeout=1, output="partial")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    runner = SafeCommandRunner(timeout_seconds=1)
+
+    result = runner.run("pytest")
+
+    assert result.success is False
+    assert result.exit_code == 124
+    assert result.stdout == "partial"
+    assert result.stderr == "Command timed out."
 
 
 def test_prompt_injection_firewall_detects_unsafe_instruction():
