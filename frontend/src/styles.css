@@ -2520,3 +2520,63 @@ ul {
     padding-bottom: calc(var(--space-md) + env(safe-area-inset-bottom, 0px));
   }
 }
+
+.codex-jobs-panel .codex-worker-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.codex-job-card {
+  padding: var(--space-sm);
+  margin-bottom: var(--space-sm);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+}
+
+.codex-job-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.codex-job-id {
+  font-size: var(--font-size-xs);
+  word-break: break-all;
+}
+
+.codex-job-results {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.codex-job-error {
+  margin-top: var(--space-xs);
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+.codex-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: lowercase;
+  border: var(--border-width) solid var(--color-border);
+}
+
+.codex-status-idle { color: var(--color-text-muted); }
+.codex-status-queued { color: var(--color-accent-cyan-soft); border-color: var(--color-glow-cyan); }
+.codex-status-running { color: var(--color-accent-emerald); border-color: var(--color-glow-green); }
+.codex-status-passed { color: var(--color-accent-green); }
+.codex-status-failed { color: var(--color-danger); }
+.codex-status-needs-manual-review { color: #fbbf24; border-color: rgba(251, 191, 36, 0.35); }

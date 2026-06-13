@@ -170,6 +170,33 @@ const ONBOARDING_STEPS = [
   },
 ]
 
+function codexJobDisplayStatus(job) {
+  const status = job?.status
+  if (status === 'blocked') return 'needs manual review'
+  if (status === 'passed' && !job.linear_done) return 'needs manual review'
+  if (status === 'failed') return 'failed'
+  if (status === 'passed') return 'passed'
+  if (status === 'running') return 'running'
+  if (status === 'queued') return 'queued'
+  return 'idle'
+}
+
+function codexWorkerSummaryStatus(jobs) {
+  if (!jobs.length) return 'idle'
+  if (jobs.some((job) => job.status === 'running')) return 'running'
+  if (jobs.some((job) => job.status === 'queued')) return 'queued'
+  if (jobs.some((job) => job.status === 'blocked' || (job.status === 'passed' && !job.linear_done))) {
+    return 'needs manual review'
+  }
+  if (jobs.some((job) => job.status === 'failed')) return 'failed'
+  if (jobs.every((job) => job.status === 'passed')) return 'passed'
+  return 'idle'
+}
+
+function codexTestResult(job, command) {
+  return (job.test_results || []).find((item) => item.command === command)
+}
+
 const progressSteps = [
   'Master Agent is understanding your request',
   'Task type is being detected',
@@ -317,7 +344,8 @@ function App() {
   const [linearLinks, setLinearLinks] = useState([])
   const [linearPollStatus, setLinearPollStatus] = useState(null)
   const [codexJobs, setCodexJobs] = useState([])
-  const [showLinearPanel, setShowLinearPanel] = useState(false)
+  const [codexJobsAvailable, setCodexJobsAvailable] = useState(false)
+  const [showCodexJobs, setShowCodexJobs] = useState(false)
   const [linearBusyId, setLinearBusyId] = useState('')
 
   useEffect(() => {
@@ -358,6 +386,7 @@ function App() {
     refreshApprovals(workspaceId)
     refreshAgentJobs(workspaceId)
     refreshSystemPrompts()
+    refreshCodexJobs()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -568,6 +597,12 @@ function App() {
     setAgentTemplates(await getAgentTemplates())
   }
 
+  async function refreshCodexJobs() {
+    const result = await getCodexJobs()
+    setCodexJobsAvailable(result.available)
+    setCodexJobs(result.items || [])
+  }
+
   async function refreshLinearStatus() {
     setLinearStatus(await getLinearStatus())
   }
@@ -577,11 +612,6 @@ function App() {
     setLinearStatus(status)
     setLinearLinks(await getLinearLinks(nextWorkspaceId))
     setLinearPollStatus(await getLinearPollStatus())
-    try {
-      setCodexJobs(await getCodexJobs())
-    } catch {
-      setCodexJobs([])
-    }
     if (status?.configured) {
       try {
         setLinearIssues(await getLinearIssues())
@@ -664,6 +694,7 @@ function App() {
       } else if (result.error) {
         setError(result.error)
       }
+      await refreshCodexJobs()
       await refreshLinearData(workspaceId)
       window.setTimeout(() => setCopied(''), 3000)
     } catch (err) {
@@ -1839,6 +1870,71 @@ function App() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowCodexJobs((current) => !current)}>
+              <span>
+                <GitBranch size={15} />
+                Codex Jobs
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showCodexJobs && (
+              <div className="mission-panel codex-jobs-panel">
+                {!codexJobsAvailable && (
+                  <p className="muted">Codex worker status is not available yet.</p>
+                )}
+                {codexJobsAvailable && (
+                  <>
+                    <div className="codex-worker-summary">
+                      <span className={`codex-status-badge codex-status-${codexWorkerSummaryStatus(codexJobs).replace(/\s+/g, '-')}`}>
+                        {codexWorkerSummaryStatus(codexJobs)}
+                      </span>
+                      <span className="muted">{codexJobs.length} job{codexJobs.length === 1 ? '' : 's'}</span>
+                    </div>
+                    {codexJobs.length === 0 && (
+                      <p className="muted">Codex worker idle — no jobs yet.</p>
+                    )}
+                    {codexJobs.slice(0, 10).map((job) => {
+                      const displayStatus = codexJobDisplayStatus(job)
+                      const pytest = codexTestResult(job, 'pytest')
+                      const build = codexTestResult(job, 'npm run build')
+                      return (
+                        <div className="codex-job-card" key={job.job_id}>
+                          <div className="codex-job-card-header">
+                            <strong>{job.issue_identifier || job.issue_id || 'Codex job'}</strong>
+                            <span className={`codex-status-badge codex-status-${displayStatus.replace(/\s+/g, '-')}`}>
+                              {displayStatus}
+                            </span>
+                          </div>
+                          <p className="muted codex-job-id">{job.job_id}</p>
+                          {job.branch_name && <p className="muted">Branch: {job.branch_name}</p>}
+                          {job.started_at && (
+                            <p className="muted">Started: {new Date(job.started_at).toLocaleString()}</p>
+                          )}
+                          {job.completed_at && (
+                            <p className="muted">Completed: {new Date(job.completed_at).toLocaleString()}</p>
+                          )}
+                          {job.changed_files?.length > 0 && (
+                            <p className="muted">Changed: {job.changed_files.join(', ')}</p>
+                          )}
+                          <div className="codex-job-results">
+                            <span>Tests: {pytest ? (pytest.success ? 'pass' : 'fail') : 'n/a'}</span>
+                            <span>Build: {build ? (build.success ? 'pass' : 'fail') : 'n/a'}</span>
+                          </div>
+                          {job.commit_hash && <p className="muted">Commit: {job.commit_hash}</p>}
+                          {job.linear_done && <p className="muted">Linear Done: yes</p>}
+                          {job.error && <p className="codex-job-error">{job.error}</p>}
+                        </div>
+                      )
+                    })}
+                  </>
+                )}
               </div>
             )}
           </section>

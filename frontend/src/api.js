@@ -599,9 +599,15 @@ export async function runCodexForLinearIssue(issueId) {
 }
 
 export async function getCodexJobs() {
-  const response = await fetch(`${API_BASE}/api/codex/jobs`)
-  if (!response.ok) throw new Error(`Codex jobs failed with status ${response.status}`)
-  return response.json()
+  try {
+    const response = await fetch(`${API_BASE}/api/codex/jobs`)
+    if (!response.ok) return { available: false, items: [] }
+    const data = await response.json()
+    const items = Array.isArray(data) ? data : data.jobs || data.items || []
+    return { available: true, items }
+  } catch {
+    return { available: false, items: [] }
+  }
 }
 
 export async function getCodexJob(jobId) {
