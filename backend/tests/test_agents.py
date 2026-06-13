@@ -1,3 +1,5 @@
+import subprocess
+
 from app.agents.master_agent import MasterOrchestratorAgent
 from app.agents.memory_agent import MemoryAgent
 from app.agents.judge_agent import JudgeAgent
@@ -153,7 +155,67 @@ def test_safe_command_runner_allowlist():
 
     assert runner.is_allowed("pytest") is True
     assert runner.is_allowed("npm run build") is True
+    assert runner.is_allowed("npm test") is False
+    assert runner.is_allowed("python -m pytest") is False
     assert runner.is_allowed("rm -rf .") is False
+
+
+def test_safe_command_runner_blocks_disallowed_commands():
+    runner = SafeCommandRunner()
+
+    result = runner.run("npm test")
+
+    assert result.success is False
+    assert result.exit_code == 126
+    assert "Allowed commands" in result.stderr
+
+
+def test_safe_command_runner_uses_fixed_argv_and_cwd(tmp_path, monkeypatch):
+    (tmp_path / "backend").mkdir()
+    (tmp_path / "frontend").mkdir()
+    calls = []
+
+    def fake_run(argv, cwd, capture_output, text, timeout, check):
+        calls.append(
+            {
+                "argv": argv,
+                "cwd": cwd,
+                "capture_output": capture_output,
+                "text": text,
+                "timeout": timeout,
+                "check": check,
+            }
+        )
+        return subprocess.CompletedProcess(argv, 0, stdout="ok", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    runner = SafeCommandRunner(tmp_path, timeout_seconds=12)
+
+    pytest_result = runner.run("  pytest  ")
+    build_result = runner.run("npm   run   build")
+
+    assert pytest_result.success is True
+    assert build_result.success is True
+    assert calls[0]["argv"] == ["pytest"]
+    assert calls[0]["cwd"] == tmp_path / "backend"
+    assert calls[1]["argv"] == ["npm", "run", "build"]
+    assert calls[1]["cwd"] == tmp_path / "frontend"
+    assert calls[1]["timeout"] == 12
+
+
+def test_safe_command_runner_reports_timeout(monkeypatch):
+    def fake_run(*args, **kwargs):
+        raise subprocess.TimeoutExpired(cmd=["pytest"], timeout=1, output="partial")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    runner = SafeCommandRunner(timeout_seconds=1)
+
+    result = runner.run("pytest")
+
+    assert result.success is False
+    assert result.exit_code == 124
+    assert result.stdout == "partial"
+    assert result.stderr == "Command timed out."
 
 
 def test_prompt_injection_firewall_detects_unsafe_instruction():
