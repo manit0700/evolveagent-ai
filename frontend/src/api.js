@@ -656,3 +656,136 @@ export async function getApprovalAudit(workspaceId) {
     return { available: false, items: [] }
   }
 }
+
+export async function getAgentJobs(workspaceId, status) {
+  try {
+    const response = await fetch(`${API_BASE}/api/agent-jobs${query({ workspace_id: workspaceId, status })}`)
+    if (!response.ok) return { available: false, items: [] }
+    const data = await response.json()
+    const items = Array.isArray(data) ? data : data.jobs || data.items || []
+    return { available: true, items }
+  } catch {
+    return { available: false, items: [] }
+  }
+}
+
+export async function getAgentJob(jobId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/agent-jobs/${jobId}`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function getAgentJobHealth() {
+  try {
+    const response = await fetch(`${API_BASE}/api/agent-jobs/health`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function createAgentJob(payload) {
+  const response = await fetch(`${API_BASE}/api/agent-jobs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Create agent job failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function startNextAgentJob() {
+  const response = await fetch(`${API_BASE}/api/agent-jobs/start-next`, { method: 'POST' })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Start next job failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function pauseAgentJob(jobId, reason) {
+  const response = await fetch(`${API_BASE}/api/agent-jobs/${jobId}/pause`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Pause job failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function resumeAgentJob(jobId, reason) {
+  const response = await fetch(`${API_BASE}/api/agent-jobs/${jobId}/resume`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Resume job failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function cancelAgentJob(jobId, reason) {
+  const response = await fetch(`${API_BASE}/api/agent-jobs/${jobId}/cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Cancel job failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function heartbeatAgentJob(jobId) {
+  const response = await fetch(`${API_BASE}/api/agent-jobs/${jobId}/heartbeat`, { method: 'POST' })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Heartbeat failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function getSystemPrompts() {
+  try {
+    const response = await fetch(`${API_BASE}/api/system-prompts`)
+    if (!response.ok) return { available: false, items: [] }
+    const data = await response.json()
+    const items = Array.isArray(data) ? data : data.prompts || data.items || []
+    return { available: true, items }
+  } catch {
+    return { available: false, items: [] }
+  }
+}
+
+export async function getSystemPrompt(agentName) {
+  const response = await fetch(`${API_BASE}/api/system-prompts/${encodeURIComponent(agentName)}`)
+  if (!response.ok) throw new Error(`System prompt failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function upsertSystemPrompt(payload) {
+  const response = await fetch(`${API_BASE}/api/system-prompts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Update system prompt failed with status ${response.status}`)
+  }
+  return body
+}

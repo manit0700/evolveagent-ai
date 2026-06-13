@@ -70,6 +70,17 @@ import {
   getApprovals,
   submitApprovalDecision,
   getApprovalAudit,
+  getAgentJobs,
+  getAgentJobHealth,
+  createAgentJob,
+  startNextAgentJob,
+  pauseAgentJob,
+  resumeAgentJob,
+  cancelAgentJob,
+  heartbeatAgentJob,
+  getSystemPrompts,
+  getSystemPrompt,
+  upsertSystemPrompt,
   getProviderStatus,
   getWorkspaceMemory,
   getWorkspaceKnowledge,
@@ -241,6 +252,17 @@ function App() {
   const [approvalAudit, setApprovalAudit] = useState([])
   const [approvalAuditAvailable, setApprovalAuditAvailable] = useState(false)
   const [approvalBusyId, setApprovalBusyId] = useState('')
+  const [showAgentJobs, setShowAgentJobs] = useState(false)
+  const [agentJobs, setAgentJobs] = useState([])
+  const [agentJobsAvailable, setAgentJobsAvailable] = useState(false)
+  const [agentJobHealth, setAgentJobHealth] = useState(null)
+  const [agentJobBusyId, setAgentJobBusyId] = useState('')
+  const [showSystemPrompts, setShowSystemPrompts] = useState(false)
+  const [systemPrompts, setSystemPrompts] = useState([])
+  const [systemPromptsAvailable, setSystemPromptsAvailable] = useState(false)
+  const [selectedPromptAgent, setSelectedPromptAgent] = useState('')
+  const [promptDraft, setPromptDraft] = useState('')
+  const [promptSaveBusy, setPromptSaveBusy] = useState(false)
   const [showAgentBuilder, setShowAgentBuilder] = useState(false)
   const [workspaces, setWorkspaces] = useState([])
   const [workspaceId, setWorkspaceId] = useState(null)
@@ -295,6 +317,8 @@ function App() {
   useEffect(() => {
     if (!workspaceId || !developerMode) return
     refreshApprovals(workspaceId)
+    refreshAgentJobs(workspaceId)
+    refreshSystemPrompts()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -393,6 +417,112 @@ function App() {
     () => approvals.filter((item) => item.status === 'pending'),
     [approvals],
   )
+
+  async function refreshAgentJobs(nextWorkspaceId = workspaceId) {
+    const [jobs, health] = await Promise.all([
+      getAgentJobs(nextWorkspaceId),
+      getAgentJobHealth(),
+    ])
+    setAgentJobsAvailable(jobs.available)
+    setAgentJobs(jobs.items || [])
+    setAgentJobHealth(health)
+  }
+
+  async function handleCreateTestAgentJob() {
+    setAgentJobBusyId('create')
+    setError('')
+    try {
+      await createAgentJob({
+        title: 'Test agent job',
+        job_type: 'health_check',
+        workspace_id: workspaceId,
+        payload: { source: 'developer_ui', note: 'Manual test job' },
+      })
+      await refreshAgentJobs(workspaceId)
+      setCopied('Test agent job created')
+      window.setTimeout(() => setCopied(''), 2000)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setAgentJobBusyId('')
+    }
+  }
+
+  async function handleStartNextAgentJob() {
+    setAgentJobBusyId('start-next')
+    setError('')
+    try {
+      const result = await startNextAgentJob()
+      if (!result.started) {
+        setError(result.reason || 'No queued job could be started.')
+      } else {
+        setCopied('Next agent job started')
+        window.setTimeout(() => setCopied(''), 2000)
+      }
+      await refreshAgentJobs(workspaceId)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setAgentJobBusyId('')
+    }
+  }
+
+  async function handleAgentJobAction(jobId, action) {
+    setAgentJobBusyId(jobId)
+    setError('')
+    const reason = window.prompt(`Optional reason for ${action}:`, '') || undefined
+    try {
+      if (action === 'pause') await pauseAgentJob(jobId, reason?.trim() || undefined)
+      if (action === 'resume') await resumeAgentJob(jobId, reason?.trim() || undefined)
+      if (action === 'cancel') await cancelAgentJob(jobId, reason?.trim() || undefined)
+      if (action === 'heartbeat') await heartbeatAgentJob(jobId)
+      await refreshAgentJobs(workspaceId)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setAgentJobBusyId('')
+    }
+  }
+
+  async function refreshSystemPrompts() {
+    const prompts = await getSystemPrompts()
+    setSystemPromptsAvailable(prompts.available)
+    setSystemPrompts(prompts.items || [])
+  }
+
+  async function handleSelectSystemPrompt(agentName) {
+    setSelectedPromptAgent(agentName)
+    setError('')
+    try {
+      const result = await getSystemPrompt(agentName)
+      setPromptDraft(result.prompt || '')
+    } catch (err) {
+      const local = systemPrompts.find((item) => item.agent_name === agentName)
+      setPromptDraft(local?.prompt || '')
+      if (!local) setError(err.message)
+    }
+  }
+
+  async function handleSaveSystemPrompt() {
+    if (!selectedPromptAgent || !promptDraft.trim()) return
+    setPromptSaveBusy(true)
+    setError('')
+    try {
+      const reason = window.prompt('Optional reason for prompt update:', '') || undefined
+      await upsertSystemPrompt({
+        agent_name: selectedPromptAgent,
+        prompt: promptDraft.trim(),
+        reason: reason?.trim() || undefined,
+      })
+      await refreshSystemPrompts()
+      setCopied(`Prompt saved for ${selectedPromptAgent}`)
+      window.setTimeout(() => setCopied(''), 2000)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setPromptSaveBusy(false)
+    }
+  }
 
   async function refreshCustomAgents(nextWorkspaceId = workspaceId) {
     setCustomAgents(await getCustomAgents(nextWorkspaceId))
@@ -1529,6 +1659,150 @@ function App() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowAgentJobs((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Agent Jobs
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showAgentJobs && (
+              <div className="mission-panel">
+                {!agentJobsAvailable && (
+                  <p className="muted">Agent jobs are not available yet.</p>
+                )}
+                {agentJobsAvailable && agentJobHealth && (
+                  <div className="provider-card">
+                    <div>
+                      <span>Health</span>
+                      <strong>{agentJobHealth.healthy ? 'healthy' : 'stale jobs'}</strong>
+                    </div>
+                    <div>
+                      <span>Queued</span>
+                      <strong>{agentJobHealth.queued ?? 0}</strong>
+                    </div>
+                    <div>
+                      <span>Running</span>
+                      <strong>{agentJobHealth.running ?? 0}</strong>
+                    </div>
+                    <div>
+                      <span>Paused</span>
+                      <strong>{agentJobHealth.paused ?? 0}</strong>
+                    </div>
+                    <div>
+                      <span>Total</span>
+                      <strong>{agentJobHealth.total_jobs ?? 0}</strong>
+                    </div>
+                  </div>
+                )}
+                {agentJobsAvailable && (
+                  <div className="inline-actions">
+                    <button type="button" disabled={agentJobBusyId === 'create'} onClick={handleCreateTestAgentJob}>
+                      Create test job
+                    </button>
+                    <button type="button" disabled={agentJobBusyId === 'start-next'} onClick={handleStartNextAgentJob}>
+                      Start next
+                    </button>
+                  </div>
+                )}
+                {agentJobsAvailable && agentJobs.length === 0 && (
+                  <p className="muted">No agent jobs yet.</p>
+                )}
+                {agentJobsAvailable && agentJobs.slice(0, 8).map((job) => (
+                  <div className="agent-template-card" key={job.job_id}>
+                    <strong>{job.title || job.job_type}</strong>
+                    <span>
+                      {job.status} · {formatType(job.job_type || 'workflow')}
+                      {job.workspace_id ? ` · ${job.workspace_id.slice(0, 8)}` : ''}
+                    </span>
+                    {job.created_at && (
+                      <p className="muted">{new Date(job.created_at).toLocaleString()}</p>
+                    )}
+                    {job.result_summary && <p className="muted">{job.result_summary}</p>}
+                    {job.error && <p className="muted">{job.error}</p>}
+                    <div className="inline-actions">
+                      {job.status === 'running' && (
+                        <>
+                          <button type="button" disabled={agentJobBusyId === job.job_id} onClick={() => handleAgentJobAction(job.job_id, 'pause')}>
+                            Pause
+                          </button>
+                          <button type="button" disabled={agentJobBusyId === job.job_id} onClick={() => handleAgentJobAction(job.job_id, 'heartbeat')}>
+                            Heartbeat
+                          </button>
+                        </>
+                      )}
+                      {job.status === 'paused' && (
+                        <button type="button" disabled={agentJobBusyId === job.job_id} onClick={() => handleAgentJobAction(job.job_id, 'resume')}>
+                          Resume
+                        </button>
+                      )}
+                      {job.status === 'queued' && (
+                        <button type="button" disabled={agentJobBusyId === job.job_id} onClick={() => handleAgentJobAction(job.job_id, 'cancel')}>
+                          Cancel
+                        </button>
+                      )}
+                      {!['completed', 'failed', 'canceled'].includes(job.status) && job.status !== 'queued' && (
+                        <button type="button" disabled={agentJobBusyId === job.job_id} onClick={() => handleAgentJobAction(job.job_id, 'cancel')}>
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowSystemPrompts((current) => !current)}>
+              <span>
+                <FileText size={15} />
+                System Prompts
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showSystemPrompts && (
+              <div className="mission-panel">
+                {!systemPromptsAvailable && (
+                  <p className="muted">System prompt registry is not available yet.</p>
+                )}
+                {systemPromptsAvailable && systemPrompts.length === 0 && (
+                  <p className="muted">No registered prompts yet.</p>
+                )}
+                {systemPromptsAvailable && systemPrompts.slice(0, 10).map((prompt) => (
+                  <button
+                    type="button"
+                    className={`goal-card ${selectedPromptAgent === prompt.agent_name ? 'active' : ''}`}
+                    key={prompt.prompt_id || prompt.agent_name}
+                    onClick={() => handleSelectSystemPrompt(prompt.agent_name)}
+                  >
+                    <strong>{prompt.agent_name}</strong>
+                    <span>{prompt.source || 'registry'} · {prompt.updated_at ? new Date(prompt.updated_at).toLocaleString() : 'n/a'}</span>
+                  </button>
+                ))}
+                {selectedPromptAgent && (
+                  <div className="developer-prompt-block">
+                    <span>Edit prompt: {selectedPromptAgent}</span>
+                    <textarea
+                      value={promptDraft}
+                      onChange={(event) => setPromptDraft(event.target.value)}
+                      rows={8}
+                      placeholder="System prompt text..."
+                    />
+                    <button type="button" disabled={promptSaveBusy || !promptDraft.trim()} onClick={handleSaveSystemPrompt}>
+                      Save prompt
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </section>
