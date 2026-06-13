@@ -147,6 +147,67 @@ def test_safe_file_editor_blocks_unsafe_paths(tmp_path):
     except ValueError:
         assert True
 
+    try:
+        editor.validate_relative_path("")
+        assert False
+    except ValueError:
+        assert True
+
+
+def test_safe_file_editor_applies_approved_patch_with_backup_and_diff(tmp_path):
+    target = tmp_path / "app.py"
+    target.write_text("print('old')\n", encoding="utf-8")
+    editor = SafeFileEditor(tmp_path, backup_dir=tmp_path / "backend/.logs/file_backups")
+
+    result = editor.apply_patches(
+        [
+            {
+                "path": "app.py",
+                "find": "old",
+                "replace": "new",
+            }
+        ]
+    )
+
+    assert result.success is True
+    assert result.changed_files == ["app.py"]
+    assert result.created_files == []
+    assert target.read_text(encoding="utf-8") == "print('new')\n"
+    assert result.backup_paths
+    assert result.diff_paths
+    assert (tmp_path / result.backup_paths[0]).read_text(encoding="utf-8") == "print('old')\n"
+    assert "-print('old')" in (tmp_path / result.diff_paths[0]).read_text(encoding="utf-8")
+
+
+def test_safe_file_editor_creates_new_file_from_full_content(tmp_path):
+    editor = SafeFileEditor(tmp_path, backup_dir=tmp_path / "backend/.logs/file_backups")
+
+    result = editor.apply_patches([{"path": "notes/todo.md", "content": "# Todo\n"}])
+
+    assert result.success is True
+    assert result.changed_files == []
+    assert result.created_files == ["notes/todo.md"]
+    assert (tmp_path / "notes/todo.md").read_text(encoding="utf-8") == "# Todo\n"
+    assert result.backup_paths == []
+    assert result.diff_paths
+
+
+def test_safe_file_editor_blocks_patch_before_writing_any_file(tmp_path):
+    safe = tmp_path / "app.py"
+    safe.write_text("old\n", encoding="utf-8")
+    editor = SafeFileEditor(tmp_path)
+
+    result = editor.apply_patches(
+        [
+            {"path": "app.py", "find": "old", "replace": "new"},
+            {"path": ".env", "content": "SECRET=true\n"},
+        ]
+    )
+
+    assert result.success is False
+    assert "Blocked path" in result.errors[0]
+    assert safe.read_text(encoding="utf-8") == "old\n"
+
 
 def test_safe_command_runner_allowlist():
     runner = SafeCommandRunner()
