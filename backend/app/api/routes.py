@@ -22,6 +22,9 @@ from app.models.request_models import (
     CreateWorkspaceMemoryRequest,
     CreateWorkspaceRequest,
     FeedbackRequest,
+    GitBranchRequest,
+    GitCommitRequest,
+    GitPushRequest,
     PromptDecisionRequest,
     PromptProposalRequest,
     RenameChatRequest,
@@ -122,6 +125,38 @@ def filter_by_workspace(items: list[dict], workspace_id: str | None = None) -> l
     if not workspace_id:
         return items
     return [item for item in items if item.get("workspace_id") == workspace_id]
+
+
+@router.get("/git/status")
+def get_git_status() -> dict:
+    status = git_service.git_status()
+    return {
+        **status,
+        "branch": git_service.current_branch(),
+        "changed_files": git_service.list_changed_files(),
+        "diff_summary": git_service.diff_summary(),
+    }
+
+
+@router.post("/git/branch")
+def create_or_checkout_git_branch(request: GitBranchRequest) -> dict:
+    return git_service.create_branch(request.branch_name)
+
+
+@router.post("/git/stage-safe")
+def stage_safe_git_files() -> dict:
+    return git_service.add_safe_files()
+
+
+@router.post("/git/commit")
+def commit_git_changes(request: GitCommitRequest) -> dict:
+    return git_service.commit(request.message)
+
+
+@router.post("/git/push")
+def push_git_branch(request: GitPushRequest | None = None) -> dict:
+    payload = request or GitPushRequest()
+    return git_service.push(remote=payload.remote, branch=payload.branch)
 
 
 @router.post("/workspaces")

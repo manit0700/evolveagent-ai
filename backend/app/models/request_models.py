@@ -174,6 +174,19 @@ class LinearCursorVerifyRequest(BaseModel):
     auto_commit: bool = Field(default=False, description="Stage and commit safe files after verification passes.")
 
 
+class GitBranchRequest(BaseModel):
+    branch_name: str = Field(..., min_length=1, max_length=160)
+
+
+class GitCommitRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=200)
+
+
+class GitPushRequest(BaseModel):
+    remote: str | None = Field(default=None, max_length=80)
+    branch: str | None = Field(default=None, max_length=160)
+
+
 class AssistantCommandRequest(BaseModel):
     input_text: str = Field(default="", max_length=2000)
     workspace_id: str | None = None

@@ -24,6 +24,23 @@ class GitService:
     def __init__(self, project_root: str | Path | None = None):
         self.project_root = Path(project_root) if project_root else Path(__file__).resolve().parents[3]
 
+    def _normalize_branch_name(self, branch_name: str) -> str:
+        safe_name = "-".join(branch_name.strip().lower().split())
+        invalid_fragments = ("..", "//", "@{", "\\")
+        invalid_chars = set("~^:?*[")
+        if (
+            not safe_name
+            or safe_name.startswith("-")
+            or safe_name.startswith("/")
+            or safe_name.endswith("/")
+            or safe_name.endswith(".")
+            or any(fragment in safe_name for fragment in invalid_fragments)
+            or any(char in safe_name for char in invalid_chars)
+            or any(ord(char) < 32 for char in safe_name)
+        ):
+            raise ValueError("Unsafe branch name")
+        return safe_name
+
     def _run(self, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             ["git", *args],
@@ -35,9 +52,10 @@ class GitService:
 
     def git_status(self) -> dict[str, str | bool]:
         result = self._run("status", "--porcelain")
+        output = result.stdout.rstrip("\n")
         return {
-            "clean": result.returncode == 0 and not result.stdout.strip(),
-            "output": result.stdout.strip(),
+            "clean": result.returncode == 0 and not output.strip(),
+            "output": output,
             "success": result.returncode == 0,
         }
 
@@ -46,7 +64,10 @@ class GitService:
         return result.stdout.strip() if result.returncode == 0 else settings.git_default_branch
 
     def create_branch(self, branch_name: str) -> dict[str, str | bool]:
-        safe_name = branch_name.replace(" ", "-").lower()
+        try:
+            safe_name = self._normalize_branch_name(branch_name)
+        except ValueError as exc:
+            return {"branch": "", "success": False, "message": str(exc)}
         checkout = self._run("checkout", "-b", safe_name)
         if checkout.returncode != 0 and "already exists" in checkout.stderr.lower():
             checkout = self._run("checkout", safe_name)
@@ -57,7 +78,10 @@ class GitService:
         }
 
     def checkout_branch(self, branch_name: str) -> dict[str, str | bool]:
-        safe_name = branch_name.replace(" ", "-").lower()
+        try:
+            safe_name = self._normalize_branch_name(branch_name)
+        except ValueError as exc:
+            return {"branch": "", "success": False, "message": str(exc)}
         checkout = self._run("checkout", safe_name)
         return {
             "branch": safe_name,
