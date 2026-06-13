@@ -110,6 +110,12 @@ def test_codex_job_creation(codex_env, monkeypatch):
     assert job["status"] == "passed"
     assert job["commit_hash"] == "abc1234"
     assert job["linear_done"] is True
+    assert job["manual_review_required"] is False
+    assert job["failure_stage"] is None
+    assert job["test_result"]["command"] == "pytest"
+    assert job["build_result"]["command"] == "npm run build"
+    assert job["verification_summary"] == "pytest: passed; npm run build: passed"
+    assert "EVO-170 completed" in job["summary"]
 
 
 def test_worker_disabled_returns_safe_error(monkeypatch):
@@ -129,6 +135,8 @@ def test_missing_handoff_file_blocks_job(codex_env, monkeypatch):
     codex_env["handoff_path"].unlink()
     result = codex_env["worker"].run_for_issue("issue-170")
     assert result["job"]["status"] == "failed"
+    assert result["job"]["failure_stage"] == "handoff_validation"
+    assert result["job"]["manual_review_required"] is True
     assert "Handoff file missing" in result["error"]
 
 
@@ -137,6 +145,9 @@ def test_unsafe_changed_files_block_commit(codex_env, monkeypatch):
     codex_env["git"].list_changed_files.return_value = ["backend/.env"]
     result = codex_env["worker"].run_for_issue("issue-170")
     assert result["job"]["status"] == "blocked"
+    assert result["job"]["failure_stage"] == "change_safety_check"
+    assert result["job"]["status_detail"] == "Blocked by worker safety rules"
+    assert result["job"]["manual_review_required"] is True
     assert "Unsafe files changed" in result["error"]
     codex_env["git"].commit.assert_not_called()
 
@@ -151,8 +162,11 @@ def test_failed_tests_do_not_mark_linear_done(codex_env, monkeypatch):
         success=command != "pytest",
     )
     result = codex_env["worker"].run_for_issue("issue-170")
-    assert result["job"]["status"] == "failed"
+    assert result["job"]["status"] == "needs_manual_review"
+    assert result["job"]["failure_stage"] == "verification"
     assert result["job"]["linear_done"] is False
+    assert result["job"]["manual_review_required"] is True
+    assert result["job"]["verification_summary"] == "pytest: failed; npm run build: passed"
     codex_env["git"].commit.assert_not_called()
     codex_env["orchestration"].verify_cursor_work.assert_not_called()
 
@@ -164,6 +178,24 @@ def test_successful_mocked_codex_run_commits_and_verifies(codex_env, monkeypatch
     codex_env["orchestration"].verify_cursor_work.assert_called_once()
     assert result["job"]["status"] == "passed"
     assert result["verify_result"]["verified"] is True
+
+
+def test_failure_comment_includes_stage_and_verification(codex_env, monkeypatch):
+    monkeypatch.setattr("shutil.which", lambda _: "/usr/bin/codex")
+    codex_env["runner"].run.side_effect = lambda command: CommandResult(
+        command=command,
+        exit_code=1 if command == "pytest" else 0,
+        stdout="",
+        stderr="fail" if command == "pytest" else "",
+        success=command != "pytest",
+    )
+    result = codex_env["worker"].run_for_issue("issue-170")
+    assert result["job"]["status"] == "needs_manual_review"
+    codex_env["orchestration"].linear.add_linear_comment.assert_called_once()
+    comment = codex_env["orchestration"].linear.add_linear_comment.call_args.args[1]
+    assert "needs manual review" in comment
+    assert "Stage: `verification`" in comment
+    assert "pytest: failed; npm run build: passed" in comment
 
 
 def test_job_list_endpoint(codex_env, monkeypatch):

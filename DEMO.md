@@ -1,12 +1,12 @@
 # EvolveAgent AI Demo Guide
 
-Use this guide for a 2-minute portfolio, class, or interview demo of **EvolveAgent AI MVP v2.6**.
+Use this guide for a short portfolio, class, or interview demo of **EvolveAgent AI v3.5 checkpoint**.
 
 ## 2-Minute Demo Script
 
 **0:00-0:15 — Introduce the project**
 
-EvolveAgent AI is a workspace-aware, voice-capable multi-agent AI workspace with project memory, real multi-LLM consensus, and an advanced adaptive learning layer. Instead of sending every request directly to one chatbot, it uses a Master Orchestrator Agent to classify the task, retrieve relevant workspace memory, route it through specialist agents, compare Deep Mode candidates when requested, evaluate the output, store memory and analytics, and return one clean final answer.
+EvolveAgent AI is a workspace-aware multi-agent AI operating workspace with a polished Jarvis-style interface. It combines chat, voice input, files, recordings, image prompts, Mission Control goals, custom agents, Project Brain search, tool routing, approvals, analytics, learning, and Developer Mode transparency.
 
 **0:15-0:35 — Show Simple Mode**
 
@@ -16,59 +16,48 @@ Run:
 Explain how EvolveAgent AI works.
 ```
 
-Show that Simple Mode feels like a normal AI assistant: user message, assistant answer, feedback buttons, and minimal controls.
+Show the Jarvis-style Simple Mode: a clean voice/text-first command center, a normal assistant answer, light/dark theme toggle, and minimal controls.
 
 **0:35-0:55 — Show Developer Mode**
 
-Click **View details** or switch to **Developer Mode**. Show:
+Switch to Developer Mode and show:
 
-- task type
-- confidence
+- task type and confidence
 - agents used
 - provider/model metadata
 - workflow trace
 - judge score
 - per-agent evaluation
-- evolution notes
-- consensus candidates and selected winner when Deep Mode is enabled
+- consensus candidates when Deep Mode is enabled
+- tool trace when a tool is selected
 
-Explain that Developer Mode proves the orchestration behind the clean chat UI.
+**0:55-1:15 — Show Project Brain**
 
-**Workspace moment — Show project context**
+Open the Knowledge Base / Project Brain panel. Search memory, chats, files, recordings, goals, and custom agents. Show cross-session links and memory importance/pinning if data exists.
 
-In the left sidebar, create or select a workspace. Open the Memory panel, add a short project fact, then ask a related prompt. In Developer Mode, show that workspace memory was used as scoped context. Explain that v2.6 separates chats, goals, agents, files, recordings, analytics, learning, and memory by project.
-
-**0:55-1:15 — Show file upload**
-
-Upload a resume, README, CSV, or code file and ask:
+Demo prompt:
 
 ```text
-Review this file and give improvements.
+Search my project knowledge for app automation decisions.
 ```
 
-Explain that the backend validates the file, saves it locally, extracts text, caps the context, runs the File Analysis Agent, and then routes the prepared context through the specialist agents.
+**1:15-1:35 — Show file or recording intelligence**
 
-**1:15-1:30 — Show mock Image Agent**
-
-Run:
+Upload a document or recording and ask:
 
 ```text
-Generate an image prompt for a futuristic AI assistant.
+Summarize this uploaded document.
 ```
 
-Explain that MVP v2.6 uses a mock image provider, cleans prompt wording, rewrites protected-character requests safely, and returns a preview without calling a real image API.
-
-**1:30-1:45 — Show recording intelligence**
-
-Upload an MP3, M4A, WAV, MP4, or WEBM recording and ask:
+or:
 
 ```text
 Summarize this recording and list action items.
 ```
 
-Explain that v2.6 stores the recording, transcribes it in mock or OpenAI mode, runs the Recording Analysis Agent, and returns summaries, action items, decisions, study notes, and Q&A.
+Explain that the backend validates uploads, extracts or transcribes text, caps context, and routes the result through specialist agents.
 
-**1:45-2:00 — Show safe app automation**
+**1:35-1:50 — Show safe automation and approvals**
 
 Run:
 
@@ -76,232 +65,101 @@ Run:
 Add a small settings page to this app.
 ```
 
-Show that EvolveAgent AI scans the project, creates an implementation plan, lists likely files and commands, and asks for approval before any apply step. Explain that v2.0 does not silently edit files.
+Show that EvolveAgent AI plans the work and asks for approval before any apply step. In Developer Mode, open the Approval Queue and Approval Audit.
 
-**Close — Show learning and analytics**
+**1:50-2:00 — Show Agent OS panels**
 
-Click **Helpful** or **Save as good answer**, then open the Analytics panel. Show:
+Open Developer Mode and show:
 
-- total runs
-- average score
-- most common task type
-- most used agent
-- fallback count
-- file/image task counts
-- feedback summary
+- Agent Jobs panel
+- System Prompt Registry panel
+- Analytics / Learning panel
 
-Also show the Developer Mode Learning Report if time permits.
-
-**Close with value**
-
-This project demonstrates a realistic multi-agent architecture with task routing, model fallback, file analysis, recording intelligence, mock image generation, voice input, Mission Control goal/task graphs, custom agent templates, approval-gated automation planning, per-agent evaluation, feedback, analytics, and orchestration-level learning reports.
-MVP v2.6 adds workspace-scoped project memory so each project can keep its own chats, files, goals, custom agents, analytics, and learning context.
-
-## What to Show First
-
-Start in **Simple Mode**. Do not begin with raw JSON.
-
-Show:
-
-- clean assistant answer
-- feedback buttons
-- copy/regenerate/view details controls
-- attached file names if using files
-
-Then switch to Developer Mode to show the system depth.
+Explain that v3.5 adds the polished UI layer over the Agent OS foundation: responsive Developer Mode, onboarding, theme tokens, accessibility improvements, and cleaner panels.
 
 ## Best Demo Prompt Order
 
 1. `Explain how EvolveAgent AI works.`
-2. Create a workspace named `Resume Projects` and add memory: `This workspace prefers concise bullet points and software engineering internship examples.`
-3. `Create a 2-minute project demo script.`
-4. Upload a resume or README and ask: `Review this file and give improvements.`
-5. `Generate an image prompt for a futuristic AI assistant.`
+2. `Search my project knowledge for app automation decisions.`
+3. `Calculate 184 * 27.`
+4. `Generate an image prompt for a futuristic AI assistant.`
+5. Upload a document and ask: `Summarize this uploaded document.`
 6. Upload a recording and ask: `Summarize this recording and list action items.`
 7. Turn on Deep Mode and ask: `Compare the best plan for improving this project demo.`
 8. `Build an AI resume analyzer app.`
 9. Open Mission Control and run one task.
 10. Create a custom `Resume Agent` from the template list.
 11. `Add dark mode to this app.`
-12. `Run tests for this project.`
-13. `Explain the current app architecture.`
-14. Upload a document and ask: `Summarize this uploaded document.`
-15. Click feedback buttons and open Analytics.
-16. Switch to Developer Mode and show consensus, workspace memory, per-agent evaluation, goals, custom agents, and learning report.
-
-## How to Explain Mission Control
-
-Say:
-
-Mission Control turns large objectives into trackable goals and task graphs. The Goal Planner Agent creates phases, task cards, dependencies, priorities, recommended agents, risk level, and the next best task. The user can run one task at a time through the existing agent workflow. Goal Mode does not silently execute code; any task that becomes app automation still requires approval.
-
-Demo prompt:
-
-```text
-Build an AI resume analyzer app.
-```
-
-Then open **Mission Control** and show:
-
-- active goal
-- progress percent
-- phases and task cards
-- priority and status badges
-- run task button
-- mark done button
-
-## How to Explain Custom Agent Builder
-
-Say:
-
-Custom agents are reusable workflow specialists that operate under the same permission, governance, and safety rules as built-in agents. They cannot bypass prompt-injection checks, secret scanning, approval gates, or governance logging.
-
-Show the Agent Builder panel and create a template-based agent, such as:
-
-- Resume Agent
-- Code Review Agent
-- Meeting Notes Agent
-- File Summary Agent
-- Business Analyst Agent
+12. Toggle light/dark mode and resize the browser to show the responsive layout.
+13. Open Developer Mode and show Approval Queue, Tool Trace, Agent Jobs, and System Prompt Registry.
 
 ## How to Explain the Master Agent
 
-The Master Agent is the supervisor. It receives the user request, loads recent chat context, detects the task type, chooses the correct workflow, tracks execution, and returns a structured response.
+The Master Agent is the supervisor. It receives the request, loads workspace context, detects the task type, chooses a workflow, tracks execution, and returns one final response.
 
-It decides whether the request is:
+## How to Explain Project Brain
 
-- normal text
-- file/document analysis
-- image generation
-- app automation
-- recording summary
-- coding
-- resume review
-- business analysis
-- system explanation
+Project Brain is a JSON-backed knowledge layer. It searches across workspace memory, chats, files, recordings, goals, and custom agents. It can export knowledge as Markdown or JSON, link related records across sessions, and rank memories by importance, pinning, recency, and usage.
 
-## How to Explain Specialist Agents
+It is not a vector database yet.
 
-Specialist agents divide the work:
+## How to Explain Assistant Tools and Tool Router
 
-- Research Agent understands context.
-- Logic Agent structures reasoning.
-- Risk Agent finds assumptions and weak points.
-- Strategy Agent recommends next steps.
-- Writing Agent creates the final answer.
-- Judge Agent scores quality.
-- Evolution Agent recommends workflow improvements.
-- File Analysis Agent summarizes uploaded documents.
-- Image Agent creates safe image prompts and mock previews.
+Assistant Tools are small safe utilities such as calculator, password generation, system info, temperature conversion, and knowledge search. The Tool Router chooses relevant tools through the registry and records a Developer Mode Tool Trace.
 
-## How to Explain Real Multi-LLM Consensus
+Simple Mode hides tool internals. Developer Mode shows selected tools, sanitized inputs, permission level, execution status, and result summary.
 
-The app can use real OpenAI text mode when `OPENAI_API_KEY` is configured. In Deep Mode, MVP v2.6 asks the LLM Router for configured consensus providers, such as OpenAI, Claude, Gemini, and Mistral. Each provider creates an independent candidate answer, the Judge Agent compares them, and the Writing Agent synthesizes one final answer.
+## How to Explain Approval Workflow 2.0
 
-If only OpenAI is configured, Deep Mode compares OpenAI with mock. If no keys are present, or if a provider call fails, candidates fall back to mock mode. This keeps the demo stable and lets the full workflow run without paid API access.
-
-Developer Mode shows each candidate, provider/model metadata, fallback status, selected winner, and judge comparison notes. Simple Mode only shows the final answer.
-
-Image generation intentionally stays on `mock_image` in MVP v2.6.
-
-## How to Explain File Upload
-
-Say:
-
-EvolveAgent AI supports document-aware workflows. Files are uploaded through the chat, validated, saved locally, and converted into extracted text. The File Analysis Agent summarizes that context before the normal specialist agents run.
-
-Limitations:
-
-- text-based PDFs only
-- no OCR
-- no scanned PDF support
-- no vector database yet
-
-## How to Explain Recording Intelligence
-
-Say:
-
-EvolveAgent AI v2.6 supports recording upload for MP3, M4A, WAV, MP4, and WEBM files. The backend validates the recording, stores it locally, transcribes it using mock mode or OpenAI transcription mode, and runs a Recording Analysis Agent. The output includes a short summary, detailed summary, key points, action items, decisions, follow-up tasks, study notes, and Q&A.
-
-Limitations:
-
-- no speaker diarization yet
-- no video frame understanding yet
-- mock transcription is used by default for demos and tests
-
-## How to Explain the Mock Image Agent
-
-Say:
-
-The Image Agent detects visual requests, cleans the prompt, rewrites protected-character wording into safer inspired-character descriptions, and returns a mock preview. This demonstrates the image workflow without adding real image API cost or complexity.
-
-## How to Explain Voice Input
-
-Say:
-
-EvolveAgent AI v2.0 adds browser voice command input. The microphone button uses the browser Web Speech API to transcribe short commands into the chat box. The user can edit the transcription before sending, so voice remains safe and controlled.
-
-## How to Explain App Automation
-
-Say:
-
-For app automation requests, EvolveAgent AI behaves like a safe Codex-style planner. It scans the project, detects frameworks, identifies likely files and build/test commands, and prepares an implementation plan. It asks for approval before any apply step and blocks dangerous paths, secrets, package installs, destructive deletion, and arbitrary shell commands.
+Approval Workflow 2.0 blocks risky actions until approved. It stores approval chains, queue entries, audit records, rejection/rollback records, and optional webhook notifications.
 
 Key safety points:
 
-- File edits require approval.
-- Commands are allowlisted.
-- Destructive file deletion is blocked.
-- Unrestricted shell execution is blocked.
-- The app does not silently self-modify.
+- file edits require approval
+- command runs require approval
+- execute-level tools require approval
+- rejected work is not applied
+- every decision is logged
 
-## How to Explain Adaptive Learning
+## How to Explain Agent Jobs
 
-Say:
+Agent Jobs are persisted background-style work records. The Developer Mode panel can create a test job, start the next queued job, pause/resume/cancel jobs, send heartbeat updates, and show job health.
 
-The system does not train the base model. It self-optimizes the orchestration layer by tracking judge scores, per-agent scores, model fallback, latency, workflow performance, human feedback, model tournament results, and inferred user preferences. It can recommend routing changes and propose prompt improvements, but prompt versions require approval and can be rolled back.
+## How to Explain System Prompt Registry
 
-## How to Explain Agent Evaluation
-
-Say:
-
-After each workflow, the Judge Agent evaluates each agent output individually. It scores usefulness and clarity, identifies the strongest and weakest agents, and records improvement suggestions. This makes the project more advanced than a normal chatbot because it measures the quality of the agent team, not just the final answer.
-
-## How to Explain Analytics Dashboard
-
-Say:
-
-The Analytics panel summarizes workflow performance. It tracks total runs, average judge score, latency, fallback usage, file tasks, image tasks, most used agents, recent runs, and human feedback. This is the start of workflow intelligence.
+The System Prompt Registry centralizes agent prompts and connects to prompt versioning. Prompt changes are controlled and reversible. The app does not silently retrain or rewrite the base model.
 
 ## How to Explain Simple Mode vs Developer Mode
 
-Simple Mode is for normal users. It shows only the answer, files, image preview, feedback, and basic controls.
+Simple Mode is for normal users. It shows the answer, image/file/recording result if relevant, feedback, copy/regenerate/view details/delete, and a clean voice/text interface.
 
-Developer Mode is for demos and debugging. It shows task routing, workflow trace, provider metadata, judge scores, per-agent evaluation, file context, image metadata, evolution notes, and raw JSON.
+Developer Mode is for demos and debugging. It shows workflow trace, provider metadata, consensus, tool trace, approvals, agent jobs, system prompts, file context, recording transcripts, governance events, learning reports, and raw JSON.
 
 ## Final Interview-Style Explanation
 
-EvolveAgent AI is a full-stack multi-agent AI workspace I built with FastAPI and React. The system uses a Master Orchestrator Agent to classify requests and route them through specialist agents for research, logic, risk analysis, strategy, final writing, judging, evolution feedback, file analysis, recording analysis, mock image generation, and safe app automation planning. It supports real OpenAI text mode with mock fallback, chat sessions, file upload and document analysis, recording upload and summaries, browser voice command input, safe mock image prompts, approval-gated automation plans, per-agent evaluation, human feedback, analytics, and orchestration-level learning reports. Simple Mode gives users a clean ChatGPT-style experience, while Developer Mode exposes the full agent workflow for technical review.
+EvolveAgent AI is a full-stack multi-agent AI operating workspace built with FastAPI and React. It routes each request through a Master Orchestrator Agent, specialist agents, judge/evolution feedback, workspace memory, governed tools, and analytics. It supports real OpenAI mode with mock fallback, Deep Mode consensus, file and recording analysis, mock image prompts, voice input, Mission Control goals, custom agents, Project Brain search, approval-gated automation planning, adaptive learning, and Developer Mode transparency. The v3.5 checkpoint adds a more professional Jarvis-style UI, responsive Developer Mode, theme tokens, onboarding, and accessibility polish over the v3.0 Agent OS foundation.
 
 ## Demo Checklist
 
 - Backend running at `http://127.0.0.1:8000`
 - Frontend running at `http://127.0.0.1:5173`
 - Simple Mode works
+- Jarvis-style command center works
+- Light/dark theme toggle works
+- Onboarding walkthrough appears or can be dismissed
+- Responsive sidebar works on narrow windows
 - Developer Mode works
-- Text prompt works
+- Project Brain search/export works
+- Assistant Tools work
+- Tool Trace appears in Developer Mode when tools are selected
+- Approval Queue and Audit appear in Developer Mode
+- Agent Jobs panel appears in Developer Mode
+- System Prompt Registry panel appears in Developer Mode
 - File upload works
 - Recording upload works
 - Image Agent mock preview works
-- Feedback buttons work
-- Analytics panel works
-- Voice input button appears
-- App automation plan requires approval
-- Learning report works in Developer Mode
-- Export Markdown/JSON works
+- Mission Control works
+- Custom Agent Builder works
+- Feedback and Analytics work
 - Backend tests pass
 - Frontend build passes
-- Linear status endpoint works when configured or unconfigured
-- Linear panel can sync/select/run issues when backend is configured
-- Poll worker detects In Progress issues and prepares branches (manual poll via Developer Mode)
-- Mission Control goal cards show Linear identifier, branch, commit, and push status when linked

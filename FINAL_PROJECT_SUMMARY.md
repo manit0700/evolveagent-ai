@@ -1,111 +1,99 @@
-# EvolveAgent AI MVP v2.6 — Workspace Memory + Personal AI Context Summary
+# EvolveAgent AI v3.5 Checkpoint — Project Summary
 
 ## Short Summary
 
-EvolveAgent AI is a workspace-aware, voice-controlled, ChatGPT-style multi-agent AI workspace with project memory, Mission Control, Custom Agent Builder, real multi-LLM consensus, governance, and an Advanced Adaptive Learning Engine. It routes user requests through a Master Orchestrator Agent, specialist agents, a Judge Agent, an Evolution Agent, workspace memory, feedback, analytics, safe automation planning, recording analysis, goal/task planning, reusable custom agents, and learning reports that optimize the orchestration layer.
+EvolveAgent AI is a workspace-aware, voice-capable multi-agent AI operating workspace. It combines a polished Jarvis-style interface with Master Agent routing, specialist agents, real OpenAI mode with mock fallback, file and recording analysis, mock image previews, Mission Control goals, custom agents, Project Brain search, safe tool routing, approval workflows, analytics, adaptive learning, and Developer Mode transparency.
 
 ## Full Technical Summary
 
-EvolveAgent AI is built with a FastAPI backend and Vite React frontend. The backend receives chat requests, creates or loads chat sessions, classifies task type, runs the correct workflow, evaluates results, saves memory and analytics, and returns a structured response. The frontend presents Simple Mode for clean user-facing answers and Developer Mode for workflow inspection.
+The project uses a FastAPI backend and Vite React frontend. The backend receives user requests, resolves workspace context, loads relevant memory, classifies the task, routes work through the correct agent workflow, evaluates the result, logs governance and analytics metadata, stores memory, and returns a structured response. The frontend has Simple Mode for normal use and Developer Mode for technical inspection.
 
-MVP v2.6 supports real OpenAI text mode, optional Deep Mode consensus across configured OpenAI, Claude, Gemini, and Mistral providers, mock fallback, JSON-based chat/session storage, file upload and document analysis, recording upload and transcript summaries, mock image preview generation, per-agent evaluation, human feedback, analytics, browser voice command input, Mission Control goal/task graphs, Custom Agent Builder templates, approval-gated app automation planning, safe project scanning, allowlisted test/build command execution, prompt versioning, task-specific learning insights, workflow strategy memory, model routing suggestions, user preference learning, workspace switching, workspace-scoped records, and searchable/editable project memory.
+The v3.5 checkpoint adds professional UI/UX polish on top of the v3.0 Agent OS foundation:
+
+- Jarvis-style Simple Mode command center
+- Responsive Developer Mode sidebar
+- Light/dark theme toggle with CSS design tokens
+- Theme-consistent panels, composer, markdown/code blocks, cards, and controls
+- First-run onboarding walkthrough
+- Improved ARIA labels and focus states
+- Reduced-motion handling
+
+The v3.0 checkpoint added the first Agent OS foundation on top of the existing v2.x system:
+
+- Project Brain / Knowledge Base search and export
+- Cross-session knowledge links
+- Memory importance ranking and pinning
+- Assistant Tools
+- Tool Registry and Tool Router
+- Plugin manifest loading
+- Developer Mode Tool Trace
+- Approval Workflow 2.0
+- Approval Queue and Audit UI
+- Agent Jobs scheduler and lifecycle controls
+- System Prompt Registry
+- Kernel Service wrapper around request orchestration
+- Jarvis-style Simple Mode foundation
 
 ## Key Features
 
-- Master Orchestrator Agent
-- Specialist text agents
-- Judge Agent scoring
-- Per-agent usefulness and clarity evaluation
-- Evolution Agent recommendations
-- JSON memory and workflow storage
-- Chat sessions and message history
-- File upload and document analysis
-- Recording upload and transcript analysis
-- Recording Analysis Agent
-- Mock Image Agent with safe prompt rewriting
-- Browser voice command input
-- `app_automation` task routing
-- Project Scanner Agent
-- Implementation Planner Agent
-- Approval workflow before automation apply
-- Safe file editor path validation
-- Safe command runner allowlist
-- Adaptive Learning Agent
-- Advanced learning report with strongest/weakest agents by task type
-- Workflow strategy memory with feedback and fallback rates
-- Model routing suggestions by task category
-- User preference learning
-- Prompt versioning with approve/reject/rollback
-- Human feedback buttons
-- Analytics dashboard
+- ChatGPT-style chat UI
+- Browser voice input
 - Simple Mode and Developer Mode
+- Master Orchestrator Agent
+- Specialist agents for research, logic, risk, strategy, writing, judging, evolution, memory, files, recordings, images, and planning
 - Real OpenAI text mode with mock fallback
-- Real multi-LLM consensus in Deep Mode
-- Consensus winner and model tournament tracking
-- Mission Control goal planning and task graph storage
-- Goal Planner Agent with phases, dependencies, priorities, risk, and next-best-task recommendations
-- Goal/task APIs and Mission Control UI
-- Custom Agent Builder with governed reusable specialist agents
-- Prebuilt Agent Skill Store templates
-- Goal/custom-agent analytics and learning insights
-- Workspace switcher with automatic default workspace fallback
-- Workspace-scoped chats, files, recordings, goals, task graphs, custom agents, feedback, analytics, learning, and governance metadata
-- Workspace memory timeline with add, search, filter, edit, and delete controls
-- Relevant workspace memory retrieval before agent runs with capped context
-- Workspace-filtered analytics and learning reports
-- Linear issue sync into Mission Control with governed git commit workflow and In Progress poll detection
-
-## Architecture Overview
-
-The user sends text, files, voice-transcribed input, image prompts, or app automation requests through the React chat UI. FastAPI receives the request and sends it to the Master Orchestrator Agent. The Master Agent detects the task type and routes the request to the correct workflow:
-
-- Workspace context is resolved first. If no workspace is provided, the default workspace is used.
-- Relevant workspace memory is retrieved and capped before being added to agent context.
-- Text tasks use Research, Logic, Risk, Strategy, Writing, Judge, Evolution, and Memory agents.
-- File tasks run File Analysis before the normal specialist workflow.
-- Image tasks use the mock Image Agent with safe prompt rewriting.
-- App automation tasks run Project Scanner and Implementation Planner, then ask for approval.
-- Recording summary tasks use uploaded recording transcripts and the Recording Analysis Agent.
-
-Results, feedback, workflow traces, workspace memories, analytics, prompt versions, model performance data, and learning reports are stored locally in JSON.
+- Deep Mode multi-LLM consensus metadata
+- File upload and document analysis
+- Recording upload and recording analysis
+- Mock Image Agent with safe prompt rewriting
+- Mission Control goal planning and task graphs
+- Custom Agent Builder and Agent Skill Store
+- Workspace memory and workspace-scoped analytics
+- Project Brain search/export
+- Cross-session knowledge links
+- Memory importance ranking
+- Assistant Tools and Tool Router
+- Local plugin manifests
+- Approval chains, queue, audit, and rejection records
+- Safe file editor and allowlisted command runner
+- Governance logging, prompt-injection checks, secret scanning, and permissions
+- Adaptive Learning Engine
+- Human feedback and analytics dashboard
+- Agent Jobs scheduler
+- System Prompt Registry
+- Kernel Service wrapper
+- Professional v3.5 UI polish with Jarvis-style command center, theme tokens, onboarding, accessibility improvements, and responsive layout
 
 ## What Problem It Solves
 
-Normal chatbots often produce one opaque answer. EvolveAgent AI separates routing, reasoning, risk analysis, writing, judging, feedback, memory, analytics, automation planning, and learning into inspectable workflow layers. This makes the system easier to evaluate, explain, and improve.
+Normal chatbots produce one opaque answer. EvolveAgent AI separates routing, context, tools, file/recording analysis, risk checks, writing, judging, feedback, memory, approvals, analytics, and learning into inspectable layers. This makes the system easier to demo, debug, govern, and improve.
 
-## What Makes It Different From a Normal Chatbot
+## What Makes It Different
 
-- It uses a Master Agent to route tasks.
-- It uses specialist agents instead of one generic answer.
-- It evaluates each agent individually.
-- It stores workflow analytics and human feedback.
-- It organizes context by workspace instead of keeping every project in one global memory.
-- It retrieves relevant project memory before a run while keeping Simple Mode clean.
-- It supports file-aware workflows.
-- It supports recording/audio summary workflows.
-- It supports voice-to-chat input.
-- It can prepare safe app automation plans.
-- It can compare multiple model candidates in Deep Mode and synthesize one final answer.
-- It can turn a large goal into a trackable task graph.
-- It can run individual goal tasks through the existing agent workflow.
-- It lets users create reusable governed custom agents from templates.
-- It requires approval before automation apply.
-- It has Simple Mode for users and Developer Mode for technical review.
-- It has mock fallback so it remains demoable without paid API access.
-- It optimizes the orchestration layer without claiming the base model trains itself.
+- It uses a Master Agent instead of one direct chatbot call.
+- It routes tasks through specialist workflows.
+- It uses project/workspace memory.
+- It can inspect files and recordings.
+- It can create goal/task graphs.
+- It supports reusable custom agents.
+- It can select governed tools and show a tool trace.
+- It requires approval for risky actions.
+- It tracks quality with judge and per-agent evaluation.
+- It has Developer Mode for transparency.
+- It uses mock fallback so demos still work without API keys.
 
 ## Safety Boundaries
 
-- File edits require explicit user approval.
-- Command execution is allowlisted.
-- Allowed commands are `npm run build`, `npm test`, `npm run lint`, `pytest`, and `python -m pytest`.
-- Destructive file deletion is not supported.
-- Unrestricted shell execution is not supported.
-- Package installation is not supported through automation.
-- `.env`, `.git`, `node_modules/`, `venv/`, uploads, and local data/analytics files are blocked from editing.
+- File edits require approval.
+- Commands are allowlisted.
+- Destructive file deletion is blocked.
+- Unrestricted shell execution is blocked.
+- Package installation is blocked.
+- `.env`, `.git`, `node_modules/`, `venv/`, uploads, and local runtime data are protected.
+- Prompt changes are versioned and reversible.
+- Custom agents cannot bypass governance.
+- The app does not train or fine-tune the base LLM.
 - The app does not silently self-modify.
-- Prompt changes are versioned, require approval, and can be rolled back.
-- The base LLM is not fine-tuned or retrained by the app.
 
 Correct learning description:
 
@@ -115,63 +103,40 @@ Correct learning description:
 
 - No authentication
 - No cloud database
-- No vector memory
-- No OCR or scanned PDF support
+- No vector search
+- No OCR for scanned PDFs
 - No real image-generation API
-- No speaker diarization yet
-- No full video frame understanding yet
+- No speaker diarization
+- No full video frame understanding
 - No deployment setup
-- No unrestricted code editing
-- No autonomous file deletion
-- JSON storage is for MVP/demo use, not production scale
-- Workspace memory is keyword/importance based, not vector search
+- JSON storage is for MVP/demo use
+- Agent Jobs are local persisted jobs, not distributed workers
 
 ## Future Roadmap
 
+- Manual UI QA for v3.5 across Simple Mode, Developer Mode, light/dark theme, onboarding, and responsive layout
+- Better responsive layout and accessibility
+- Light/dark theme tokens
+- Onboarding walkthrough
 - Server-Sent Events streaming
-- Longer recording processing and richer transcript metadata
-- Speaker diarization
-- More advanced model routing and cost tracking
-- Real image API
+- Richer approval diff previews
+- Vector memory and retrieval
+- Real image generation
 - OCR/scanned PDF support
-- Vector search and retrieval
-- Patch preview with second approval
-- User accounts and team workspace sharing
-- Cloud database
+- User accounts and team workspaces
 - Deployment
-- Agent performance trends over time
-
-## Demo Prompts
-
-- `Add dark mode to this app`
-- `Run tests for this project`
-- `Explain the current app architecture`
-- `Summarize this uploaded document`
-- `Summarize this recording and list action items`
-- `Turn this lecture recording into study notes`
-- `Generate an image prompt for a futuristic AI assistant`
-- `Create a workspace for Resume Projects and remember that I prefer concise bullet points`
-- `Explain how EvolveAgent AI works`
-- `Review my FastAPI backend architecture`
-- `Build an AI resume analyzer app`
-- `Create a full implementation plan for a SaaS app`
-- `Break this goal into tasks`
 
 ## Resume Bullets
 
-- Built EvolveAgent AI, a full-stack voice-controlled multi-agent AI workspace using FastAPI, React, and OpenAI with a Master Orchestrator Agent for task routing.
-- Designed specialist agents for research, logic analysis, risk detection, strategy planning, writing, judging, evolution feedback, memory, file analysis, image prompt generation, and automation planning.
-- Implemented real OpenAI text mode and optional multi-LLM consensus across configured providers, with mock fallback to keep workflows stable when API keys are missing or provider calls fail.
-- Added browser voice command input, chat sessions, message history, markdown rendering, export controls, and JSON-based local memory.
-- Built file upload and document analysis for PDFs, resumes, CSVs, code files, markdown, JSON, and text documents.
-- Added recording upload and mock/OpenAI transcription support for MP3, M4A, WAV, MP4, and WEBM recordings with transcript summaries, action items, decisions, study notes, and Q&A.
-- Implemented approval-gated app automation planning with safe project scanning, path validation, and allowlisted build/test command execution.
-- Created an Advanced Adaptive Learning Engine that tracks judge scores, per-agent scores, feedback, model performance, workflow strategy, prompt versions, and inferred user preferences.
-- Built Simple Mode for clean user-facing responses and Developer Mode for inspecting workflow trace, provider metadata, automation plans, learning reports, judge scores, per-agent scores, file context, image metadata, and raw JSON.
-- Added Mission Control for goal planning, task graph creation, task progress tracking, runnable subtasks, and goal analytics.
-- Built a Custom Agent Builder with governed reusable agents and prebuilt templates for resume review, code review, meetings, files, pharmacy PA, business analysis, bug fixing, and study notes.
-- Added workspace-scoped project memory with a memory timeline, relevant memory retrieval, default workspace fallback, workspace-filtered chats/goals/agents, and workspace-specific analytics/learning reports.
+- Built EvolveAgent AI, a full-stack multi-agent AI operating workspace using FastAPI, React, and OpenAI with Master Agent routing, specialist workflows, and Developer Mode transparency.
+- Implemented real OpenAI mode with mock fallback and Deep Mode consensus metadata so the app remains demoable with or without API keys.
+- Added file upload, document analysis, recording analysis, mock image prompts, browser voice input, Mission Control goal planning, and governed custom agents.
+- Built Project Brain search across workspace memory, chats, files, recordings, goals, and custom agents with knowledge export, cross-session links, and memory importance ranking.
+- Implemented a governed Tool Router with Assistant Tools, plugin manifests, permission levels, and Developer Mode tool tracing.
+- Added Approval Workflow 2.0 with approval chains, queue endpoints, audit records, rejection handling, optional webhook notification, and governance logging.
+- Built an Agent OS foundation with persisted Agent Jobs, lifecycle controls, health monitoring, System Prompt Registry, and a Kernel Service wrapper around request orchestration.
+- Designed safety controls including prompt-injection checks, secret scanning, protected paths, allowlisted commands, approval-gated automation, and no unrestricted shell execution.
 
 ## Interview Explanation
 
-EvolveAgent AI is a full-stack project I built to demonstrate a workspace-aware, voice-controlled multi-agent AI operating workflow. Instead of sending every prompt to one chatbot, the system uses a Master Orchestrator Agent to classify the task, retrieve relevant workspace memory, and route the request through the right workflow. Text tasks go through research, logic, risk, strategy, writing, judging, evolution, and memory agents. In Deep Mode, it can compare candidates from configured OpenAI, Claude, Gemini, Mistral, and mock providers, then synthesize one final answer. File tasks use a File Analysis Agent before the normal workflow. Recording tasks use a Transcription Service and Recording Analysis Agent. Image tasks use a mock Image Agent with safe prompt rewriting. App automation tasks scan the project and create an implementation plan, but require approval before any apply step. MVP v2.6 adds workspaces and project memory so chats, files, recordings, goals, custom agents, analytics, learning, and relevant memories can be scoped by project. Simple Mode keeps the UI clean, while Developer Mode shows workspace memory usage, consensus candidates, selected winner, model metadata, goals, custom agents, and the full agent workflow for technical review.
+EvolveAgent AI is a full-stack AI operating workspace I built to explore safe multi-agent orchestration. The system uses a Master Orchestrator Agent to classify requests, retrieve workspace memory, select tools or specialist agents, evaluate output quality, and store feedback and analytics. It supports text, files, recordings, image prompts, voice input, goal planning, custom agents, and approval-gated automation. Developer Mode exposes the workflow trace, provider metadata, consensus candidates, tool trace, approvals, agent jobs, system prompts, and raw JSON. The v3.5 checkpoint adds professional UI polish over the Agent OS foundation while keeping risky actions behind human approval and governance controls.

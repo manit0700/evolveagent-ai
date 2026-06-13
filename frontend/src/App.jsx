@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import {
   Activity,
@@ -16,8 +16,11 @@ import {
   Flag,
   Gauge,
   GitBranch,
+  Keyboard,
   Layers3,
   Library,
+  Menu,
+  Moon,
   MoreHorizontal,
   Paperclip,
   Mic,
@@ -27,6 +30,7 @@ import {
   Send,
   ShieldAlert,
   Sparkles,
+  Sun,
   Terminal,
   ThumbsDown,
   ThumbsUp,
@@ -66,8 +70,28 @@ import {
   getLinearStatus,
   getCodexJobs,
   runCodexForLinearIssue,
+  getApprovals,
+  submitApprovalDecision,
+  getApprovalAudit,
+  getAgentJobs,
+  getAgentJobHealth,
+  createAgentJob,
+  startNextAgentJob,
+  pauseAgentJob,
+  resumeAgentJob,
+  cancelAgentJob,
+  heartbeatAgentJob,
+  getSystemPrompts,
+  getSystemPrompt,
+  upsertSystemPrompt,
   getProviderStatus,
   getWorkspaceMemory,
+  getWorkspaceKnowledge,
+  searchWorkspaceKnowledge,
+  exportWorkspaceKnowledge,
+  getAssistantCommands,
+  runAssistantCommand,
+  pinWorkspaceMemory,
   getWorkspaces,
   rejectPromptVersion,
   renameChat,
@@ -122,6 +146,56 @@ const promptCards = [
   'Build an AI resume analyzer app',
   'Create a full implementation plan for a SaaS app',
 ]
+
+const ONBOARDING_STEPS = [
+  {
+    title: 'Speak or Type',
+    body: 'Simple Mode opens with a voice-first command center. Tap Speak for microphone input or Type to focus the composer.',
+  },
+  {
+    title: 'Developer Mode',
+    body: 'Switch to Dev for the engineering dashboard: inspector, tool trace, approvals, analytics, and raw run JSON.',
+  },
+  {
+    title: 'Mission Control',
+    body: 'Create goals, run tasks, and track completion. Linear-linked issues sync branches and handoffs when configured.',
+  },
+  {
+    title: 'Knowledge Base',
+    body: 'Search workspace knowledge and manage pinned memory to give EvolveAgent stronger project context.',
+  },
+  {
+    title: 'Agent Jobs',
+    body: 'Queue, start, pause, and monitor background agent jobs from the Developer sidebar when the scheduler is enabled.',
+  },
+]
+
+function codexJobDisplayStatus(job) {
+  const status = job?.status
+  if (status === 'blocked') return 'needs manual review'
+  if (status === 'passed' && !job.linear_done) return 'needs manual review'
+  if (status === 'failed') return 'failed'
+  if (status === 'passed') return 'passed'
+  if (status === 'running') return 'running'
+  if (status === 'queued') return 'queued'
+  return 'idle'
+}
+
+function codexWorkerSummaryStatus(jobs) {
+  if (!jobs.length) return 'idle'
+  if (jobs.some((job) => job.status === 'running')) return 'running'
+  if (jobs.some((job) => job.status === 'queued')) return 'queued'
+  if (jobs.some((job) => job.status === 'blocked' || (job.status === 'passed' && !job.linear_done))) {
+    return 'needs manual review'
+  }
+  if (jobs.some((job) => job.status === 'failed')) return 'failed'
+  if (jobs.every((job) => job.status === 'passed')) return 'passed'
+  return 'idle'
+}
+
+function codexTestResult(job, command) {
+  return (job.test_results || []).find((item) => item.command === command)
+}
 
 const progressSteps = [
   'Master Agent is understanding your request',
@@ -198,6 +272,10 @@ function App() {
   const [taskType, setTaskType] = useState('auto')
   const [deepMode, setDeepMode] = useState(false)
   const [developerMode, setDeveloperMode] = useState(false)
+  const [theme, setTheme] = useState(() => localStorage.getItem('evolveagent-theme') || 'dark')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('evolveagent-onboarding-dismissed'))
+  const [onboardingStep, setOnboardingStep] = useState(0)
   const [messages, setMessages] = useState([])
   const [sessionId, setSessionId] = useState(null)
   const [selectedRunId, setSelectedRunId] = useState(null)
@@ -225,11 +303,40 @@ function App() {
   const [customAgents, setCustomAgents] = useState([])
   const [agentTemplates, setAgentTemplates] = useState([])
   const [showMissionControl, setShowMissionControl] = useState(false)
+  const [showApprovals, setShowApprovals] = useState(false)
+  const [approvals, setApprovals] = useState([])
+  const [approvalsAvailable, setApprovalsAvailable] = useState(false)
+  const [approvalAudit, setApprovalAudit] = useState([])
+  const [approvalAuditAvailable, setApprovalAuditAvailable] = useState(false)
+  const [approvalBusyId, setApprovalBusyId] = useState('')
+  const [showAgentJobs, setShowAgentJobs] = useState(false)
+  const [agentJobs, setAgentJobs] = useState([])
+  const [agentJobsAvailable, setAgentJobsAvailable] = useState(false)
+  const [agentJobHealth, setAgentJobHealth] = useState(null)
+  const [agentJobBusyId, setAgentJobBusyId] = useState('')
+  const [showSystemPrompts, setShowSystemPrompts] = useState(false)
+  const [systemPrompts, setSystemPrompts] = useState([])
+  const [systemPromptsAvailable, setSystemPromptsAvailable] = useState(false)
+  const [selectedPromptAgent, setSelectedPromptAgent] = useState('')
+  const [promptDraft, setPromptDraft] = useState('')
+  const [promptSaveBusy, setPromptSaveBusy] = useState(false)
   const [showAgentBuilder, setShowAgentBuilder] = useState(false)
   const [workspaces, setWorkspaces] = useState([])
   const [workspaceId, setWorkspaceId] = useState(null)
   const [workspaceMemory, setWorkspaceMemory] = useState([])
   const [showMemoryPanel, setShowMemoryPanel] = useState(false)
+  const [showKnowledgePanel, setShowKnowledgePanel] = useState(false)
+  const [knowledgeSummary, setKnowledgeSummary] = useState(null)
+  const [knowledgeSearch, setKnowledgeSearch] = useState('')
+  const [knowledgeSource, setKnowledgeSource] = useState('')
+  const [knowledgeResults, setKnowledgeResults] = useState([])
+  const [knowledgeLinks, setKnowledgeLinks] = useState([])
+  const [showToolsPanel, setShowToolsPanel] = useState(false)
+  const [assistantCommands, setAssistantCommands] = useState([])
+  const [selectedCommand, setSelectedCommand] = useState('help')
+  const [commandInput, setCommandInput] = useState('')
+  const [commandResult, setCommandResult] = useState(null)
+  const composerRef = useRef(null)
   const [memorySearch, setMemorySearch] = useState('')
   const [memoryType, setMemoryType] = useState('')
   const [linearStatus, setLinearStatus] = useState(null)
@@ -237,13 +344,24 @@ function App() {
   const [linearLinks, setLinearLinks] = useState([])
   const [linearPollStatus, setLinearPollStatus] = useState(null)
   const [codexJobs, setCodexJobs] = useState([])
-  const [showLinearPanel, setShowLinearPanel] = useState(false)
+  const [codexJobsAvailable, setCodexJobsAvailable] = useState(false)
+  const [showCodexJobs, setShowCodexJobs] = useState(false)
   const [linearBusyId, setLinearBusyId] = useState('')
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('evolveagent-theme', theme)
+  }, [theme])
+
+  useEffect(() => {
+    if (!developerMode) setSidebarOpen(false)
+  }, [developerMode])
 
   useEffect(() => {
     refreshWorkspaces()
     refreshProviderStatus()
     refreshLinearStatus()
+    refreshAssistantCommands()
   }, [])
 
   useEffect(() => {
@@ -259,8 +377,17 @@ function App() {
     refreshMissionControl(workspaceId)
     refreshCustomAgents(workspaceId)
     refreshWorkspaceMemory(workspaceId)
+    refreshKnowledge(workspaceId)
     refreshLinearData(workspaceId)
   }, [workspaceId])
+
+  useEffect(() => {
+    if (!workspaceId || !developerMode) return
+    refreshApprovals(workspaceId)
+    refreshAgentJobs(workspaceId)
+    refreshSystemPrompts()
+    refreshCodexJobs()
+  }, [workspaceId, developerMode])
 
   useEffect(() => {
     if (!loading) return undefined
@@ -277,6 +404,14 @@ function App() {
     }, 250)
     return () => window.clearTimeout(timer)
   }, [memorySearch, memoryType, workspaceId])
+
+  useEffect(() => {
+    if (!workspaceId) return
+    const timer = window.setTimeout(() => {
+      refreshKnowledge(workspaceId)
+    }, 250)
+    return () => window.clearTimeout(timer)
+  }, [knowledgeSearch, knowledgeSource, workspaceId])
 
   const selectedRun = useMemo(() => {
     const assistantMessages = messages.filter((message) => message.role === 'assistant' && message.result)
@@ -301,6 +436,14 @@ function App() {
     setProviderStatus(await getProviderStatus())
   }
 
+  async function refreshAssistantCommands() {
+    const commands = await getAssistantCommands()
+    setAssistantCommands(commands)
+    if (commands.length > 0 && !commands.find((command) => command.name === selectedCommand)) {
+      setSelectedCommand(commands[0].name)
+    }
+  }
+
   async function refreshAnalytics(nextWorkspaceId = workspaceId) {
     setAnalytics(await getAnalytics(nextWorkspaceId))
   }
@@ -313,9 +456,151 @@ function App() {
     setGoals(await getGoals(nextWorkspaceId))
   }
 
+  async function refreshApprovals(nextWorkspaceId = workspaceId) {
+    const [queue, audit] = await Promise.all([
+      getApprovals(nextWorkspaceId),
+      getApprovalAudit(nextWorkspaceId),
+    ])
+    setApprovalsAvailable(queue.available)
+    setApprovals(queue.items || [])
+    setApprovalAuditAvailable(audit.available)
+    setApprovalAudit(audit.items || [])
+  }
+
+  async function handleApprovalDecision(approvalId, decision) {
+    setApprovalBusyId(approvalId)
+    setError('')
+    try {
+      const comment = window.prompt(`Optional comment for ${decision}:`, '') || undefined
+      await submitApprovalDecision(approvalId, { decision, comment: comment?.trim() || undefined })
+      await refreshApprovals(workspaceId)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setApprovalBusyId('')
+    }
+  }
+
+  const pendingApprovals = useMemo(
+    () => approvals.filter((item) => item.status === 'pending'),
+    [approvals],
+  )
+
+  async function refreshAgentJobs(nextWorkspaceId = workspaceId) {
+    const [jobs, health] = await Promise.all([
+      getAgentJobs(nextWorkspaceId),
+      getAgentJobHealth(),
+    ])
+    setAgentJobsAvailable(jobs.available)
+    setAgentJobs(jobs.items || [])
+    setAgentJobHealth(health)
+  }
+
+  async function handleCreateTestAgentJob() {
+    setAgentJobBusyId('create')
+    setError('')
+    try {
+      await createAgentJob({
+        title: 'Test agent job',
+        job_type: 'health_check',
+        workspace_id: workspaceId,
+        payload: { source: 'developer_ui', note: 'Manual test job' },
+      })
+      await refreshAgentJobs(workspaceId)
+      setCopied('Test agent job created')
+      window.setTimeout(() => setCopied(''), 2000)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setAgentJobBusyId('')
+    }
+  }
+
+  async function handleStartNextAgentJob() {
+    setAgentJobBusyId('start-next')
+    setError('')
+    try {
+      const result = await startNextAgentJob()
+      if (!result.started) {
+        setError(result.reason || 'No queued job could be started.')
+      } else {
+        setCopied('Next agent job started')
+        window.setTimeout(() => setCopied(''), 2000)
+      }
+      await refreshAgentJobs(workspaceId)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setAgentJobBusyId('')
+    }
+  }
+
+  async function handleAgentJobAction(jobId, action) {
+    setAgentJobBusyId(jobId)
+    setError('')
+    const reason = window.prompt(`Optional reason for ${action}:`, '') || undefined
+    try {
+      if (action === 'pause') await pauseAgentJob(jobId, reason?.trim() || undefined)
+      if (action === 'resume') await resumeAgentJob(jobId, reason?.trim() || undefined)
+      if (action === 'cancel') await cancelAgentJob(jobId, reason?.trim() || undefined)
+      if (action === 'heartbeat') await heartbeatAgentJob(jobId)
+      await refreshAgentJobs(workspaceId)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setAgentJobBusyId('')
+    }
+  }
+
+  async function refreshSystemPrompts() {
+    const prompts = await getSystemPrompts()
+    setSystemPromptsAvailable(prompts.available)
+    setSystemPrompts(prompts.items || [])
+  }
+
+  async function handleSelectSystemPrompt(agentName) {
+    setSelectedPromptAgent(agentName)
+    setError('')
+    try {
+      const result = await getSystemPrompt(agentName)
+      setPromptDraft(result.prompt || '')
+    } catch (err) {
+      const local = systemPrompts.find((item) => item.agent_name === agentName)
+      setPromptDraft(local?.prompt || '')
+      if (!local) setError(err.message)
+    }
+  }
+
+  async function handleSaveSystemPrompt() {
+    if (!selectedPromptAgent || !promptDraft.trim()) return
+    setPromptSaveBusy(true)
+    setError('')
+    try {
+      const reason = window.prompt('Optional reason for prompt update:', '') || undefined
+      await upsertSystemPrompt({
+        agent_name: selectedPromptAgent,
+        prompt: promptDraft.trim(),
+        reason: reason?.trim() || undefined,
+      })
+      await refreshSystemPrompts()
+      setCopied(`Prompt saved for ${selectedPromptAgent}`)
+      window.setTimeout(() => setCopied(''), 2000)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setPromptSaveBusy(false)
+    }
+  }
+
   async function refreshCustomAgents(nextWorkspaceId = workspaceId) {
     setCustomAgents(await getCustomAgents(nextWorkspaceId))
     setAgentTemplates(await getAgentTemplates())
+  }
+
+  async function refreshCodexJobs() {
+    const result = await getCodexJobs()
+    setCodexJobsAvailable(result.available)
+    setCodexJobs(result.items || [])
   }
 
   async function refreshLinearStatus() {
@@ -327,11 +612,6 @@ function App() {
     setLinearStatus(status)
     setLinearLinks(await getLinearLinks(nextWorkspaceId))
     setLinearPollStatus(await getLinearPollStatus())
-    try {
-      setCodexJobs(await getCodexJobs())
-    } catch {
-      setCodexJobs([])
-    }
     if (status?.configured) {
       try {
         setLinearIssues(await getLinearIssues())
@@ -414,6 +694,7 @@ function App() {
       } else if (result.error) {
         setError(result.error)
       }
+      await refreshCodexJobs()
       await refreshLinearData(workspaceId)
       window.setTimeout(() => setCopied(''), 3000)
     } catch (err) {
@@ -435,6 +716,44 @@ function App() {
         memory_type: memoryType,
       }),
     )
+  }
+
+  async function refreshKnowledge(nextWorkspaceId = workspaceId) {
+    if (!nextWorkspaceId) return
+    const [summary, search] = await Promise.all([
+      getWorkspaceKnowledge(nextWorkspaceId),
+      searchWorkspaceKnowledge(nextWorkspaceId, {
+        q: knowledgeSearch,
+        source_type: knowledgeSource,
+        limit: 10,
+      }),
+    ])
+    setKnowledgeSummary(summary)
+    setKnowledgeResults(search.results || [])
+    setKnowledgeLinks(search.related_links || [])
+  }
+
+  async function handleExportKnowledge(format) {
+    try {
+      const exported = await exportWorkspaceKnowledge(workspaceId, format)
+      const filename = `workspace-knowledge.${format === 'json' ? 'json' : 'md'}`
+      const text = format === 'json' ? JSON.stringify(exported, null, 2) : exported
+      downloadFile(filename, text, format === 'json' ? 'application/json' : 'text/markdown')
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function handleRunAssistantCommand() {
+    try {
+      const result = await runAssistantCommand(selectedCommand, {
+        input_text: commandInput,
+        workspace_id: workspaceId,
+      })
+      setCommandResult(result)
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
   async function handleCreateWorkspace() {
@@ -511,6 +830,16 @@ function App() {
     try {
       await deleteWorkspaceMemory(workspaceId, memoryId)
       await refreshWorkspaceMemory(workspaceId)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function handleToggleMemoryPin(memory) {
+    try {
+      await pinWorkspaceMemory(workspaceId, memory.memory_id, !memory.pinned)
+      await refreshWorkspaceMemory(workspaceId)
+      await refreshKnowledge(workspaceId)
     } catch (err) {
       setError(err.message)
     }
@@ -827,6 +1156,15 @@ function App() {
     recognition.start()
   }
 
+  function focusComposer() {
+    composerRef.current?.focus()
+  }
+
+  function handleJarvisSpeak() {
+    focusComposer()
+    startVoiceInput()
+  }
+
   async function copyText(text) {
     await navigator.clipboard.writeText(text)
     setCopied('Copied')
@@ -928,6 +1266,23 @@ function App() {
   const providerList = providerStatus?.available_providers?.join(', ') || 'none'
   const realProvidersAvailable = (providerStatus?.available_providers || []).filter((provider) => provider !== 'mock')
   const realModeWithoutRealProvider = providerStatus?.llm_mode === 'real' && realProvidersAvailable.length === 0
+  function toggleTheme() {
+    setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
+  }
+
+  function dismissOnboarding() {
+    localStorage.setItem('evolveagent-onboarding-dismissed', '1')
+    setShowOnboarding(false)
+  }
+
+  function nextOnboardingStep() {
+    if (onboardingStep >= ONBOARDING_STEPS.length - 1) {
+      dismissOnboarding()
+      return
+    }
+    setOnboardingStep((current) => current + 1)
+  }
+
   const previewText = (text, limit = 360) => {
     const compact = String(text || '').replace(/\s+/g, ' ').trim()
     if (compact.length <= limit) return compact
@@ -935,8 +1290,35 @@ function App() {
   }
 
   return (
-    <main className={`app-shell chat-shell ${developerMode ? 'developer-mode' : 'simple-mode'}`}>
-      <aside className="sidebar">
+    <main className={`app-shell chat-shell ${developerMode ? 'developer-mode' : 'simple-mode'} ${sidebarOpen ? 'sidebar-open' : ''}`}>
+      {developerMode && sidebarOpen && (
+        <button
+          type="button"
+          className="sidebar-backdrop"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Close sidebar"
+        />
+      )}
+      {showOnboarding && (
+        <div className="onboarding-overlay" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+          <div className="onboarding-card">
+            <div className="onboarding-steps" aria-hidden="true">
+              {ONBOARDING_STEPS.map((step, index) => (
+                <span className={`onboarding-step-dot ${index === onboardingStep ? 'active' : ''}`} key={step.title} />
+              ))}
+            </div>
+            <h3 id="onboarding-title">{ONBOARDING_STEPS[onboardingStep].title}</h3>
+            <p>{ONBOARDING_STEPS[onboardingStep].body}</p>
+            <div className="onboarding-actions">
+              <button type="button" onClick={dismissOnboarding}>Skip</button>
+              <button type="button" onClick={nextOnboardingStep}>
+                {onboardingStep >= ONBOARDING_STEPS.length - 1 ? 'Get started' : 'Next'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-brand">
           <div className="brand-mark">
             <Brain size={21} />
@@ -952,6 +1334,7 @@ function App() {
           New Chat
         </button>
 
+        <div className="sidebar-dev-only">
         <section className="sidebar-section">
           <div className="side-heading">
             <Library size={15} />
@@ -1017,14 +1400,129 @@ function App() {
               {workspaceMemory.slice(0, 8).map((memory) => (
                 <div className="memory-card" key={memory.memory_id}>
                   <strong>{memory.title}</strong>
-                  <span>{formatType(memory.type)} · {memory.importance}</span>
+                  <span>
+                    {formatType(memory.type)} · {memory.importance}
+                    {memory.pinned ? ' · pinned' : ''}
+                    {memory.usage_count ? ` · used ${memory.usage_count}` : ''}
+                  </span>
                   <p>{previewText(memory.content, 150)}</p>
                   <div className="chat-row-actions">
+                    <button type="button" onClick={() => handleToggleMemoryPin(memory)}>
+                      {memory.pinned ? 'Unpin' : 'Pin'}
+                    </button>
                     <button type="button" onClick={() => handleEditMemory(memory)}>Edit</button>
                     <button type="button" onClick={() => handleDeleteMemory(memory.memory_id)}>Delete</button>
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </section>
+
+        <section className="sidebar-section">
+          <button className="analytics-toggle" type="button" onClick={() => setShowKnowledgePanel((current) => !current)}>
+            <span>
+              <Brain size={15} />
+              Knowledge Base
+            </span>
+            <ChevronDown size={15} />
+          </button>
+          {showKnowledgePanel && (
+            <div className="memory-panel knowledge-panel">
+              <div className="knowledge-summary">
+                <div>
+                  <span>Records</span>
+                  <strong>{knowledgeSummary?.total_records || 0}</strong>
+                </div>
+                <div>
+                  <span>High value</span>
+                  <strong>{knowledgeSummary?.high_importance_count || 0}</strong>
+                </div>
+              </div>
+              <div className="memory-controls">
+                <input
+                  value={knowledgeSearch}
+                  onChange={(event) => setKnowledgeSearch(event.target.value)}
+                  placeholder="Search project brain"
+                />
+                <select value={knowledgeSource} onChange={(event) => setKnowledgeSource(event.target.value)}>
+                  <option value="">All sources</option>
+                  <option value="memory">Memory</option>
+                  <option value="chat">Chats</option>
+                  <option value="file">Files</option>
+                  <option value="recording">Recordings</option>
+                  <option value="goal">Goals</option>
+                  <option value="custom_agent">Custom agents</option>
+                </select>
+              </div>
+              <div className="workspace-actions">
+                <button type="button" onClick={() => handleExportKnowledge('markdown')}>Export MD</button>
+                <button type="button" onClick={() => handleExportKnowledge('json')}>Export JSON</button>
+                <button type="button" onClick={() => refreshKnowledge(workspaceId)}>Refresh</button>
+              </div>
+              {knowledgeResults.length === 0 && <p className="muted">No knowledge records match this search.</p>}
+              {knowledgeResults.slice(0, 8).map((item) => (
+                <div className="memory-card knowledge-card" key={`${item.source_type}-${item.record_id}`}>
+                  <strong>{item.title}</strong>
+                  <span>{formatType(item.source_type)} · score {item.score}</span>
+                  <p>{previewText(item.content_preview, 150)}</p>
+                  {item.tags?.length > 0 && <small>{item.tags.slice(0, 4).join(', ')}</small>}
+                  {item.linked_items?.length > 0 && (
+                    <small>
+                      Linked: {item.linked_items.slice(0, 3).map((linked) => linked.title).join(', ')}
+                    </small>
+                  )}
+                </div>
+              ))}
+              {knowledgeLinks.length > 0 && (
+                <details className="developer-prompt-block">
+                  <summary>Related knowledge</summary>
+                  {knowledgeLinks.slice(0, 5).map((link) => (
+                    <p className="muted" key={`${link.source_type}-${link.record_id}`}>
+                      {formatType(link.source_type)} · {link.title}
+                    </p>
+                  ))}
+                </details>
+              )}
+            </div>
+          )}
+        </section>
+
+        <section className="sidebar-section">
+          <button className="analytics-toggle" type="button" onClick={() => setShowToolsPanel((current) => !current)}>
+            <span>
+              <Terminal size={15} />
+              Assistant Tools
+            </span>
+            <ChevronDown size={15} />
+          </button>
+          {showToolsPanel && (
+            <div className="memory-panel tools-panel">
+              <select value={selectedCommand} onChange={(event) => setSelectedCommand(event.target.value)}>
+                {assistantCommands.map((command) => (
+                  <option key={command.name} value={command.name}>
+                    {command.name}
+                  </option>
+                ))}
+              </select>
+              <textarea
+                value={commandInput}
+                onChange={(event) => setCommandInput(event.target.value)}
+                placeholder="Input, e.g. 24 * (7 + 3)"
+                rows={3}
+              />
+              <button className="secondary-button full-width" type="button" onClick={handleRunAssistantCommand}>
+                Run tool
+              </button>
+              {assistantCommands.find((command) => command.name === selectedCommand)?.description && (
+                <p className="muted">{assistantCommands.find((command) => command.name === selectedCommand).description}</p>
+              )}
+              {commandResult && (
+                <div className={`command-result ${commandResult.success ? 'success' : 'failed'}`}>
+                  <strong>{commandResult.command}</strong>
+                  <pre>{commandResult.output}</pre>
+                </div>
+              )}
             </div>
           )}
         </section>
@@ -1226,6 +1724,269 @@ function App() {
           )}
         </section>
 
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowApprovals((current) => !current)}>
+              <span>
+                <ShieldAlert size={15} />
+                Approval Queue
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showApprovals && (
+              <div className="mission-panel">
+                {!approvalsAvailable && (
+                  <p className="muted">Approval queue is not available yet.</p>
+                )}
+                {approvalsAvailable && pendingApprovals.length === 0 && (
+                  <p className="muted">No pending approvals.</p>
+                )}
+                {approvalsAvailable && pendingApprovals.map((approval) => (
+                  <div className="agent-template-card" key={approval.approval_id}>
+                    <strong>{approval.summary || approval.action_type || 'Approval request'}</strong>
+                    <span>
+                      {formatType(approval.action_type || 'action')} · {approval.risk_level || 'unknown'} risk · {approval.status}
+                    </span>
+                    {approval.created_at && (
+                      <p className="muted">{new Date(approval.created_at).toLocaleString()}</p>
+                    )}
+                    {(approval.steps || []).length > 0 && (
+                      <p className="muted">
+                        Steps: {(approval.steps || []).map((step) => step.title || step.step_id).join(', ')}
+                      </p>
+                    )}
+                    <div className="inline-actions">
+                      <button
+                        type="button"
+                        disabled={approvalBusyId === approval.approval_id}
+                        onClick={() => handleApprovalDecision(approval.approval_id, 'approve')}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        disabled={approvalBusyId === approval.approval_id}
+                        onClick={() => handleApprovalDecision(approval.approval_id, 'reject')}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowAgentJobs((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Agent Jobs
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showAgentJobs && (
+              <div className="mission-panel">
+                {!agentJobsAvailable && (
+                  <p className="muted">Agent jobs are not available yet.</p>
+                )}
+                {agentJobsAvailable && agentJobHealth && (
+                  <div className="provider-card">
+                    <div>
+                      <span>Health</span>
+                      <strong>{agentJobHealth.healthy ? 'healthy' : 'stale jobs'}</strong>
+                    </div>
+                    <div>
+                      <span>Queued</span>
+                      <strong>{agentJobHealth.queued ?? 0}</strong>
+                    </div>
+                    <div>
+                      <span>Running</span>
+                      <strong>{agentJobHealth.running ?? 0}</strong>
+                    </div>
+                    <div>
+                      <span>Paused</span>
+                      <strong>{agentJobHealth.paused ?? 0}</strong>
+                    </div>
+                    <div>
+                      <span>Total</span>
+                      <strong>{agentJobHealth.total_jobs ?? 0}</strong>
+                    </div>
+                  </div>
+                )}
+                {agentJobsAvailable && (
+                  <div className="inline-actions">
+                    <button type="button" disabled={agentJobBusyId === 'create'} onClick={handleCreateTestAgentJob}>
+                      Create test job
+                    </button>
+                    <button type="button" disabled={agentJobBusyId === 'start-next'} onClick={handleStartNextAgentJob}>
+                      Start next
+                    </button>
+                  </div>
+                )}
+                {agentJobsAvailable && agentJobs.length === 0 && (
+                  <p className="muted">No agent jobs yet.</p>
+                )}
+                {agentJobsAvailable && agentJobs.slice(0, 8).map((job) => (
+                  <div className="agent-template-card" key={job.job_id}>
+                    <strong>{job.title || job.job_type}</strong>
+                    <span>
+                      {job.status} · {formatType(job.job_type || 'workflow')}
+                      {job.workspace_id ? ` · ${job.workspace_id.slice(0, 8)}` : ''}
+                    </span>
+                    {job.created_at && (
+                      <p className="muted">{new Date(job.created_at).toLocaleString()}</p>
+                    )}
+                    {job.result_summary && <p className="muted">{job.result_summary}</p>}
+                    {job.error && <p className="muted">{job.error}</p>}
+                    <div className="inline-actions">
+                      {job.status === 'running' && (
+                        <>
+                          <button type="button" disabled={agentJobBusyId === job.job_id} onClick={() => handleAgentJobAction(job.job_id, 'pause')}>
+                            Pause
+                          </button>
+                          <button type="button" disabled={agentJobBusyId === job.job_id} onClick={() => handleAgentJobAction(job.job_id, 'heartbeat')}>
+                            Heartbeat
+                          </button>
+                        </>
+                      )}
+                      {job.status === 'paused' && (
+                        <button type="button" disabled={agentJobBusyId === job.job_id} onClick={() => handleAgentJobAction(job.job_id, 'resume')}>
+                          Resume
+                        </button>
+                      )}
+                      {job.status === 'queued' && (
+                        <button type="button" disabled={agentJobBusyId === job.job_id} onClick={() => handleAgentJobAction(job.job_id, 'cancel')}>
+                          Cancel
+                        </button>
+                      )}
+                      {!['completed', 'failed', 'canceled'].includes(job.status) && job.status !== 'queued' && (
+                        <button type="button" disabled={agentJobBusyId === job.job_id} onClick={() => handleAgentJobAction(job.job_id, 'cancel')}>
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowCodexJobs((current) => !current)}>
+              <span>
+                <GitBranch size={15} />
+                Codex Jobs
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showCodexJobs && (
+              <div className="mission-panel codex-jobs-panel">
+                {!codexJobsAvailable && (
+                  <p className="muted">Codex worker status is not available yet.</p>
+                )}
+                {codexJobsAvailable && (
+                  <>
+                    <div className="codex-worker-summary">
+                      <span className={`codex-status-badge codex-status-${codexWorkerSummaryStatus(codexJobs).replace(/\s+/g, '-')}`}>
+                        {codexWorkerSummaryStatus(codexJobs)}
+                      </span>
+                      <span className="muted">{codexJobs.length} job{codexJobs.length === 1 ? '' : 's'}</span>
+                    </div>
+                    {codexJobs.length === 0 && (
+                      <p className="muted">Codex worker idle — no jobs yet.</p>
+                    )}
+                    {codexJobs.slice(0, 10).map((job) => {
+                      const displayStatus = codexJobDisplayStatus(job)
+                      const pytest = codexTestResult(job, 'pytest')
+                      const build = codexTestResult(job, 'npm run build')
+                      return (
+                        <div className="codex-job-card" key={job.job_id}>
+                          <div className="codex-job-card-header">
+                            <strong>{job.issue_identifier || job.issue_id || 'Codex job'}</strong>
+                            <span className={`codex-status-badge codex-status-${displayStatus.replace(/\s+/g, '-')}`}>
+                              {displayStatus}
+                            </span>
+                          </div>
+                          <p className="muted codex-job-id">{job.job_id}</p>
+                          {job.branch_name && <p className="muted">Branch: {job.branch_name}</p>}
+                          {job.started_at && (
+                            <p className="muted">Started: {new Date(job.started_at).toLocaleString()}</p>
+                          )}
+                          {job.completed_at && (
+                            <p className="muted">Completed: {new Date(job.completed_at).toLocaleString()}</p>
+                          )}
+                          {job.changed_files?.length > 0 && (
+                            <p className="muted">Changed: {job.changed_files.join(', ')}</p>
+                          )}
+                          <div className="codex-job-results">
+                            <span>Tests: {pytest ? (pytest.success ? 'pass' : 'fail') : 'n/a'}</span>
+                            <span>Build: {build ? (build.success ? 'pass' : 'fail') : 'n/a'}</span>
+                          </div>
+                          {job.commit_hash && <p className="muted">Commit: {job.commit_hash}</p>}
+                          {job.linear_done && <p className="muted">Linear Done: yes</p>}
+                          {job.error && <p className="codex-job-error">{job.error}</p>}
+                        </div>
+                      )
+                    })}
+                  </>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowSystemPrompts((current) => !current)}>
+              <span>
+                <FileText size={15} />
+                System Prompts
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showSystemPrompts && (
+              <div className="mission-panel">
+                {!systemPromptsAvailable && (
+                  <p className="muted">System prompt registry is not available yet.</p>
+                )}
+                {systemPromptsAvailable && systemPrompts.length === 0 && (
+                  <p className="muted">No registered prompts yet.</p>
+                )}
+                {systemPromptsAvailable && systemPrompts.slice(0, 10).map((prompt) => (
+                  <button
+                    type="button"
+                    className={`goal-card ${selectedPromptAgent === prompt.agent_name ? 'active' : ''}`}
+                    key={prompt.prompt_id || prompt.agent_name}
+                    onClick={() => handleSelectSystemPrompt(prompt.agent_name)}
+                  >
+                    <strong>{prompt.agent_name}</strong>
+                    <span>{prompt.source || 'registry'} · {prompt.updated_at ? new Date(prompt.updated_at).toLocaleString() : 'n/a'}</span>
+                  </button>
+                ))}
+                {selectedPromptAgent && (
+                  <div className="developer-prompt-block">
+                    <span>Edit prompt: {selectedPromptAgent}</span>
+                    <textarea
+                      value={promptDraft}
+                      onChange={(event) => setPromptDraft(event.target.value)}
+                      rows={8}
+                      placeholder="System prompt text..."
+                    />
+                    <button type="button" disabled={promptSaveBusy || !promptDraft.trim()} onClick={handleSaveSystemPrompt}>
+                      Save prompt
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
         <section className="sidebar-section">
           <button className="analytics-toggle" type="button" onClick={() => setShowAgentBuilder((current) => !current)}>
             <span>
@@ -1260,186 +2021,6 @@ function App() {
           )}
         </section>
 
-        <section className="sidebar-section">
-          <button className="analytics-toggle" type="button" onClick={() => setShowLinearPanel((current) => !current)}>
-            <span>
-              <GitBranch size={15} />
-              Linear
-            </span>
-            <ChevronDown size={15} />
-          </button>
-          {showLinearPanel && (
-            <div className="mission-panel">
-              <div className="provider-card">
-                <div>
-                  <span>Configured</span>
-                  <strong>{linearStatus?.configured ? 'yes' : 'no'}</strong>
-                </div>
-                <div>
-                  <span>Sync enabled</span>
-                  <strong>{linearStatus?.sync_enabled ? 'yes' : 'no'}</strong>
-                </div>
-                <div>
-                  <span>Auto push</span>
-                  <strong>{linearStatus?.auto_git_push ? 'yes' : 'no'}</strong>
-                </div>
-                <div>
-                  <span>Poll worker</span>
-                  <strong>{linearPollStatus?.running ? 'running' : 'idle'}</strong>
-                </div>
-                <div>
-                  <span>Cursor worker</span>
-                  <strong>{linearStatus?.linear_cursor_worker ? 'enabled' : 'off'}</strong>
-                </div>
-                <div>
-                  <span>Codex worker</span>
-                  <strong>{linearStatus?.codex_worker_enabled ? 'enabled' : 'off'}</strong>
-                </div>
-                <div>
-                  <span>Codex mode</span>
-                  <strong>{linearStatus?.codex_worker_mode || 'manual_trigger'}</strong>
-                </div>
-                <div>
-                  <span>Auto Codex</span>
-                  <strong>{linearStatus?.linear_autonomous_codex_worker ? 'on' : 'off'}</strong>
-                </div>
-                {linearPollStatus?.last_poll_at && (
-                  <div>
-                    <span>Last poll</span>
-                    <strong>{new Date(linearPollStatus.last_poll_at).toLocaleString()}</strong>
-                  </div>
-                )}
-              </div>
-              {developerMode && linearPollStatus && (
-                <details className="developer-prompt-block">
-                  <summary>Poll metadata</summary>
-                  <pre>{JSON.stringify(linearPollStatus, null, 2)}</pre>
-                  <button type="button" onClick={async () => { await runLinearPollOnce(); await refreshLinearData(workspaceId) }}>
-                    Run poll once
-                  </button>
-                </details>
-              )}
-              {!linearStatus?.configured && (
-                <p className="muted">Add LINEAR_API_KEY and LINEAR_TEAM_ID to backend/.env, then restart the backend.</p>
-              )}
-              {linearIssues.length === 0 && linearStatus?.configured && (
-                <p className="muted">No Linear issues found for the configured team/project.</p>
-              )}
-              {codexJobs.length > 0 && (
-                <details className="developer-prompt-block">
-                  <summary>Codex jobs ({codexJobs.length})</summary>
-                  {codexJobs.slice(0, 6).map((job) => (
-                    <div className="agent-template-card" key={job.job_id}>
-                      <strong>{job.issue_identifier || job.issue_id}</strong>
-                      <span>{job.status} · {job.branch_name}</span>
-                      {job.commit_hash && <p className="muted">Commit: {job.commit_hash}</p>}
-                      {job.error && <p className="muted">{job.error}</p>}
-                    </div>
-                  ))}
-                </details>
-              )}
-              {linearIssues.slice(0, 8).map((issue) => {
-                const link = linearLinkForIssue(issue.id)
-                const codexJob = latestCodexJobForIssue(issue.id)
-                return (
-                  <div className="agent-template-card" key={issue.id}>
-                    <strong>{issue.identifier}</strong>
-                    <span>{issue.status} · priority {issue.priority ?? 0}</span>
-                    <p>{issue.title}</p>
-                    {link && (
-                      <p className="muted">
-                        Local: {link.status}
-                        {link.branch_name ? ` · ${link.branch_name}` : ''}
-                        {link.commits?.length ? ` · ${link.commits[link.commits.length - 1].hash}` : ''}
-                      </p>
-                    )}
-                    {codexJob && (
-                      <details className="developer-prompt-block">
-                        <summary>Codex job: {codexJob.status}</summary>
-                        <p className="muted">Branch: {codexJob.branch_name}</p>
-                        <p className="muted">Handoff: {codexJob.handoff_path}</p>
-                        {codexJob.changed_files?.length > 0 && (
-                          <p className="muted">Changed: {codexJob.changed_files.join(', ')}</p>
-                        )}
-                        {codexJob.test_results?.map((item) => (
-                          <p className="muted" key={item.command}>
-                            {item.command}: {item.success ? 'pass' : 'fail'}
-                          </p>
-                        ))}
-                        {codexJob.commit_hash && <p className="muted">Commit: {codexJob.commit_hash}</p>}
-                        <p className="muted">Linear Done: {codexJob.linear_done ? 'yes' : 'no'}</p>
-                        {codexJob.error && <p className="muted">{codexJob.error}</p>}
-                      </details>
-                    )}
-                    {developerMode && (
-                      <details className="developer-prompt-block">
-                        <summary>Raw issue JSON</summary>
-                        <pre>{JSON.stringify(issue, null, 2)}</pre>
-                        {link && <pre>{JSON.stringify(link, null, 2)}</pre>}
-                      </details>
-                    )}
-                    <div className="inline-actions">
-                      <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('sync', issue.id)}>
-                        Sync
-                      </button>
-                      <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('select', issue.id)}>
-                        Select
-                      </button>
-                      {link?.branch_name && (
-                        <>
-                          <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('cursor-handoff', issue.id)}>
-                            Copy Cursor prompt
-                          </button>
-                          <button
-                            type="button"
-                            disabled={linearBusyId === issue.id}
-                            onClick={async () => {
-                              setLinearBusyId(issue.id)
-                              try {
-                                await handleCopyCursorHandoff(issue.id, 'codex')
-                              } catch (err) {
-                                setError(err.message)
-                              } finally {
-                                setLinearBusyId('')
-                              }
-                            }}
-                          >
-                            Copy Codex prompt
-                          </button>
-                          <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('cursor-verify', issue.id)}>
-                            Verify Cursor work
-                          </button>
-                          <button
-                            type="button"
-                            disabled={linearBusyId === issue.id || !linearStatus?.codex_worker_enabled}
-                            onClick={() => handleRunAutonomousCodex(issue.id)}
-                            title={linearStatus?.codex_worker_enabled ? 'Run autonomous Codex worker' : 'Enable CODEX_WORKER_ENABLED in backend/.env'}
-                          >
-                            Run Autonomous Codex
-                          </button>
-                        </>
-                      )}
-                      <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('run', issue.id)}>
-                        Run task (EvolveAgent AI)
-                      </button>
-                      {developerMode && link?.status !== 'completed' && (
-                        <button type="button" disabled={linearBusyId === issue.id} onClick={() => handleLinearAction('complete', issue.id)}>
-                          Force Done in Linear
-                        </button>
-                      )}
-                      {issue.url && (
-                        <a href={issue.url} target="_blank" rel="noreferrer">
-                          Open
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </section>
-
         <section className="sidebar-section history-panel">
           <div className="side-heading">
             <Clock size={15} />
@@ -1464,49 +2045,143 @@ function App() {
             ))}
           </div>
         </section>
+        </div>
       </aside>
 
       <section className="chat-workspace">
-        <header className="chat-topbar">
-          <div>
-            <div className="section-kicker">
-              <Terminal size={16} />
-              AI Workbench
-            </div>
-            <h2>Ask EvolveAgent AI</h2>
-            <p>Your request is routed through specialist agents and returned as one final answer.</p>
-          </div>
-          <div className="topbar-actions">
-            <div className="mode-toggle" role="group" aria-label="Mode toggle">
-              <button className={!developerMode ? 'active' : ''} onClick={() => setDeveloperMode(false)}>
-                Simple
-              </button>
-              <button className={developerMode ? 'active' : ''} onClick={() => setDeveloperMode(true)}>
-                Developer
-              </button>
-            </div>
-            <div className="status-pill">
-              <Sparkles size={16} />
-              {modeLabel}
-            </div>
-            <div className="export-actions">
-              <button type="button" onClick={copyConversation} disabled={messages.length === 0}>
-                <Copy size={14} />
-                Copy chat
-              </button>
-              <button type="button" onClick={exportMarkdown} disabled={messages.length === 0}>
-                <Download size={14} />
-                Markdown
-              </button>
-              <button type="button" onClick={exportJson} disabled={messages.length === 0}>
-                JSON
-              </button>
-            </div>
-          </div>
+        <header className={`chat-topbar ${developerMode ? '' : 'jarvis-topbar'}`}>
+          {developerMode ? (
+            <>
+              <div>
+                <div className="section-kicker">
+                  <Terminal size={16} />
+                  AI Workbench
+                </div>
+                <h2>Ask EvolveAgent AI</h2>
+                <p>Your request is routed through specialist agents and returned as one final answer.</p>
+              </div>
+              <div className="topbar-actions">
+                <button
+                  type="button"
+                  className="sidebar-toggle"
+                  onClick={() => setSidebarOpen((current) => !current)}
+                  aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+                  aria-expanded={sidebarOpen}
+                >
+                  <Menu size={16} />
+                </button>
+                <button
+                  type="button"
+                  className="theme-toggle-button"
+                  onClick={toggleTheme}
+                  aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+                >
+                  {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                </button>
+                <div className="mode-toggle" role="group" aria-label="Mode toggle">
+                  <button className={!developerMode ? 'active' : ''} onClick={() => setDeveloperMode(false)}>
+                    Simple
+                  </button>
+                  <button className={developerMode ? 'active' : ''} onClick={() => setDeveloperMode(true)}>
+                    Developer
+                  </button>
+                </div>
+                <div className="status-pill">
+                  <Sparkles size={16} />
+                  {modeLabel}
+                </div>
+                <div className="export-actions">
+                  <button type="button" onClick={copyConversation} disabled={messages.length === 0}>
+                    <Copy size={14} />
+                    Copy chat
+                  </button>
+                  <button type="button" onClick={exportMarkdown} disabled={messages.length === 0}>
+                    <Download size={14} />
+                    Markdown
+                  </button>
+                  <button type="button" onClick={exportJson} disabled={messages.length === 0}>
+                    JSON
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="jarvis-topbar-brand">
+                <h2>EvolveAgent AI</h2>
+                <p>Voice-controlled multi-agent operating system</p>
+              </div>
+              <div className="topbar-actions jarvis-topbar-actions">
+                <button
+                  type="button"
+                  className="theme-toggle-button"
+                  onClick={toggleTheme}
+                  aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+                >
+                  {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                </button>
+                <select
+                  className="jarvis-workspace-select"
+                  value={workspaceId || ''}
+                  onChange={(event) => setWorkspaceId(event.target.value)}
+                  aria-label="Select workspace"
+                >
+                  {workspaces.map((workspace) => (
+                    <option key={workspace.workspace_id} value={workspace.workspace_id}>
+                      {workspace.name}
+                    </option>
+                  ))}
+                </select>
+                <button className="jarvis-icon-button" type="button" onClick={newChat} aria-label="New chat">
+                  <MessageSquarePlus size={16} />
+                </button>
+                <div className="mode-toggle mode-toggle-compact" role="group" aria-label="Mode toggle">
+                  <button className={!developerMode ? 'active' : ''} onClick={() => setDeveloperMode(false)}>
+                    Simple
+                  </button>
+                  <button className={developerMode ? 'active' : ''} onClick={() => setDeveloperMode(true)}>
+                    Dev
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </header>
 
-        <section className="chat-scroll">
-          {messages.length === 0 && !loading && (
+        <section className={`chat-scroll ${!developerMode ? 'jarvis-scroll' : ''}`}>
+          {messages.length === 0 && !loading && !developerMode && (
+            <div className="jarvis-command-center">
+              <div className="jarvis-glow" aria-hidden="true" />
+              <div className="jarvis-ring" aria-hidden="true" />
+              <div className="jarvis-command-header">
+                <h2>EvolveAgent AI</h2>
+                <p>Voice-controlled multi-agent operating system</p>
+              </div>
+              <div className="jarvis-command-options">
+                <button
+                  type="button"
+                  className={`jarvis-command-option speak ${listening ? 'active' : ''}`}
+                  onClick={handleJarvisSpeak}
+                >
+                  <span className="jarvis-option-icon">
+                    <Mic size={28} />
+                  </span>
+                  <strong>Speak</strong>
+                  <span className="jarvis-option-subtitle">Give EvolveAgent a voice command.</span>
+                </button>
+                <button type="button" className="jarvis-command-option type" onClick={focusComposer}>
+                  <span className="jarvis-option-icon">
+                    <Keyboard size={28} />
+                  </span>
+                  <strong>Type</strong>
+                  <span className="jarvis-option-subtitle">Send a text command.</span>
+                </button>
+              </div>
+              {listening && <p className="jarvis-listening">Listening for your command...</p>}
+            </div>
+          )}
+
+          {messages.length === 0 && !loading && developerMode && (
               <div className="chat-empty">
               <div className="empty-orb">
                 <Brain size={30} />
@@ -1789,7 +2464,8 @@ function App() {
           )}
         </section>
 
-        <section className="chat-composer">
+        <section className={`chat-composer ${developerMode ? '' : 'jarvis-composer'}`}>
+          {developerMode && (
           <div className="composer-controls">
             <select value={taskType} onChange={(event) => setTaskType(event.target.value)} aria-label="Task type">
               {taskTypes.map((type) => (
@@ -1808,6 +2484,7 @@ function App() {
               Deep Mode
             </label>
           </div>
+          )}
           {attachedFiles.length > 0 && (
             <div className="file-chip-row">
               {attachedFiles.map((file) => (
@@ -1863,10 +2540,11 @@ function App() {
               <Mic size={18} />
             </button>
             <textarea
+              ref={composerRef}
               value={input}
               onChange={(event) => setInput(event.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask EvolveAgent AI anything..."
+              placeholder={developerMode ? 'Ask EvolveAgent AI anything...' : 'Send a command...'}
               rows={1}
             />
             <button className="send-button" onClick={() => submitMessage()} disabled={loading || uploadingFiles || uploadingRecordings || input.trim().length < 1} aria-label="Send message">
@@ -2089,6 +2767,47 @@ function App() {
                           <span>risk {event.risk_score}</span>
                         </div>
                         <p>{event.reason}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </details>
+            )}
+
+            {developerMode && (
+              <details className="inspector-section">
+                <summary>
+                  <Route size={15} />
+                  Tool Trace
+                  <ChevronDown size={15} />
+                </summary>
+                {(selectedRun.tool_trace || []).length === 0 ? (
+                  <p className="muted">No tools were selected for this run.</p>
+                ) : (
+                  <div className="agent-list">
+                    {(selectedRun.tool_trace || []).map((tool, index) => (
+                      <div className="provider-row" key={`${tool.tool_name || 'tool'}-${index}`}>
+                        <strong>{tool.tool_name || 'unknown'}</strong>
+                        <div className="model-meta">
+                          <span>{tool.source || 'n/a'}</span>
+                          <span>{tool.permission_level || 'n/a'}</span>
+                          {tool.selected && <span>selected</span>}
+                          {tool.executed && <span>executed</span>}
+                          {tool.blocked && <span>blocked</span>}
+                          {tool.approval_required && <span>approval required</span>}
+                        </div>
+                        {tool.sanitized_input && (
+                          <p>
+                            <span>Input: </span>
+                            {tool.sanitized_input}
+                          </p>
+                        )}
+                        {tool.result_summary && (
+                          <p>
+                            <span>Result: </span>
+                            {tool.result_summary}
+                          </p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -2454,6 +3173,40 @@ function App() {
               </details>
             )}
 
+            {developerMode && (
+              <details className="inspector-section">
+                <summary>
+                  <ShieldAlert size={15} />
+                  Approval Audit
+                  <ChevronDown size={15} />
+                </summary>
+                {!approvalAuditAvailable && (
+                  <p className="muted">Approval queue is not available yet.</p>
+                )}
+                {approvalAuditAvailable && approvalAudit.length === 0 && (
+                  <p className="muted">No approval audit entries yet.</p>
+                )}
+                {approvalAuditAvailable && approvalAudit.length > 0 && (
+                  <div className="agent-list">
+                    {approvalAudit.map((entry, index) => (
+                      <div className="provider-row" key={entry.approval_id || entry.audit_id || index}>
+                        <strong>{entry.decision || entry.status || 'decision'}</strong>
+                        <div className="model-meta">
+                          <span>{formatType(entry.action_type || 'action')}</span>
+                          <span>{entry.risk_level || 'unknown'} risk</span>
+                          {entry.run_id && <span>{entry.run_id.slice(0, 8)}</span>}
+                        </div>
+                        {entry.comment && <p>{entry.comment}</p>}
+                        {entry.created_at && (
+                          <p className="muted">{new Date(entry.created_at).toLocaleString()}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </details>
+            )}
+
             {developerMode && selectedRun.automation_apply_result && (
               <details className="inspector-section">
                 <summary>
@@ -2486,13 +3239,13 @@ function App() {
                 )}
                 <h3>Backup paths</h3>
                 {(selectedRun.automation_apply_result.backup_paths || []).length > 0 ? (
-                  <ul>{selectedRun.automation_apply_result.backup_paths.map((path) => <li key={path}>{path}</li>)}</ul>
+                  <ul>{selectedRun.automation_apply_result.backup_paths.map((backupPath) => <li key={backupPath}>{backupPath}</li>)}</ul>
                 ) : (
                   <p className="muted">None</p>
                 )}
                 <h3>Diff paths</h3>
                 {(selectedRun.automation_apply_result.diff_paths || []).length > 0 ? (
-                  <ul>{selectedRun.automation_apply_result.diff_paths.map((path) => <li key={path}>{path}</li>)}</ul>
+                  <ul>{selectedRun.automation_apply_result.diff_paths.map((diffPath) => <li key={diffPath}>{diffPath}</li>)}</ul>
                 ) : (
                   <p className="muted">None</p>
                 )}
@@ -2525,6 +3278,7 @@ function App() {
                 )}
               </details>
             )}
+
 
             {learningReport && (
               <details className="inspector-section">

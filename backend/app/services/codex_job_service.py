@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from app.services.storage_service import StorageService
 
-JOB_STATUSES = {"queued", "running", "passed", "failed", "blocked"}
+JOB_STATUSES = {"queued", "running", "passed", "failed", "blocked", "needs_manual_review"}
 
 
 class CodexJobService:
@@ -35,11 +35,18 @@ class CodexJobService:
             "branch_name": data.get("branch_name", ""),
             "handoff_path": data.get("handoff_path", ""),
             "status": "queued",
+            "status_detail": "Waiting to start",
+            "failure_stage": None,
+            "manual_review_required": False,
+            "summary": "",
             "started_at": None,
             "completed_at": None,
             "codex_stdout": "",
             "codex_stderr": "",
             "test_results": [],
+            "test_result": None,
+            "build_result": None,
+            "verification_summary": "",
             "changed_files": [],
             "commit_hash": None,
             "linear_done": False,

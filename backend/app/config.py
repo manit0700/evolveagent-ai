@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     auto_git_push: bool = Field(default=False, alias="AUTO_GIT_PUSH")
     git_default_branch: str = Field(default="main", alias="GIT_DEFAULT_BRANCH")
     git_remote_name: str = Field(default="origin", alias="GIT_REMOTE_NAME")
+    approval_webhook_url: str | None = Field(default=None, alias="APPROVAL_WEBHOOK_URL")
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",

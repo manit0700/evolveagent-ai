@@ -3,8 +3,11 @@ from fastapi.testclient import TestClient
 from app.config import DATA_DIR
 from app.api import routes
 from app.main import app
+from app.services.governance_service import GovernanceService
+from app.services.plugin_loader_service import PluginLoaderService
 from app.services.safe_file_editor import SafeFileEditor
 from app.services.storage_service import StorageService
+from app.services.tool_registry_service import ToolRegistryService
 
 client = TestClient(app)
 storage = StorageService(DATA_DIR)
@@ -99,6 +102,240 @@ def test_governance_endpoint_returns_summary():
     assert "secret_redactions" in body
     assert "prompt_injection_warnings" in body
     assert "recent_events" in body
+
+
+def test_workspace_knowledge_search_and_export():
+    workspace_response = client.post("/api/workspaces", json={"name": "Knowledge Test"})
+    workspace_id = workspace_response.json()["workspace_id"]
+    memory_response = client.post(
+        f"/api/workspaces/{workspace_id}/memory",
+        json={
+            "type": "project_fact",
+            "title": "Preferred stack",
+            "content": "The project uses FastAPI, React, Linear, and Codex automation.",
+            "importance": "high",
+            "tags": ["fastapi", "linear"],
+        },
+    )
+    memory = memory_response.json()
+    second_memory = client.post(
+        f"/api/workspaces/{workspace_id}/memory",
+        json={
+            "type": "decision",
+            "title": "Automation boundary",
+            "content": "Codex automation requires tests and safe file staging before Linear is marked Done.",
+            "importance": "medium",
+            "tags": ["codex", "linear"],
+        },
+    ).json()
+
+    pin_response = client.post(f"/api/workspaces/{workspace_id}/memory/{memory['memory_id']}/pin")
+    assert pin_response.status_code == 200
+    assert pin_response.json()["pinned"] is True
+
+    summary_response = client.get(f"/api/workspaces/{workspace_id}/knowledge")
+    summary = summary_response.json()
+    assert summary_response.status_code == 200
+    assert summary["total_records"] >= 1
+    assert summary["high_importance_count"] >= 1
+
+    search_response = client.get(f"/api/workspaces/{workspace_id}/knowledge/search?q=FastAPI")
+    search = search_response.json()
+    assert search_response.status_code == 200
+    assert search["result_count"] >= 1
+    assert any("Preferred stack" == item["title"] for item in search["results"])
+    preferred = next(item for item in search["results"] if item["title"] == "Preferred stack")
+    assert preferred["metadata"]["pinned"] is True
+    assert preferred["metadata"]["importance_score"] > 100
+
+    export_response = client.get(f"/api/workspaces/{workspace_id}/knowledge/export")
+    assert export_response.status_code == 200
+    assert "Preferred stack" in export_response.text
+
+    link_response = client.post(
+        f"/api/workspaces/{workspace_id}/knowledge/links",
+        json={
+            "source_type": "memory",
+            "source_id": memory["memory_id"],
+            "target_type": "memory",
+            "target_id": second_memory["memory_id"],
+            "reason": "Both describe Linear/Codex automation decisions.",
+        },
+    )
+    assert link_response.status_code == 200
+    link = link_response.json()
+    assert link["source"]["title"] == "Preferred stack"
+    assert link["target"]["title"] == "Automation boundary"
+
+    linked_search = client.get(f"/api/workspaces/{workspace_id}/knowledge/search?q=FastAPI").json()
+    linked_preferred = next(item for item in linked_search["results"] if item["title"] == "Preferred stack")
+    assert linked_preferred["linked_items"][0]["title"] == "Automation boundary"
+
+    links = client.get(f"/api/workspaces/{workspace_id}/knowledge/links").json()
+    assert any(item["link_id"] == link["link_id"] for item in links)
+
+    delete_link = client.delete(f"/api/workspaces/{workspace_id}/knowledge/links/{link['link_id']}")
+    assert delete_link.status_code == 200
+    assert delete_link.json()["deleted"] is True
+
+
+def test_assistant_commands_are_safe_and_workspace_aware():
+    commands_response = client.get("/api/assistant/commands")
+    commands = commands_response.json()
+    assert commands_response.status_code == 200
+    assert any(command["name"] == "calculate" for command in commands)
+
+    calc_response = client.post("/api/assistant/commands/calculate", json={"input_text": "2 + 3 * 4"})
+    calc = calc_response.json()
+    assert calc_response.status_code == 200
+    assert calc["success"] is True
+    assert calc["data"]["value"] == 14
+
+    blocked_response = client.post("/api/assistant/commands/calculate", json={"input_text": "__import__('os').system('rm -rf /')"})
+    blocked = blocked_response.json()
+    assert blocked_response.status_code == 200
+    assert blocked["success"] is False
+
+    unknown_response = client.post("/api/assistant/commands/delete_everything", json={"input_text": ""})
+    unknown = unknown_response.json()
+    assert unknown_response.status_code == 200
+    assert unknown["success"] is False
+    assert unknown["error"] == "unknown_command"
+
+
+def test_tool_registry_and_router_trace():
+    tools_response = client.get("/api/tools")
+    tools = tools_response.json()
+    assert tools_response.status_code == 200
+    assert any(tool["name"] == "calculate" for tool in tools)
+
+    register_response = client.post(
+        "/api/tools/register",
+        json={
+            "name": "approval demo",
+            "description": "A test tool that requires approval.",
+            "permission_level": "approve_to_run",
+            "source": "built_in",
+        },
+    )
+    assert register_response.status_code == 200
+    assert register_response.json()["name"] == "approval_demo"
+
+    get_response = client.get("/api/tools/approval_demo")
+    assert get_response.status_code == 200
+    assert get_response.json()["permission_level"] == "approve_to_run"
+
+    run_response = client.post(
+        "/api/run",
+        json={
+            "user_input": "calculate 2 + 3 * 4",
+            "task_type": "general",
+        },
+    )
+    run = run_response.json()
+    assert run_response.status_code == 200
+    assert run["tool_trace"]
+    calculate_trace = next(item for item in run["tool_trace"] if item["tool_name"] == "calculate")
+    assert calculate_trace["executed"] is True
+    assert calculate_trace["permission_level"] == "read_only"
+    assert "14" in calculate_trace["result_summary"]
+
+
+def test_agent_job_lifecycle_and_health():
+    create_response = client.post(
+        "/api/agent-jobs",
+        json={"title": "Review task queue", "job_type": "workflow", "payload": {"task": "review"}},
+    )
+    job = create_response.json()
+    assert create_response.status_code == 200
+    assert job["status"] == "queued"
+    assert job["job_id"]
+
+    list_response = client.get("/api/agent-jobs")
+    assert any(item["job_id"] == job["job_id"] for item in list_response.json())
+
+    start_response = client.post("/api/agent-jobs/start-next")
+    started = start_response.json()
+    assert start_response.status_code == 200
+    assert started["started"] is True
+    assert started["job"]["status"] == "running"
+
+    pause_response = client.post(f"/api/agent-jobs/{job['job_id']}/pause", json={"reason": "manual pause"})
+    assert pause_response.status_code == 200
+    assert pause_response.json()["status"] == "paused"
+
+    resume_response = client.post(f"/api/agent-jobs/{job['job_id']}/resume", json={"reason": "resume queue"})
+    assert resume_response.status_code == 200
+    assert resume_response.json()["status"] == "queued"
+
+    cancel_response = client.post(f"/api/agent-jobs/{job['job_id']}/cancel", json={"reason": "test cleanup"})
+    assert cancel_response.status_code == 200
+    assert cancel_response.json()["status"] == "canceled"
+
+    health = client.get("/api/agent-jobs/health").json()
+    assert "total_jobs" in health
+    assert "healthy" in health
+
+
+def test_system_prompt_registry_endpoint():
+    prompt_response = client.post(
+        "/api/system-prompts",
+        json={
+            "agent_name": "Risk Agent",
+            "prompt": "You are a careful risk reviewer.",
+            "reason": "Test prompt registry.",
+        },
+    )
+    assert prompt_response.status_code == 200
+    assert prompt_response.json()["agent_name"] == "Risk Agent"
+
+    list_response = client.get("/api/system-prompts")
+    prompts = list_response.json()
+    assert list_response.status_code == 200
+    assert any(item["agent_name"] == "Risk Agent" for item in prompts)
+
+    get_response = client.get("/api/system-prompts/Risk Agent")
+    assert get_response.status_code == 200
+    assert "careful risk reviewer" in get_response.json()["prompt"]
+
+
+def test_plugin_loader_registers_valid_plugins_and_skips_invalid(tmp_path):
+    plugin_dir = tmp_path / "plugins"
+    plugin_dir.mkdir()
+    (plugin_dir / "good.json").write_text(
+        """
+        {
+          "name": "Demo Plugin",
+          "description": "Test manifest",
+          "version": "0.1.0",
+          "tools": [
+            {
+              "name": "demo_lookup",
+              "description": "Read-only lookup",
+              "permission_level": "read_only",
+              "input_schema": {"type": "string"}
+            }
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
+    (plugin_dir / "bad.json").write_text('{"name": "Bad", "tools": [{"name": "oops", "permission_level": "root"}]}', encoding="utf-8")
+    temp_storage = StorageService(str(tmp_path / "data"))
+    registry = ToolRegistryService(temp_storage)
+    governance = GovernanceService(temp_storage)
+    loader = PluginLoaderService(temp_storage, registry, governance, plugin_dir=plugin_dir)
+
+    loaded = loader.load_plugins()
+
+    assert len(loaded) == 1
+    assert loaded[0]["name"] == "demo_plugin"
+    plugin_tool = registry.get_tool("demo_lookup")
+    assert plugin_tool is not None
+    assert plugin_tool["source"] == "plugin"
+    assert plugin_tool["permission_level"] == "read_only"
+    summary = governance.summary()
+    assert summary["blocked_actions"] >= 1
 
 
 def test_chat_session_lifecycle():
@@ -226,6 +463,14 @@ def test_app_automation_api_and_reject_apply():
     assert reject_body["success"] is False
     assert "rejected" in reject_body["summary"].lower()
 
+    approvals = client.get("/api/approvals").json()
+    matching = [item for item in approvals if item["run_id"] == body["run_id"]]
+    assert matching
+    assert matching[0]["status"] == "rolled_back"
+    audit = client.get("/api/approvals/audit").json()
+    assert any(item["run_id"] == body["run_id"] and item["decision"] == "reject" for item in audit)
+    assert any(item["run_id"] == body["run_id"] and item["decision"] == "rollback" for item in audit)
+
 
 def test_unsafe_file_edit_is_blocked_on_automation_apply():
     storage.append(
@@ -254,6 +499,43 @@ def test_unsafe_file_edit_is_blocked_on_automation_apply():
     assert response.status_code == 200
     assert body["success"] is False
     assert "Blocked path" in body["errors"][0]
+
+
+def test_approval_queue_decision_flow():
+    run_id = "approval-flow-run"
+    storage.append(
+        "automation_runs.json",
+        {
+            "run_id": run_id,
+            "session_id": "approval-session",
+            "workspace_id": None,
+            "status": "pending_approval",
+            "automation_plan": {
+                "summary": "Safe no-op approval validation",
+                "files_to_change": [],
+                "files_to_create": [],
+                "commands_to_run": [],
+                "risk_level": "low",
+                "requires_approval": True,
+                "notes": [],
+                "project_scan": None,
+                "consensus_candidates": [],
+                "judge_reason": None,
+            },
+        },
+    )
+
+    apply_response = client.post("/api/automation/apply", json={"run_id": run_id, "approved": True})
+    assert apply_response.status_code == 200
+    approvals = client.get("/api/approvals").json()
+    approval = next(item for item in approvals if item["run_id"] == run_id)
+    assert approval["status"] == "approved"
+    detail_response = client.get(f"/api/approvals/{approval['approval_id']}")
+    assert detail_response.status_code == 200
+    assert detail_response.json()["steps"][0]["status"] == "approved"
+
+    audit = client.get("/api/approvals/audit").json()
+    assert any(item["approval_id"] == approval["approval_id"] and item["decision"] == "approve" for item in audit)
 
 
 def test_automation_apply_writes_approved_file_patch(tmp_path, monkeypatch):

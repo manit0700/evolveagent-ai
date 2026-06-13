@@ -22,6 +22,8 @@ class StorageService:
             "feedback.json",
             "automation_runs.json",
             "automation_logs.json",
+            "approval_chains.json",
+            "approval_audit.json",
             "learning_memory.json",
             "prompt_versions.json",
             "workflow_strategies.json",
@@ -34,8 +36,13 @@ class StorageService:
             "custom_agents.json",
             "workspaces.json",
             "workspace_memory.json",
+            "knowledge_links.json",
+            "tool_registry.json",
+            "plugin_manifests.json",
             "linear_links.json",
             "codex_jobs.json",
+            "agent_jobs.json",
+            "system_prompt_registry.json",
         ):
             self._ensure_file(filename)
 

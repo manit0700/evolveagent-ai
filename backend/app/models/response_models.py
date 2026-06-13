@@ -111,6 +111,18 @@ class SecurityReport(BaseModel):
     blocked: bool = False
 
 
+class ToolTrace(BaseModel):
+    tool_name: str
+    source: str = "built_in"
+    permission_level: str = "read_only"
+    selected: bool = True
+    executed: bool = False
+    blocked: bool = False
+    approval_required: bool = False
+    sanitized_input: str = ""
+    result_summary: str = ""
+
+
 class ProviderStatus(BaseModel):
     llm_mode: str
     openai_configured: bool
@@ -323,6 +335,7 @@ class RunResponse(BaseModel):
     quality_gates: QualityGates = Field(default_factory=QualityGates)
     security_report: SecurityReport = Field(default_factory=SecurityReport)
     governance_events: list[GovernanceEvent] = Field(default_factory=list)
+    tool_trace: list[ToolTrace] = Field(default_factory=list)
     voice_used: bool = False
     voice_transcript: str | None = None
     final_output: str

@@ -421,11 +421,87 @@ export async function updateWorkspaceMemory(workspaceId, memoryId, payload) {
   return response.json()
 }
 
+export async function pinWorkspaceMemory(workspaceId, memoryId, pinned = true) {
+  const action = pinned ? 'pin' : 'unpin'
+  const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/memory/${memoryId}/${action}`, {
+    method: 'POST',
+  })
+  if (!response.ok) throw new Error(`Memory ${action} failed with status ${response.status}`)
+  return response.json()
+}
+
 export async function deleteWorkspaceMemory(workspaceId, memoryId) {
   const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/memory/${memoryId}`, {
     method: 'DELETE',
   })
   if (!response.ok) throw new Error(`Memory delete failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function getWorkspaceKnowledge(workspaceId) {
+  if (!workspaceId) return null
+  try {
+    const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/knowledge`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function searchWorkspaceKnowledge(workspaceId, params = {}) {
+  if (!workspaceId) return { results: [], related_links: [] }
+  try {
+    const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/knowledge/search${query(params)}`)
+    if (!response.ok) return { results: [], related_links: [] }
+    return response.json()
+  } catch {
+    return { results: [], related_links: [] }
+  }
+}
+
+export async function exportWorkspaceKnowledge(workspaceId, format = 'markdown') {
+  const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/knowledge/export${query({ format })}`)
+  if (!response.ok) throw new Error(`Knowledge export failed with status ${response.status}`)
+  if (format === 'json') return response.json()
+  return response.text()
+}
+
+export async function createKnowledgeLink(workspaceId, payload) {
+  const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/knowledge/links`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Knowledge link creation failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function deleteKnowledgeLink(workspaceId, linkId) {
+  const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/knowledge/links/${linkId}`, {
+    method: 'DELETE',
+  })
+  if (!response.ok) throw new Error(`Knowledge link delete failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function getAssistantCommands() {
+  try {
+    const response = await fetch(`${API_BASE}/api/assistant/commands`)
+    if (!response.ok) return []
+    return response.json()
+  } catch {
+    return []
+  }
+}
+
+export async function runAssistantCommand(commandName, payload) {
+  const response = await fetch(`${API_BASE}/api/assistant/commands/${commandName}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Assistant command failed with status ${response.status}`)
   return response.json()
 }
 
@@ -523,13 +599,199 @@ export async function runCodexForLinearIssue(issueId) {
 }
 
 export async function getCodexJobs() {
-  const response = await fetch(`${API_BASE}/api/codex/jobs`)
-  if (!response.ok) throw new Error(`Codex jobs failed with status ${response.status}`)
-  return response.json()
+  try {
+    const response = await fetch(`${API_BASE}/api/codex/jobs`)
+    if (!response.ok) return { available: false, items: [] }
+    const data = await response.json()
+    const items = Array.isArray(data) ? data : data.jobs || data.items || []
+    return { available: true, items }
+  } catch {
+    return { available: false, items: [] }
+  }
 }
 
 export async function getCodexJob(jobId) {
   const response = await fetch(`${API_BASE}/api/codex/jobs/${jobId}`)
   if (!response.ok) throw new Error(`Codex job failed with status ${response.status}`)
   return response.json()
+}
+
+export async function getApprovals(workspaceId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/approvals${query({ workspace_id: workspaceId })}`)
+    if (!response.ok) return { available: false, items: [] }
+    const data = await response.json()
+    const items = Array.isArray(data) ? data : data.approvals || data.items || []
+    return { available: true, items }
+  } catch {
+    return { available: false, items: [] }
+  }
+}
+
+export async function getApproval(approvalId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/approvals/${approvalId}`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function submitApprovalDecision(approvalId, payload) {
+  const response = await fetch(`${API_BASE}/api/approvals/${approvalId}/decision`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Approval decision failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function getApprovalAudit(workspaceId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/approvals/audit${query({ workspace_id: workspaceId })}`)
+    if (!response.ok) return { available: false, items: [] }
+    const data = await response.json()
+    const items = Array.isArray(data) ? data : data.audit || data.items || []
+    return { available: true, items }
+  } catch {
+    return { available: false, items: [] }
+  }
+}
+
+export async function getAgentJobs(workspaceId, status) {
+  try {
+    const response = await fetch(`${API_BASE}/api/agent-jobs${query({ workspace_id: workspaceId, status })}`)
+    if (!response.ok) return { available: false, items: [] }
+    const data = await response.json()
+    const items = Array.isArray(data) ? data : data.jobs || data.items || []
+    return { available: true, items }
+  } catch {
+    return { available: false, items: [] }
+  }
+}
+
+export async function getAgentJob(jobId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/agent-jobs/${jobId}`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function getAgentJobHealth() {
+  try {
+    const response = await fetch(`${API_BASE}/api/agent-jobs/health`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function createAgentJob(payload) {
+  const response = await fetch(`${API_BASE}/api/agent-jobs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Create agent job failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function startNextAgentJob() {
+  const response = await fetch(`${API_BASE}/api/agent-jobs/start-next`, { method: 'POST' })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Start next job failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function pauseAgentJob(jobId, reason) {
+  const response = await fetch(`${API_BASE}/api/agent-jobs/${jobId}/pause`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Pause job failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function resumeAgentJob(jobId, reason) {
+  const response = await fetch(`${API_BASE}/api/agent-jobs/${jobId}/resume`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Resume job failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function cancelAgentJob(jobId, reason) {
+  const response = await fetch(`${API_BASE}/api/agent-jobs/${jobId}/cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Cancel job failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function heartbeatAgentJob(jobId) {
+  const response = await fetch(`${API_BASE}/api/agent-jobs/${jobId}/heartbeat`, { method: 'POST' })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Heartbeat failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function getSystemPrompts() {
+  try {
+    const response = await fetch(`${API_BASE}/api/system-prompts`)
+    if (!response.ok) return { available: false, items: [] }
+    const data = await response.json()
+    const items = Array.isArray(data) ? data : data.prompts || data.items || []
+    return { available: true, items }
+  } catch {
+    return { available: false, items: [] }
+  }
+}
+
+export async function getSystemPrompt(agentName) {
+  const response = await fetch(`${API_BASE}/api/system-prompts/${encodeURIComponent(agentName)}`)
+  if (!response.ok) throw new Error(`System prompt failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function upsertSystemPrompt(payload) {
+  const response = await fetch(`${API_BASE}/api/system-prompts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Update system prompt failed with status ${response.status}`)
+  }
+  return body
 }

@@ -47,6 +47,11 @@ class AutomationApplyRequest(BaseModel):
     patches: list[FilePatchRequest] = Field(default_factory=list, max_length=5)
 
 
+class ApprovalDecisionRequest(BaseModel):
+    decision: str = Field(..., pattern="^(approve|reject)$")
+    comment: str | None = Field(default=None, max_length=1000)
+
+
 class PromptProposalRequest(BaseModel):
     agent_name: str = Field(..., min_length=1, max_length=80)
     reason: str = Field(..., min_length=1, max_length=1000)
@@ -157,6 +162,15 @@ class UpdateWorkspaceMemoryRequest(BaseModel):
     source: str | None = Field(default=None, pattern="^(chat|file|recording|goal|feedback|manual)$")
     importance: str | None = Field(default=None, pattern="^(low|medium|high)$")
     tags: list[str] | None = None
+    pinned: bool | None = None
+
+
+class CreateKnowledgeLinkRequest(BaseModel):
+    source_type: str = Field(..., pattern="^(memory|chat|file|recording|goal|custom_agent)$")
+    source_id: str = Field(..., min_length=1, max_length=160)
+    target_type: str = Field(..., pattern="^(memory|chat|file|recording|goal|custom_agent)$")
+    target_id: str = Field(..., min_length=1, max_length=160)
+    reason: str | None = Field(default=None, max_length=500)
 
 
 class LinearCommentRequest(BaseModel):
@@ -166,3 +180,47 @@ class LinearCommentRequest(BaseModel):
 class LinearCursorVerifyRequest(BaseModel):
     completion_note: str | None = Field(default=None, max_length=2000)
     auto_commit: bool = Field(default=False, description="Stage and commit safe files after verification passes.")
+
+
+class GitBranchRequest(BaseModel):
+    branch_name: str = Field(..., min_length=1, max_length=160)
+
+
+class GitCommitRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=200)
+
+
+class GitPushRequest(BaseModel):
+    remote: str | None = Field(default=None, max_length=80)
+    branch: str | None = Field(default=None, max_length=160)
+
+
+class AssistantCommandRequest(BaseModel):
+    input_text: str = Field(default="", max_length=2000)
+    workspace_id: str | None = None
+
+
+class RegisterToolRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    description: str = Field(default="", max_length=1000)
+    input_schema: dict = Field(default_factory=dict)
+    permission_level: str = Field(default="read_only", pattern="^(read_only|plan_only|approve_to_edit|approve_to_run|blocked)$")
+    enabled: bool = True
+    source: str = Field(default="built_in", pattern="^(built_in|plugin|assistant_command)$")
+
+
+class CreateAgentJobRequest(BaseModel):
+    job_type: str = Field(default="workflow", pattern="^(workflow|tool|maintenance|health_check)$")
+    title: str = Field(..., min_length=1, max_length=160)
+    payload: dict = Field(default_factory=dict)
+    workspace_id: str | None = None
+
+
+class AgentJobActionRequest(BaseModel):
+    reason: str | None = Field(default=None, max_length=1000)
+
+
+class UpdateSystemPromptRequest(BaseModel):
+    agent_name: str = Field(..., min_length=1, max_length=120)
+    prompt: str = Field(..., min_length=1, max_length=8000)
+    reason: str | None = Field(default=None, max_length=1000)

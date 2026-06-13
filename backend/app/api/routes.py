@@ -3,12 +3,18 @@ from collections import Counter
 from uuid import uuid4
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
+from fastapi.responses import PlainTextResponse
 
 from app.agents.learning_agent import LearningAgent
 from app.agents.master_agent import MasterOrchestratorAgent
 from app.agents.memory_agent import MemoryAgent
 from app.models.request_models import (
+    AgentJobActionRequest,
+    ApprovalDecisionRequest,
     AutomationApplyRequest,
+    AssistantCommandRequest,
+    CreateAgentJobRequest,
+    CreateKnowledgeLinkRequest,
     CreateChatRequest,
     CreateCustomAgentRequest,
     CreateGoalRequest,
@@ -16,6 +22,9 @@ from app.models.request_models import (
     CreateWorkspaceMemoryRequest,
     CreateWorkspaceRequest,
     FeedbackRequest,
+    GitBranchRequest,
+    GitCommitRequest,
+    GitPushRequest,
     PromptDecisionRequest,
     PromptProposalRequest,
     RenameChatRequest,
@@ -27,6 +36,8 @@ from app.models.request_models import (
     UpdateWorkspaceRequest,
     LinearCommentRequest,
     LinearCursorVerifyRequest,
+    RegisterToolRequest,
+    UpdateSystemPromptRequest,
 )
 from app.models.response_models import AutomationApplyResult, GovernanceEvent, ProviderStatus, RunResponse
 from app.services.governance_service import GovernanceService
@@ -41,6 +52,14 @@ from app.services.safe_command_runner import SafeCommandRunner
 from app.services.safe_file_editor import SafeFileEditor
 from app.services.storage_service import StorageService
 from app.services.workspace_service import WorkspaceService
+from app.services.knowledge_service import KnowledgeService
+from app.services.assistant_command_service import AssistantCommandService
+from app.services.approval_service import ApprovalService
+from app.services.agent_scheduler_service import AgentSchedulerService
+from app.services.kernel_service import KernelService
+from app.services.plugin_loader_service import PluginLoaderService
+from app.services.system_prompt_registry_service import SystemPromptRegistryService
+from app.services.tool_registry_service import ToolRegistryService
 from app.services.user_preference_service import UserPreferenceService
 from app.services.workflow_strategy_service import WorkflowStrategyService
 from app.services.linear_service import LinearService, LinearServiceError
@@ -62,13 +81,22 @@ safe_file_editor = SafeFileEditor()
 safe_command_runner = SafeCommandRunner()
 permission_service = PermissionService()
 governance_service = GovernanceService(storage)
+approval_service = ApprovalService(storage, governance_service)
 prompt_versions = PromptVersionService(storage)
+system_prompt_registry = SystemPromptRegistryService(storage, prompt_versions)
 learning_agent = LearningAgent(storage)
 workflow_strategy = WorkflowStrategyService(storage)
 user_preferences = UserPreferenceService(storage)
 goal_service = GoalService(storage)
 custom_agent_service = CustomAgentService(storage)
 workspace_service = WorkspaceService(storage)
+knowledge_service = KnowledgeService(storage, workspace_service)
+assistant_commands = AssistantCommandService(workspace_service, knowledge_service)
+tool_registry = ToolRegistryService(storage, permission_service)
+plugin_loader = PluginLoaderService(storage, tool_registry, governance_service)
+plugin_loader.load_plugins()
+agent_scheduler = AgentSchedulerService(storage, governance_service, workspace_service)
+kernel_service = KernelService(master_agent, agent_scheduler)
 linear_service = LinearService(SecretScanner())
 linear_link_service = LinearLinkService(storage)
 git_service = GitService()
@@ -97,6 +125,38 @@ def filter_by_workspace(items: list[dict], workspace_id: str | None = None) -> l
     if not workspace_id:
         return items
     return [item for item in items if item.get("workspace_id") == workspace_id]
+
+
+@router.get("/git/status")
+def get_git_status() -> dict:
+    status = git_service.git_status()
+    return {
+        **status,
+        "branch": git_service.current_branch(),
+        "changed_files": git_service.list_changed_files(),
+        "diff_summary": git_service.diff_summary(),
+    }
+
+
+@router.post("/git/branch")
+def create_or_checkout_git_branch(request: GitBranchRequest) -> dict:
+    return git_service.create_branch(request.branch_name)
+
+
+@router.post("/git/stage-safe")
+def stage_safe_git_files() -> dict:
+    return git_service.add_safe_files()
+
+
+@router.post("/git/commit")
+def commit_git_changes(request: GitCommitRequest) -> dict:
+    return git_service.commit(request.message)
+
+
+@router.post("/git/push")
+def push_git_branch(request: GitPushRequest | None = None) -> dict:
+    payload = request or GitPushRequest()
+    return git_service.push(remote=payload.remote, branch=payload.branch)
 
 
 @router.post("/workspaces")
@@ -170,9 +230,202 @@ def delete_workspace_memory(workspace_id: str, memory_id: str) -> dict[str, bool
     return {"deleted": True}
 
 
+@router.post("/workspaces/{workspace_id}/memory/{memory_id}/pin")
+def pin_workspace_memory(workspace_id: str, memory_id: str) -> dict:
+    memory = workspace_service.update_memory(workspace_id, memory_id, {"pinned": True})
+    if memory is None:
+        raise HTTPException(status_code=404, detail="Workspace memory not found")
+    return memory
+
+
+@router.post("/workspaces/{workspace_id}/memory/{memory_id}/unpin")
+def unpin_workspace_memory(workspace_id: str, memory_id: str) -> dict:
+    memory = workspace_service.update_memory(workspace_id, memory_id, {"pinned": False})
+    if memory is None:
+        raise HTTPException(status_code=404, detail="Workspace memory not found")
+    return memory
+
+
+@router.get("/workspaces/{workspace_id}/knowledge")
+def get_workspace_knowledge(workspace_id: str) -> dict:
+    return knowledge_service.summary(workspace_id)
+
+
+@router.get("/workspaces/{workspace_id}/knowledge/search")
+def search_workspace_knowledge(
+    workspace_id: str,
+    q: str = Query(default=""),
+    source_type: str | None = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=100),
+) -> dict:
+    return knowledge_service.search(workspace_id, query=q, source_type=source_type, limit=limit)
+
+
+@router.get("/workspaces/{workspace_id}/knowledge/export", response_model=None)
+def export_workspace_knowledge(
+    workspace_id: str,
+    format: str = Query(default="markdown", pattern="^(markdown|json)$"),
+):
+    if format == "json":
+        return knowledge_service.export_json(workspace_id)
+    return PlainTextResponse(
+        knowledge_service.export_markdown(workspace_id),
+        media_type="text/markdown",
+    )
+
+
+@router.post("/workspaces/{workspace_id}/knowledge/links")
+def create_knowledge_link(workspace_id: str, request: CreateKnowledgeLinkRequest) -> dict:
+    try:
+        return knowledge_service.create_link(workspace_id, request.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/workspaces/{workspace_id}/knowledge/links")
+def list_knowledge_links(
+    workspace_id: str,
+    record_type: str | None = Query(default=None),
+    record_id: str | None = Query(default=None),
+) -> list[dict]:
+    return knowledge_service.list_links(workspace_id, record_type=record_type, record_id=record_id)
+
+
+@router.delete("/workspaces/{workspace_id}/knowledge/links/{link_id}")
+def delete_knowledge_link(workspace_id: str, link_id: str) -> dict[str, bool]:
+    if not knowledge_service.delete_link(workspace_id, link_id):
+        raise HTTPException(status_code=404, detail="Knowledge link not found")
+    return {"deleted": True}
+
+
+@router.get("/assistant/commands")
+def list_assistant_commands() -> list[dict]:
+    return assistant_commands.list_commands()
+
+
+@router.post("/assistant/commands/{command_name}")
+def run_assistant_command(command_name: str, request: AssistantCommandRequest) -> dict:
+    return assistant_commands.run(
+        command_name,
+        input_text=request.input_text,
+        workspace_id=request.workspace_id,
+    )
+
+
+@router.get("/tools")
+def list_tools(include_disabled: bool = Query(default=False)) -> list[dict]:
+    plugin_loader.load_plugins()
+    return tool_registry.list_tools(include_disabled=include_disabled)
+
+
+@router.post("/tools/register")
+def register_tool(request: RegisterToolRequest) -> dict:
+    try:
+        return tool_registry.register_tool(request.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/tools/{name}")
+def get_tool(name: str) -> dict:
+    tool = tool_registry.get_tool(name)
+    if tool is None:
+        raise HTTPException(status_code=404, detail="Tool not found")
+    return tool
+
+
+@router.get("/plugins")
+def list_plugins() -> list[dict]:
+    return plugin_loader.load_plugins()
+
+
 @router.post("/run", response_model=RunResponse)
 def run_workflow(request: RunRequest) -> RunResponse:
-    return master_agent.run(request)
+    return kernel_service.run_workflow(request)
+
+
+@router.post("/agent-jobs")
+def create_agent_job(request: CreateAgentJobRequest) -> dict:
+    return agent_scheduler.create_job(request.model_dump())
+
+
+@router.get("/agent-jobs")
+def list_agent_jobs(
+    status: str | None = Query(default=None),
+    workspace_id: str | None = Query(default=None),
+) -> list[dict]:
+    return agent_scheduler.list_jobs(status=status, workspace_id=workspace_id)
+
+
+@router.get("/agent-jobs/health")
+def agent_jobs_health() -> dict:
+    return agent_scheduler.health()
+
+
+@router.post("/agent-jobs/start-next")
+def start_next_agent_job() -> dict:
+    job = agent_scheduler.start_next()
+    if job is None:
+        return {"started": False, "reason": "No queued job is available or concurrency limit is reached."}
+    return {"started": True, "job": job}
+
+
+@router.get("/agent-jobs/{job_id}")
+def get_agent_job(job_id: str) -> dict:
+    job = agent_scheduler.get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Agent job not found")
+    return job
+
+
+@router.post("/agent-jobs/{job_id}/pause")
+def pause_agent_job(job_id: str, request: AgentJobActionRequest) -> dict:
+    try:
+        return agent_scheduler.pause(job_id, request.reason)
+    except ValueError as error:
+        raise HTTPException(status_code=404 if "not found" in str(error).lower() else 400, detail=str(error)) from error
+
+
+@router.post("/agent-jobs/{job_id}/resume")
+def resume_agent_job(job_id: str, request: AgentJobActionRequest) -> dict:
+    try:
+        return agent_scheduler.resume(job_id, request.reason)
+    except ValueError as error:
+        raise HTTPException(status_code=404 if "not found" in str(error).lower() else 400, detail=str(error)) from error
+
+
+@router.post("/agent-jobs/{job_id}/cancel")
+def cancel_agent_job(job_id: str, request: AgentJobActionRequest) -> dict:
+    try:
+        return agent_scheduler.cancel(job_id, request.reason)
+    except ValueError as error:
+        raise HTTPException(status_code=404 if "not found" in str(error).lower() else 400, detail=str(error)) from error
+
+
+@router.post("/agent-jobs/{job_id}/heartbeat")
+def heartbeat_agent_job(job_id: str) -> dict:
+    try:
+        return agent_scheduler.heartbeat(job_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404 if "not found" in str(error).lower() else 400, detail=str(error)) from error
+
+
+@router.get("/system-prompts")
+def list_system_prompts() -> list[dict]:
+    return system_prompt_registry.list_prompts()
+
+
+@router.get("/system-prompts/{agent_name}")
+def get_system_prompt(agent_name: str) -> dict:
+    prompt = system_prompt_registry.get_prompt(agent_name)
+    if not prompt:
+        raise HTTPException(status_code=404, detail="System prompt not found")
+    return {"agent_name": agent_name, "prompt": prompt}
+
+
+@router.post("/system-prompts")
+def upsert_system_prompt(request: UpdateSystemPromptRequest) -> dict:
+    return system_prompt_registry.upsert_prompt(request.agent_name, request.prompt, request.reason)
 
 
 @router.post("/files/upload")
@@ -250,7 +503,22 @@ def apply_automation(request: AutomationApplyRequest) -> AutomationApplyResult:
     if run is None:
         raise HTTPException(status_code=404, detail="Automation run not found")
 
+    approval = approval_service.find_pending_for_run(request.run_id, "automation_apply")
+    if approval is None:
+        approval = approval_service.create_chain(
+            run_id=request.run_id,
+            session_id=run.get("session_id"),
+            workspace_id=run.get("workspace_id"),
+            task_type="app_automation",
+            action_type="automation_apply",
+            summary="Approve automation apply for safe file validation and allowlisted commands.",
+            risk_level=(run.get("automation_plan") or {}).get("risk_level", "medium"),
+            metadata={"source": "automation_apply_endpoint"},
+        )
+
     if not request.approved:
+        approval_service.decide(approval["approval_id"], "reject", "User rejected automation apply.")
+        approval_service.mark_rolled_back(approval["approval_id"], "Rejected before any file validation or command execution.")
         run["status"] = "rejected"
         run["updated_at"] = datetime.now(UTC).isoformat()
         storage.write_list("automation_runs.json", runs)
@@ -280,6 +548,11 @@ def apply_automation(request: AutomationApplyRequest) -> AutomationApplyResult:
         )
         storage.append("automation_logs.json", {"run_id": request.run_id, "approved": False, "result": result.model_dump()})
         return result
+
+    if approval.get("status") == "pending":
+        approval = approval_service.decide(approval["approval_id"], "approve", "User approved automation apply.")
+    if approval.get("status") != "approved":
+        raise HTTPException(status_code=409, detail="Automation approval is not approved.")
 
     plan = run.get("automation_plan", {})
     from app.models.response_models import AutomationPlan
@@ -377,6 +650,43 @@ def apply_automation(request: AutomationApplyRequest) -> AutomationApplyResult:
     storage.write_list("automation_runs.json", runs)
     storage.append("automation_logs.json", {"run_id": request.run_id, "approved": True, "result": result.model_dump()})
     return result
+
+
+@router.get("/approvals")
+def list_approvals(
+    status: str | None = Query(default=None),
+    workspace_id: str | None = Query(default=None),
+) -> list[dict]:
+    return approval_service.list_chains(status=status, workspace_id=workspace_id)
+
+
+@router.get("/approvals/audit")
+def list_approval_audit(
+    workspace_id: str | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=250),
+) -> list[dict]:
+    return approval_service.audit(limit=limit, workspace_id=workspace_id)
+
+
+@router.get("/approvals/{approval_id}")
+def get_approval(approval_id: str) -> dict:
+    approval = approval_service.get_chain(approval_id)
+    if approval is None:
+        raise HTTPException(status_code=404, detail="Approval not found")
+    return approval
+
+
+@router.post("/approvals/{approval_id}/decision")
+def decide_approval(approval_id: str, request: ApprovalDecisionRequest) -> dict:
+    try:
+        approval = approval_service.decide(approval_id, request.decision, request.comment)
+    except ValueError as exc:
+        message = str(exc)
+        raise HTTPException(status_code=404 if "not found" in message.lower() else 400, detail=message) from exc
+    if request.decision == "reject":
+        approval_service.mark_rolled_back(approval_id, request.comment or "Rejected by user; no action was applied.")
+        approval = approval_service.get_chain(approval_id) or approval
+    return approval
 
 
 @router.get("/learning/report")

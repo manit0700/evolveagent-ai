@@ -40,6 +40,10 @@ from app.services.permission_service import PermissionService
 from app.services.recording_service import RecordingService
 from app.services.secret_scanner import SecretScanner
 from app.services.storage_service import StorageService
+from app.services.assistant_command_service import AssistantCommandService
+from app.services.knowledge_service import KnowledgeService
+from app.services.tool_registry_service import ToolRegistryService
+from app.services.tool_router_service import ToolRouterService
 from app.services.workspace_service import WorkspaceService
 from app.services.workflow_strategy_service import WorkflowStrategyService
 
@@ -65,6 +69,15 @@ class MasterOrchestratorAgent:
         self.secret_scanner = SecretScanner()
         self.permission_service = PermissionService()
         self.governance = GovernanceService(storage)
+        self.knowledge_service = KnowledgeService(storage, self.workspace)
+        self.assistant_commands = AssistantCommandService(self.workspace, self.knowledge_service)
+        self.tool_registry = ToolRegistryService(storage, self.permission_service)
+        self.tool_router = ToolRouterService(
+            self.tool_registry,
+            self.assistant_commands,
+            self.permission_service,
+            self.secret_scanner,
+        )
         self.specialists = [ResearchAgent(), LogicAgent(), RiskAgent(), StrategyAgent()]
         self.writer = WritingAgent()
         self.judge = JudgeAgent()
@@ -243,6 +256,26 @@ class MasterOrchestratorAgent:
             shared_context += f"\n\nRelevant workspace memory:\n{workspace_memory_context}"
         if conversation_context:
             shared_context += f"\n\nRecent conversation context:\n{conversation_context}"
+        tool_trace = self.tool_router.route_and_run(request.user_input, workspace_id=workspace_id)
+        if tool_trace:
+            executed_tools = [item for item in tool_trace if item.get("executed")]
+            blocked_tools = [item for item in tool_trace if item.get("blocked")]
+            workflow_trace.append(
+                WorkflowStep(
+                    step=len(workflow_trace) + 1,
+                    stage="Tool routing",
+                    agent_name="Tool Router Agent",
+                    status="complete" if not blocked_tools else "warning",
+                    summary=f"Selected {len(tool_trace)} tool(s); executed {len(executed_tools)} read-only tool(s).",
+                )
+            )
+            tool_context = "\n".join(
+                f"{item['tool_name']} ({item['permission_level']}): {item.get('result_summary', '')}"
+                for item in executed_tools
+                if item.get("result_summary")
+            )
+            if tool_context:
+                shared_context += f"\n\nRead-only tool results:\n{tool_context}"
         if recording_context_used:
             recording_agent_output, recording_summary = self.recording_analysis.run(
                 recordings_used, recording_context, request.user_input
@@ -478,6 +511,7 @@ class MasterOrchestratorAgent:
             quality_gates=quality_gates,
             security_report=security_report,
             governance_events=governance_events,
+            tool_trace=tool_trace,
             voice_used=request.voice_used,
             voice_transcript=request.voice_transcript,
             final_output=final_output,

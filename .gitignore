@@ -21,6 +21,8 @@ backend/app/data/feedback.json
 backend/app/data/agent_analytics.json
 backend/app/data/automation_runs.json
 backend/app/data/automation_logs.json
+backend/app/data/approval_chains.json
+backend/app/data/approval_audit.json
 backend/app/data/learning_memory.json
 backend/app/data/model_performance.json
 backend/app/data/workflow_strategies.json
@@ -32,7 +34,12 @@ backend/app/data/task_graphs.json
 backend/app/data/custom_agents.json
 backend/app/data/workspaces.json
 backend/app/data/workspace_memory.json
+backend/app/data/knowledge_links.json
+backend/app/data/tool_registry.json
+backend/app/data/plugin_manifests.json
 backend/app/data/linear_links.json
 backend/app/data/codex_jobs.json
+backend/app/data/agent_jobs.json
+backend/app/data/system_prompt_registry.json
 *.log
 logs/
