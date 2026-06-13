@@ -1,14 +1,24 @@
-# EvolveAgent AI v3.0 Checkpoint — Project Summary
+# EvolveAgent AI v3.5 Checkpoint — Project Summary
 
 ## Short Summary
 
-EvolveAgent AI is a workspace-aware, voice-capable multi-agent AI operating workspace. It combines a ChatGPT-style interface with Master Agent routing, specialist agents, real OpenAI mode with mock fallback, file and recording analysis, mock image previews, Mission Control goals, custom agents, Project Brain search, safe tool routing, approval workflows, analytics, adaptive learning, and Developer Mode transparency.
+EvolveAgent AI is a workspace-aware, voice-capable multi-agent AI operating workspace. It combines a polished Jarvis-style interface with Master Agent routing, specialist agents, real OpenAI mode with mock fallback, file and recording analysis, mock image previews, Mission Control goals, custom agents, Project Brain search, safe tool routing, approval workflows, analytics, adaptive learning, and Developer Mode transparency.
 
 ## Full Technical Summary
 
 The project uses a FastAPI backend and Vite React frontend. The backend receives user requests, resolves workspace context, loads relevant memory, classifies the task, routes work through the correct agent workflow, evaluates the result, logs governance and analytics metadata, stores memory, and returns a structured response. The frontend has Simple Mode for normal use and Developer Mode for technical inspection.
 
-The v3.0 checkpoint adds the first Agent OS foundation on top of the existing v2.x system:
+The v3.5 checkpoint adds professional UI/UX polish on top of the v3.0 Agent OS foundation:
+
+- Jarvis-style Simple Mode command center
+- Responsive Developer Mode sidebar
+- Light/dark theme toggle with CSS design tokens
+- Theme-consistent panels, composer, markdown/code blocks, cards, and controls
+- First-run onboarding walkthrough
+- Improved ARIA labels and focus states
+- Reduced-motion handling
+
+The v3.0 checkpoint added the first Agent OS foundation on top of the existing v2.x system:
 
 - Project Brain / Knowledge Base search and export
 - Cross-session knowledge links
@@ -22,7 +32,7 @@ The v3.0 checkpoint adds the first Agent OS foundation on top of the existing v2
 - Agent Jobs scheduler and lifecycle controls
 - System Prompt Registry
 - Kernel Service wrapper around request orchestration
-- Jarvis-style Simple Mode polish
+- Jarvis-style Simple Mode foundation
 
 ## Key Features
 
@@ -52,6 +62,7 @@ The v3.0 checkpoint adds the first Agent OS foundation on top of the existing v2
 - Agent Jobs scheduler
 - System Prompt Registry
 - Kernel Service wrapper
+- Professional v3.5 UI polish with Jarvis-style command center, theme tokens, onboarding, accessibility improvements, and responsive layout
 
 ## What Problem It Solves
 
@@ -103,7 +114,7 @@ Correct learning description:
 
 ## Future Roadmap
 
-- v3.5 UI/UX professional polish
+- Manual UI QA for v3.5 across Simple Mode, Developer Mode, light/dark theme, onboarding, and responsive layout
 - Better responsive layout and accessibility
 - Light/dark theme tokens
 - Onboarding walkthrough
@@ -128,4 +139,4 @@ Correct learning description:
 
 ## Interview Explanation
 
-EvolveAgent AI is a full-stack AI operating workspace I built to explore safe multi-agent orchestration. The system uses a Master Orchestrator Agent to classify requests, retrieve workspace memory, select tools or specialist agents, evaluate output quality, and store feedback and analytics. It supports text, files, recordings, image prompts, voice input, goal planning, custom agents, and approval-gated automation. Developer Mode exposes the workflow trace, provider metadata, consensus candidates, tool trace, approvals, agent jobs, system prompts, and raw JSON. The v3.0 checkpoint adds the Agent OS foundation while keeping risky actions behind human approval and governance controls.
+EvolveAgent AI is a full-stack AI operating workspace I built to explore safe multi-agent orchestration. The system uses a Master Orchestrator Agent to classify requests, retrieve workspace memory, select tools or specialist agents, evaluate output quality, and store feedback and analytics. It supports text, files, recordings, image prompts, voice input, goal planning, custom agents, and approval-gated automation. Developer Mode exposes the workflow trace, provider metadata, consensus candidates, tool trace, approvals, agent jobs, system prompts, and raw JSON. The v3.5 checkpoint adds professional UI polish over the Agent OS foundation while keeping risky actions behind human approval and governance controls.

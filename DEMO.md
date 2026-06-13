@@ -1,12 +1,12 @@
 # EvolveAgent AI Demo Guide
 
-Use this guide for a short portfolio, class, or interview demo of **EvolveAgent AI v3.0 checkpoint**.
+Use this guide for a short portfolio, class, or interview demo of **EvolveAgent AI v3.5 checkpoint**.
 
 ## 2-Minute Demo Script
 
 **0:00-0:15 — Introduce the project**
 
-EvolveAgent AI is a workspace-aware multi-agent AI operating workspace. It combines chat, voice input, files, recordings, image prompts, Mission Control goals, custom agents, Project Brain search, tool routing, approvals, analytics, learning, and Developer Mode transparency.
+EvolveAgent AI is a workspace-aware multi-agent AI operating workspace with a polished Jarvis-style interface. It combines chat, voice input, files, recordings, image prompts, Mission Control goals, custom agents, Project Brain search, tool routing, approvals, analytics, learning, and Developer Mode transparency.
 
 **0:15-0:35 — Show Simple Mode**
 
@@ -16,7 +16,7 @@ Run:
 Explain how EvolveAgent AI works.
 ```
 
-Show the Jarvis-style Simple Mode: a clean voice/text-first interface, a normal assistant answer, and minimal controls.
+Show the Jarvis-style Simple Mode: a clean voice/text-first command center, a normal assistant answer, light/dark theme toggle, and minimal controls.
 
 **0:35-0:55 — Show Developer Mode**
 
@@ -75,7 +75,7 @@ Open Developer Mode and show:
 - System Prompt Registry panel
 - Analytics / Learning panel
 
-Explain that v3.0 adds the first Agent OS foundation: persisted jobs, lifecycle controls, prompt registry, and a kernel wrapper around orchestration.
+Explain that v3.5 adds the polished UI layer over the Agent OS foundation: responsive Developer Mode, onboarding, theme tokens, accessibility improvements, and cleaner panels.
 
 ## Best Demo Prompt Order
 
@@ -90,7 +90,8 @@ Explain that v3.0 adds the first Agent OS foundation: persisted jobs, lifecycle 
 9. Open Mission Control and run one task.
 10. Create a custom `Resume Agent` from the template list.
 11. `Add dark mode to this app.`
-12. Open Developer Mode and show Approval Queue, Tool Trace, Agent Jobs, and System Prompt Registry.
+12. Toggle light/dark mode and resize the browser to show the responsive layout.
+13. Open Developer Mode and show Approval Queue, Tool Trace, Agent Jobs, and System Prompt Registry.
 
 ## How to Explain the Master Agent
 
@@ -136,13 +137,17 @@ Developer Mode is for demos and debugging. It shows workflow trace, provider met
 
 ## Final Interview-Style Explanation
 
-EvolveAgent AI is a full-stack multi-agent AI operating workspace built with FastAPI and React. It routes each request through a Master Orchestrator Agent, specialist agents, judge/evolution feedback, workspace memory, governed tools, and analytics. It supports real OpenAI mode with mock fallback, Deep Mode consensus, file and recording analysis, mock image prompts, voice input, Mission Control goals, custom agents, Project Brain search, approval-gated automation planning, adaptive learning, and Developer Mode transparency. The v3.0 checkpoint adds the Agent OS foundation with tool routing, approval chains, agent jobs, system prompt registry, and a kernel wrapper while preserving safe human approval for risky actions.
+EvolveAgent AI is a full-stack multi-agent AI operating workspace built with FastAPI and React. It routes each request through a Master Orchestrator Agent, specialist agents, judge/evolution feedback, workspace memory, governed tools, and analytics. It supports real OpenAI mode with mock fallback, Deep Mode consensus, file and recording analysis, mock image prompts, voice input, Mission Control goals, custom agents, Project Brain search, approval-gated automation planning, adaptive learning, and Developer Mode transparency. The v3.5 checkpoint adds a more professional Jarvis-style UI, responsive Developer Mode, theme tokens, onboarding, and accessibility polish over the v3.0 Agent OS foundation.
 
 ## Demo Checklist
 
 - Backend running at `http://127.0.0.1:8000`
 - Frontend running at `http://127.0.0.1:5173`
 - Simple Mode works
+- Jarvis-style command center works
+- Light/dark theme toggle works
+- Onboarding walkthrough appears or can be dismissed
+- Responsive sidebar works on narrow windows
 - Developer Mode works
 - Project Brain search/export works
 - Assistant Tools work

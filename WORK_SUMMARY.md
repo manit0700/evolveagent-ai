@@ -73,11 +73,27 @@ Verification:
 - Frontend build passed after `d806da8`.
 - Latest checkpoint verification: backend `98 passed`, frontend build passed.
 
-## UI Polish
+## v3.5 — UI/UX Professional Polish
+
+Epic: `EVO-163`
 
 | Commit | Summary |
 | --- | --- |
 | `6aba5df` | Polished Jarvis-style Simple Mode voice/text UI. |
+| `56b5431` | Added responsive Jarvis UI polish, theme toggle, onboarding, and accessibility prep. |
+| `86bae79` | Reconciled theme tokens across older panels, composer, markdown/code blocks, and controls. |
+
+Manual verification:
+
+- Simple Mode Jarvis UI checked.
+- Developer Mode checked.
+- Light/dark theme checked.
+- Onboarding checked.
+- Responsive layout checked.
+
+Verification:
+
+- Frontend build passed after `86bae79`.
 
 ## Current Notes
 

@@ -1,8 +1,8 @@
 # EvolveAgent AI
 
-**Current version:** v3.0 checkpoint — Agent OS Foundation
+**Current version:** v3.5 checkpoint — Professional UI/UX Polish
 
-**One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with project memory, Master Agent routing, Mission Control, Custom Agent Builder, Project Brain search, safe tool routing, approval workflows, agent job scheduling, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
+**One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with a polished Jarvis-style interface, project memory, Master Agent routing, Mission Control, Custom Agent Builder, Project Brain search, safe tool routing, approval workflows, agent job scheduling, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
 
 ## Project Overview
 
@@ -10,7 +10,9 @@ EvolveAgent AI is a full-stack AI workbench built to demonstrate advanced multi-
 
 The app supports normal text requests, uploaded document analysis, recording/audio transcript summaries, mock image-generation previews, browser voice command input, Mission Control goal planning, custom agents, approval-gated app automation planning, human feedback, and analytics. Simple Mode keeps the user experience clean. Developer Mode exposes the workflow trace, provider metadata, judge results, per-agent evaluation, automation plans, learning reports, recording transcript metadata, file context, goal/task metadata, custom agent metadata, and raw JSON for demos and technical review.
 
-The current v3.0 checkpoint keeps the workspace layer and adds the next operating-system pieces: a Project Brain knowledge base with cross-session links and memory ranking, Assistant Tools, a governed Tool Router and local plugin manifest loader, Approval Workflow 2.0, Agent Jobs, a System Prompt Registry, and a thin Kernel Service around request orchestration.
+The current v3.5 checkpoint keeps the Agent OS foundation and adds professional UI/UX polish: a Jarvis-style Simple Mode command center, responsive Developer Mode sidebar, light/dark theme tokens, onboarding walkthrough, improved accessibility labels, reduced-motion handling, and cleaner theme-consistent panels.
+
+The v3.0 foundation added the operating-system pieces underneath the UI: a Project Brain knowledge base with cross-session links and memory ranking, Assistant Tools, a governed Tool Router and local plugin manifest loader, Approval Workflow 2.0, Agent Jobs, a System Prompt Registry, and a thin Kernel Service around request orchestration.
 
 Workspace Memory lets users create separate workspaces for projects, switch between them in the sidebar, keep chats/files/recordings/goals/custom agents scoped to the active workspace, store project-specific memory, search/edit/delete memory entries, and filter analytics and learning reports by workspace. A default workspace is created automatically so existing data and old requests continue to work.
 
@@ -78,6 +80,11 @@ Workspace Memory lets users create separate workspaces for projects, switch betw
 - System Prompt Registry integrated with prompt versioning
 - Kernel Service wrapper for request intake, routing, scheduling, and governance integration
 - Jarvis-style Simple Mode start experience with voice/text-first controls
+- Responsive Developer Mode sidebar with mobile overlay behavior
+- Light/dark theme toggle backed by CSS design tokens
+- First-run onboarding walkthrough
+- Improved focus states, ARIA labels, and reduced-motion support
+- Theme-consistent panels, composer, markdown/code blocks, cards, and controls
 
 ## Tech Stack
 

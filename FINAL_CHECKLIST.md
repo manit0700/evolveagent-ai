@@ -1,4 +1,4 @@
-# EvolveAgent AI v3.0 Checkpoint — Final Checklist
+# EvolveAgent AI v3.5 Checkpoint — Final Checklist
 
 ## Verification Commands
 
@@ -33,7 +33,13 @@ npm run build
 ## Manual UI Checks
 
 - Simple Mode opens cleanly with the Jarvis-style voice/text start.
+- Jarvis-style command center shows voice and text options.
+- Light/dark theme toggle works and persists.
+- Theme styling remains readable in chat, panels, markdown, code blocks, cards, and composer.
+- Onboarding walkthrough appears on first run and can be dismissed.
+- Reduced-motion setting is respected by UI animations.
 - Developer Mode inspector opens and closes cleanly.
+- Developer Mode sidebar works on narrow/mobile-width windows.
 - Workspace switcher works.
 - Memory panel can add, search, filter, edit, delete, pin, and unpin memory.
 - Project Brain / Knowledge Base search works.
@@ -120,10 +126,10 @@ npm run build
 
 ## GitHub Cleanup Checklist
 
-- README reflects the v3.0 checkpoint.
-- DEMO.md reflects the v3.0 checkpoint.
-- FINAL_PROJECT_SUMMARY.md reflects the v3.0 checkpoint.
-- FINAL_CHECKLIST.md reflects the v3.0 checkpoint.
+- README reflects the v3.5 checkpoint.
+- DEMO.md reflects the v3.5 checkpoint.
+- FINAL_PROJECT_SUMMARY.md reflects the v3.5 checkpoint.
+- FINAL_CHECKLIST.md reflects the v3.5 checkpoint.
 - WORK_SUMMARY.md maps recent EVO issues to commits.
 - Backend tests pass.
 - Frontend build passes.
