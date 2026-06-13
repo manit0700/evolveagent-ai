@@ -2454,6 +2454,78 @@ function App() {
               </details>
             )}
 
+            {developerMode && selectedRun.automation_apply_result && (
+              <details className="inspector-section">
+                <summary>
+                  <Edit3 size={15} />
+                  File Apply Result
+                  <ChevronDown size={15} />
+                </summary>
+                <div className={`automation-result ${selectedRun.automation_apply_result.success ? 'success' : 'failed'}`}>
+                  <div className="mini-grid">
+                    <div>
+                      <span>Result</span>
+                      <strong>{selectedRun.automation_apply_result.success ? 'Success' : 'Failed'}</strong>
+                    </div>
+                  </div>
+                  {selectedRun.automation_apply_result.summary && (
+                    <p>{selectedRun.automation_apply_result.summary}</p>
+                  )}
+                </div>
+                <h3>Changed files</h3>
+                {(selectedRun.automation_apply_result.changed_files || []).length > 0 ? (
+                  <ul>{selectedRun.automation_apply_result.changed_files.map((file) => <li key={file}>{file}</li>)}</ul>
+                ) : (
+                  <p className="muted">None</p>
+                )}
+                <h3>Created files</h3>
+                {(selectedRun.automation_apply_result.created_files || []).length > 0 ? (
+                  <ul>{selectedRun.automation_apply_result.created_files.map((file) => <li key={file}>{file}</li>)}</ul>
+                ) : (
+                  <p className="muted">None</p>
+                )}
+                <h3>Backup paths</h3>
+                {(selectedRun.automation_apply_result.backup_paths || []).length > 0 ? (
+                  <ul>{selectedRun.automation_apply_result.backup_paths.map((path) => <li key={path}>{path}</li>)}</ul>
+                ) : (
+                  <p className="muted">None</p>
+                )}
+                <h3>Diff paths</h3>
+                {(selectedRun.automation_apply_result.diff_paths || []).length > 0 ? (
+                  <ul>{selectedRun.automation_apply_result.diff_paths.map((path) => <li key={path}>{path}</li>)}</ul>
+                ) : (
+                  <p className="muted">None</p>
+                )}
+                <h3>Errors</h3>
+                {(selectedRun.automation_apply_result.errors || []).length > 0 ? (
+                  <ul>{selectedRun.automation_apply_result.errors.map((error) => <li key={error}>{error}</li>)}</ul>
+                ) : (
+                  <p className="muted">None</p>
+                )}
+                {(selectedRun.automation_apply_result.command_results || []).length > 0 && (
+                  <>
+                    <h3>Command results</h3>
+                    <div className="agent-list">
+                      {selectedRun.automation_apply_result.command_results.map((commandResult, index) => (
+                        <div
+                          className={`command-result ${commandResult.success ? 'success' : 'failed'}`}
+                          key={`${commandResult.command || 'command'}-${index}`}
+                        >
+                          <strong>{commandResult.command || 'unknown command'}</strong>
+                          <div className="model-meta">
+                            <span>exit {commandResult.exit_code ?? 'n/a'}</span>
+                            <span>{commandResult.success ? 'passed' : 'failed'}</span>
+                          </div>
+                          {commandResult.stdout && <pre>{commandResult.stdout}</pre>}
+                          {commandResult.stderr && <pre>{commandResult.stderr}</pre>}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </details>
+            )}
+
             {learningReport && (
               <details className="inspector-section">
                 <summary>
