@@ -213,6 +213,8 @@ class AutomationApplyResult(BaseModel):
     created_files: list[str] = []
     command_results: list[CommandResult] = []
     errors: list[str] = []
+    backup_paths: list[str] = []
+    diff_paths: list[str] = []
     summary: str = ""
 
 

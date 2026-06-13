@@ -1,7 +1,9 @@
 from fastapi.testclient import TestClient
 
 from app.config import DATA_DIR
+from app.api import routes
 from app.main import app
+from app.services.safe_file_editor import SafeFileEditor
 from app.services.storage_service import StorageService
 
 client = TestClient(app)
@@ -252,6 +254,49 @@ def test_unsafe_file_edit_is_blocked_on_automation_apply():
     assert response.status_code == 200
     assert body["success"] is False
     assert "Blocked path" in body["errors"][0]
+
+
+def test_automation_apply_writes_approved_file_patch(tmp_path, monkeypatch):
+    target = tmp_path / "app.py"
+    target.write_text("print('old')\n", encoding="utf-8")
+    monkeypatch.setattr(routes, "safe_file_editor", SafeFileEditor(tmp_path, backup_dir=tmp_path / "backend/.logs/file_backups"))
+    storage.append(
+        "automation_runs.json",
+        {
+            "run_id": "patch-run-test",
+            "session_id": "patch-session",
+            "status": "pending_approval",
+            "automation_plan": {
+                "summary": "Safe patch",
+                "files_to_change": ["app.py"],
+                "files_to_create": [],
+                "commands_to_run": [],
+                "risk_level": "low",
+                "requires_approval": True,
+                "notes": [],
+                "project_scan": None,
+                "consensus_candidates": [],
+                "judge_reason": None,
+            },
+        },
+    )
+
+    response = client.post(
+        "/api/automation/apply",
+        json={
+            "run_id": "patch-run-test",
+            "approved": True,
+            "patches": [{"path": "app.py", "find": "old", "replace": "new"}],
+        },
+    )
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["success"] is True
+    assert body["changed_files"] == ["app.py"]
+    assert body["backup_paths"]
+    assert body["diff_paths"]
+    assert target.read_text(encoding="utf-8") == "print('new')\n"
 
 
 def test_learning_endpoints():
