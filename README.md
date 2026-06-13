@@ -1,8 +1,8 @@
 # EvolveAgent AI
 
-**Current version:** MVP v2.6 — Workspace Memory + Personal AI Context
+**Current version:** v3.0 checkpoint — Agent OS Foundation
 
-**One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with project memory, Master Agent routing, Mission Control goal/task graphs, Custom Agent Builder, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
+**One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with project memory, Master Agent routing, Mission Control, Custom Agent Builder, Project Brain search, safe tool routing, approval workflows, agent job scheduling, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
 
 ## Project Overview
 
@@ -10,9 +10,9 @@ EvolveAgent AI is a full-stack AI workbench built to demonstrate advanced multi-
 
 The app supports normal text requests, uploaded document analysis, recording/audio transcript summaries, mock image-generation previews, browser voice command input, Mission Control goal planning, custom agents, approval-gated app automation planning, human feedback, and analytics. Simple Mode keeps the user experience clean. Developer Mode exposes the workflow trace, provider metadata, judge results, per-agent evaluation, automation plans, learning reports, recording transcript metadata, file context, goal/task metadata, custom agent metadata, and raw JSON for demos and technical review.
 
-MVP v2.6 adds **Workspace Memory + Personal AI Context**. Users can create separate workspaces for projects, switch between them in the sidebar, keep chats/files/recordings/goals/custom agents scoped to the active workspace, store project-specific memory, search/edit/delete memory entries, and filter analytics and learning reports by workspace. A default workspace is created automatically so existing data and old requests continue to work.
+The current v3.0 checkpoint keeps the workspace layer and adds the next operating-system pieces: a Project Brain knowledge base with cross-session links and memory ranking, Assistant Tools, a governed Tool Router and local plugin manifest loader, Approval Workflow 2.0, Agent Jobs, a System Prompt Registry, and a thin Kernel Service around request orchestration.
 
-MVP v2.6 also retains **Mission Control**, a goal/task operating layer for large objectives, and the **Custom Agent Builder** for reusable specialist agents and templates that remain governed by the same permissions, prompt-injection checks, secret scanning, and analytics as built-in agents.
+Workspace Memory lets users create separate workspaces for projects, switch between them in the sidebar, keep chats/files/recordings/goals/custom agents scoped to the active workspace, store project-specific memory, search/edit/delete memory entries, and filter analytics and learning reports by workspace. A default workspace is created automatically so existing data and old requests continue to work.
 
 ## Feature List
 
@@ -65,6 +65,19 @@ MVP v2.6 also retains **Mission Control**, a goal/task operating layer for large
 - Workspace memory timeline with add, search, filter, edit, and delete controls
 - Memory retrieval before agent runs with capped context and Developer Mode visibility
 - Workspace-filtered analytics and learning reports
+- Project Brain / Knowledge Base search across memory, chats, files, recordings, goals, and custom agents
+- Cross-session knowledge links between related memories, chats, goals, files, and recordings
+- Memory importance ranking with pinning, recency, usage, and importance signals
+- Markdown and JSON knowledge export
+- Assistant Tools for calculator, random password generation, system info, temperature conversion, and knowledge search
+- Tool Registry and Tool Router for governed tool selection
+- Local plugin manifest loader with invalid-plugin isolation and governance logging
+- Developer Mode Tool Trace for selected tools, sanitized inputs, permission level, execution status, and result summary
+- Approval Workflow 2.0 with approval chains, queue endpoints, audit records, rejection/rollback records, and optional webhook notification
+- Agent Jobs scheduler with persisted jobs, lifecycle states, pause/resume/cancel/heartbeat controls, health monitoring, and governance logging
+- System Prompt Registry integrated with prompt versioning
+- Kernel Service wrapper for request intake, routing, scheduling, and governance integration
+- Jarvis-style Simple Mode start experience with voice/text-first controls
 
 ## Tech Stack
 
@@ -98,7 +111,8 @@ flowchart TD
     Workspace --> WorkspaceMemory[Retrieve Relevant Workspace Memory]
     WorkspaceMemory --> Session[Create or Load Chat Session]
     Session --> Master[Master Orchestrator Agent]
-    Master --> Detect[Task Type Detection]
+    Master --> Kernel[Kernel Service]
+    Kernel --> Detect[Task Type Detection]
 
     Detect -->|Text Task| TextFlow[Text Agent Workflow]
     Detect -->|Files Attached| FileFlow[File Upload and Document Analysis]
@@ -106,6 +120,7 @@ flowchart TD
     Detect -->|App Automation| AutoFlow[Approval-Gated Automation Workflow]
     Detect -->|Recording Summary| RecordingFlow[Recording Intelligence Workflow]
     Detect -->|Goal Planning| GoalFlow[Mission Control Goal Planner]
+    Detect -->|Tool Needed| ToolFlow[Tool Router and Plugin Registry]
 
     FileFlow --> Extract[Extract Text and Metadata]
     Extract --> FileAgent[File Analysis Agent]
@@ -143,12 +158,17 @@ flowchart TD
     GoalPlanner --> GoalStore[Goal and Task Graph Storage]
     GoalStore --> MissionUI[Mission Control UI]
     MissionUI --> TextFlow
+    ToolFlow --> ToolRegistry[Tool Registry]
+    ToolRegistry --> ToolTrace[Developer Tool Trace]
+    ToolTrace --> TextFlow
 
     Analytics --> Memory[Memory Agent and JSON Storage]
     Memory --> WorkspaceStore[Workspace Memory and Project Context]
     WorkspaceStore --> Learning[Adaptive Learning Engine]
     Memory --> Learning[Adaptive Learning Engine]
     Learning --> PromptVersions[Prompt Versions and Workflow Strategy]
+    Learning --> PromptRegistry[System Prompt Registry]
+    PromptRegistry --> AgentJobs[Agent Jobs Scheduler]
     Memory --> Response[Final API Response]
     Response --> UI
     UI --> Feedback[Human Feedback]
@@ -174,7 +194,7 @@ flowchart TD
 
 ## Workspace Memory Workflow
 
-MVP v2.6 adds a workspace layer so the app can separate projects such as EvolveAgent AI, resume work, school notes, pharmacy PA support, or business planning.
+The workspace layer lets the app separate projects such as EvolveAgent AI, resume work, school notes, pharmacy PA support, or business planning.
 
 Workspace behavior:
 
@@ -199,7 +219,7 @@ This is not model training. The system uses workspace memory as controlled conte
 
 ## Mission Control Workflow
 
-MVP v2.6 adds `goal_planning` for larger objectives such as:
+Mission Control adds `goal_planning` for larger objectives such as:
 
 - `Build an AI resume analyzer app`
 - `Create a full implementation plan for a SaaS app`
@@ -219,7 +239,7 @@ Goal Mode does not silently execute code changes. Any task that becomes app auto
 
 ## Custom Agent Builder
 
-MVP v2.6 adds reusable custom agents. Custom agents can be created manually or from templates such as:
+EvolveAgent AI includes reusable custom agents. Custom agents can be created manually or from templates such as:
 
 - Resume Agent
 - Code Review Agent
@@ -234,6 +254,60 @@ MVP v2.6 adds reusable custom agents. Custom agents can be created manually or f
 
 Custom agents are reusable workflow specialists that operate under the same permission, governance, and safety rules as built-in agents. They cannot bypass the prompt-injection firewall, secret scanner, permission system, safe command runner, or governance logging.
 
+## Project Brain and Knowledge Base
+
+The Project Brain layer searches across workspace memory, chats, files, recordings, goals, and custom agents. It supports:
+
+- workspace-scoped knowledge search
+- markdown and JSON export
+- cross-session knowledge links between related records
+- memory importance ranking based on manual pinning, importance, usage, and recency
+- Developer Mode visibility for linked items and memory retrieval metadata
+
+This is still JSON-backed and intentionally not a vector database.
+
+## Assistant Tools and Tool Router
+
+The Assistant Tools layer adds small safe utilities such as:
+
+- calculate
+- random password
+- system info
+- temperature conversion
+- knowledge search
+
+The Tool Registry stores tool metadata, permission level, enabled status, and input schema. The Tool Router lets the Master workflow select relevant tools while preserving governance controls. Developer Mode shows a Tool Trace with tool name, source, permission level, selected/executed/blocked status, sanitized input, and result summary. Simple Mode does not show tool internals.
+
+Local plugins can be registered through manifest files. Invalid plugins are skipped and logged instead of crashing the app.
+
+## Approval Workflow 2.0
+
+Risky actions create approval chains before execution. The approval system stores pending approvals, decisions, audit records, rollback/rejection metadata, and optional webhook notifications.
+
+Approval rules:
+
+- file edits require approval
+- command execution requires approval
+- execute-level tools require approval
+- rejection blocks the action and records an audit event
+- approval/rejection decisions are logged through governance
+
+The frontend has a Developer Mode approval queue and audit view. Simple Mode remains focused on the final user-facing answer or plan.
+
+## Agent OS Foundation
+
+The v3.0 checkpoint adds the first Agent OS backend layer:
+
+- Agent Jobs scheduler with persisted job records
+- lifecycle states: queued, running, paused, canceled, completed, failed
+- pause, resume, cancel, heartbeat, and start-next endpoints
+- job health and stale-job monitoring
+- System Prompt Registry for centralized agent prompts
+- Kernel Service wrapper around request intake and orchestration
+- Developer Mode panels for Agent Jobs and System Prompt Registry
+
+The Kernel Service is intentionally thin at this checkpoint. It preserves `/api/run` behavior while making the orchestration path easier to evolve.
+
 ## Text-Agent Workflow
 
 1. **Research Agent** identifies background context and important facts.
@@ -247,7 +321,7 @@ Custom agents are reusable workflow specialists that operate under the same perm
 
 ## Real Multi-LLM Consensus Workflow
 
-MVP v2.6 keeps optional Deep Mode consensus planning. Normal chat requests still use the existing OpenAI-first text workflow with mock fallback. When Deep Mode is enabled, the Master Agent asks the LLM Router for available consensus providers and compares independent candidates before final synthesis.
+Deep Mode keeps optional multi-LLM consensus planning. Normal chat requests still use the existing OpenAI-first text workflow with mock fallback. When Deep Mode is enabled, the Master Agent asks the LLM Router for available consensus providers and compares independent candidates before final synthesis.
 
 Provider behavior:
 
@@ -358,11 +432,11 @@ The Image Agent:
 5. Returns a user-facing mock preview and prompt.
 6. Saves image metadata for Developer Mode and analytics.
 
-Real image APIs are intentionally not included in MVP v2.6.
+Real image APIs are intentionally not included in this checkpoint.
 
 ## Voice Command Workflow
 
-MVP v2.6 includes a microphone button near the chat input.
+The app includes a microphone button near the chat input.
 
 1. User clicks the microphone.
 2. Browser Web Speech API listens for a short command.
@@ -376,11 +450,11 @@ If the browser does not support speech recognition, the UI shows:
 Voice input is not supported in this browser yet.
 ```
 
-No paid transcription API is required for v2.0 voice commands.
+No paid transcription API is required for browser voice commands.
 
 ## App Automation Workflow
 
-MVP v2.6 includes `app_automation` for requests such as:
+The app includes `app_automation` for requests such as:
 
 - add a page
 - create a component
@@ -412,7 +486,7 @@ Current conservative apply behavior:
 
 ## Safe Automation Rules
 
-The v2.0 automation layer blocks `.env` edits, `node_modules/`, `venv/`, `.git/`, uploads, local data memory files, path traversal, destructive deletion, package installation, arbitrary shell commands, `git push`, and secret exposure.
+The automation layer blocks `.env` edits, `node_modules/`, `venv/`, `.git/`, uploads, local data memory files, path traversal, destructive deletion, package installation, arbitrary shell commands, `git push`, and secret exposure.
 
 Allowed command runner commands:
 
@@ -432,7 +506,7 @@ Correct wording:
 
 It analyzes judge scores, per-agent scores, task types, provider/model usage, fallback status, latency, human feedback, file/image/recording/automation task metadata, workflow outcomes, and user preference signals.
 
-The v2.6 learning report includes:
+The learning report includes:
 
 - strongest and weakest agents by task type
 - best and worst workflows by task type
@@ -682,6 +756,34 @@ npm run build
 - `POST /api/learning/approve-prompt`
 - `POST /api/learning/reject-prompt`
 - `POST /api/learning/rollback-prompt`
+- `GET /api/workspaces/{workspace_id}/knowledge`
+- `GET /api/workspaces/{workspace_id}/knowledge/search`
+- `GET /api/workspaces/{workspace_id}/knowledge/export`
+- `POST /api/workspaces/{workspace_id}/knowledge/links`
+- `GET /api/workspaces/{workspace_id}/knowledge/links`
+- `DELETE /api/workspaces/{workspace_id}/knowledge/links/{link_id}`
+- `GET /api/assistant/commands`
+- `POST /api/assistant/commands/{name}`
+- `GET /api/tools`
+- `POST /api/tools/register`
+- `GET /api/tools/{name}`
+- `GET /api/plugins`
+- `GET /api/approvals`
+- `GET /api/approvals/{approval_id}`
+- `POST /api/approvals/{approval_id}/decision`
+- `GET /api/approvals/audit`
+- `POST /api/agent-jobs`
+- `GET /api/agent-jobs`
+- `GET /api/agent-jobs/{job_id}`
+- `POST /api/agent-jobs/{job_id}/pause`
+- `POST /api/agent-jobs/{job_id}/resume`
+- `POST /api/agent-jobs/{job_id}/cancel`
+- `POST /api/agent-jobs/{job_id}/heartbeat`
+- `POST /api/agent-jobs/start-next`
+- `GET /api/agent-jobs/health`
+- `GET /api/system-prompts`
+- `GET /api/system-prompts/{agent_name}`
+- `POST /api/system-prompts/{agent_name}`
 - `GET /api/linear/status`
 - `GET /api/linear/issues`
 - `GET /api/linear/issues/{issue_id}`
@@ -699,26 +801,20 @@ npm run build
 - `GET /api/codex/jobs`
 - `GET /api/codex/jobs/{job_id}`
 
-## EvolveAgent + Linear Workflow
+## Linear and Codex Worker Backend
 
-EvolveAgent can sync Linear issues into Mission Control and assist with selected tasks using the existing governed automation workflow.
+The EvolveAgent frontend no longer includes a Linear panel. Linear is best managed in the Linear app itself. The backend still includes optional Linear/Codex automation services for local development workflows.
 
-1. Add `LINEAR_API_KEY`, `LINEAR_TEAM_ID`, and optional `LINEAR_PROJECT_ID` to `backend/.env`.
-2. Set `LINEAR_SYNC_ENABLED=true`, `LINEAR_CURSOR_WORKER=true`, and keep `AUTO_GIT_PUSH=false` until testing is stable.
-3. Start backend and frontend.
-4. Open the **Linear** sidebar panel.
-5. **Sync** an issue, or move it to **In Progress** in Linear — poll detects it, syncs Mission Control, creates branch `linear/evo-*`, writes `docs/linear-handoffs/EVO-*.md`, and posts a Cursor/Codex handoff comment.
-6. **Copy Cursor prompt** or **Copy Codex prompt** from the Linear panel (or open the handoff file).
-7. Implement in **Cursor Agent** or **Codex** on the prepared branch.
-8. Click **Verify Cursor work** — runs `pytest` + `npm run build`, optionally commits safe files, marks Mission Control done, and closes Linear with a summary.
-9. Optional: **Run task (EvolveAgent AI)** uses built-in agents instead of Cursor/Codex.
-10. Enable `AUTO_GIT_PUSH=true` only after commits and tests are stable.
+When configured server-side, the backend can:
 
-**Handoff API:** `GET /api/linear/issues/{issue_id}/cursor-handoff` · `POST /api/linear/issues/{issue_id}/cursor-verify`
+1. Poll Linear for issues moved to **In Progress**.
+2. Create a `linear/evo-*` branch.
+3. Write a handoff file under `docs/linear-handoffs/`.
+4. Trigger a guarded Codex worker job when explicitly enabled.
+5. Run verification through the existing test/build checks.
+6. Post completion or failure comments back to Linear.
 
-When `LINEAR_SYNC_ENABLED=true`, the backend polls Linear every `LINEAR_POLL_INTERVAL_SECONDS` (default 60) for issues in **In Progress**. Poll status is visible in the Linear panel; Developer Mode shows raw poll metadata and a manual **Run poll once** action.
-
-Linear API keys are server-side only and are never exposed in frontend responses or logs.
+Required configuration stays in `backend/.env` only. Linear API keys are never exposed in frontend responses or logs. Full autonomous mode remains disabled by default and should only be enabled after manual validation.
 
 ## Limitations
 
