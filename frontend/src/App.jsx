@@ -85,6 +85,7 @@ import {
   getSystemPrompt,
   upsertSystemPrompt,
   getProviderStatus,
+  getQualityStatus,
   getWorkspaceMemory,
   getWorkspaceKnowledge,
   searchWorkspaceKnowledge,
@@ -99,6 +100,7 @@ import {
   runGoalTask,
   runLinearIssue,
   runLinearPollOnce,
+  runQualityChecks,
   runWorkflow,
   selectLinearIssue,
   sendFeedback,
@@ -336,6 +338,10 @@ function App() {
   const [selectedCommand, setSelectedCommand] = useState('help')
   const [commandInput, setCommandInput] = useState('')
   const [commandResult, setCommandResult] = useState(null)
+  const [showQualityPanel, setShowQualityPanel] = useState(false)
+  const [qualityStatus, setQualityStatus] = useState(null)
+  const [qualityBusy, setQualityBusy] = useState(false)
+  const [qualityError, setQualityError] = useState('')
   const composerRef = useRef(null)
   const [memorySearch, setMemorySearch] = useState('')
   const [memoryType, setMemoryType] = useState('')
@@ -387,6 +393,7 @@ function App() {
     refreshAgentJobs(workspaceId)
     refreshSystemPrompts()
     refreshCodexJobs()
+    refreshQualityStatus()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -450,6 +457,10 @@ function App() {
 
   async function refreshLearningReport(nextWorkspaceId = workspaceId) {
     setLearningReport(await getLearningReport(nextWorkspaceId))
+  }
+
+  async function refreshQualityStatus() {
+    setQualityStatus(await getQualityStatus())
   }
 
   async function refreshMissionControl(nextWorkspaceId = workspaceId) {
@@ -753,6 +764,23 @@ function App() {
       setCommandResult(result)
     } catch (err) {
       setError(err.message)
+    }
+  }
+
+  async function handleRunQualityChecks() {
+    setQualityBusy(true)
+    setQualityError('')
+    try {
+      const result = await runQualityChecks({ commands: ['pytest', 'npm run build'] })
+      setQualityStatus((current) => ({
+        ...(current || {}),
+        latest_run: result,
+      }))
+      await refreshQualityStatus()
+    } catch (err) {
+      setQualityError(err.message)
+    } finally {
+      setQualityBusy(false)
     }
   }
 
@@ -1723,6 +1751,68 @@ function App() {
             </div>
           )}
         </section>
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowQualityPanel((current) => !current)}>
+              <span>
+                <Gauge size={15} />
+                Quality Gate
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showQualityPanel && (
+              <div className="mission-panel">
+                <button
+                  className="secondary-button full-width"
+                  type="button"
+                  disabled={qualityBusy}
+                  onClick={handleRunQualityChecks}
+                >
+                  {qualityBusy ? 'Running checks...' : 'Run pytest + build'}
+                </button>
+                {qualityError && <p className="provider-warning">{qualityError}</p>}
+                {!qualityStatus?.latest_run && <p className="muted">No quality run recorded yet.</p>}
+                {qualityStatus?.latest_run && (
+                  <>
+                    <div className="provider-card">
+                      <div>
+                        <span>Gate</span>
+                        <strong>{qualityStatus.latest_run.quality_gate?.passed ? 'passed' : 'blocked'}</strong>
+                      </div>
+                      <div>
+                        <span>Runs</span>
+                        <strong>{qualityStatus.total_quality_runs || 0}</strong>
+                      </div>
+                      <div>
+                        <span>Branch</span>
+                        <strong>{qualityStatus.latest_run.branch || 'unknown'}</strong>
+                      </div>
+                      <div>
+                        <span>Flaky</span>
+                        <strong>{qualityStatus.flaky_tests?.length || 0}</strong>
+                      </div>
+                    </div>
+                    <p className="muted">{qualityStatus.latest_run.quality_gate?.reason}</p>
+                    {(qualityStatus.latest_run.command_results || []).map((command) => (
+                      <div className="agent-template-card" key={`${qualityStatus.latest_run.quality_run_id}-${command.command}`}>
+                        <strong>{command.command}</strong>
+                        <span>{command.success ? 'passed' : 'failed'} · exit {command.exit_code}</span>
+                      </div>
+                    ))}
+                    {(qualityStatus.latest_run.test_suggestions?.suggestions || []).slice(0, 4).map((suggestion) => (
+                      <div className="agent-template-card" key={`${suggestion.source_file}-${suggestion.test_target}`}>
+                        <strong>{suggestion.test_target}</strong>
+                        <span>{suggestion.priority} · {suggestion.source_file}</span>
+                        <p className="muted">{suggestion.reason}</p>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
+          </section>
+        )}
 
         {developerMode && (
           <section className="sidebar-section">

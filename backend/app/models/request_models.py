@@ -195,6 +195,20 @@ class GitPushRequest(BaseModel):
     branch: str | None = Field(default=None, max_length=160)
 
 
+class QualityRunRequest(BaseModel):
+    commands: list[str] = Field(default_factory=list, max_length=2)
+    issue_id: str | None = Field(default=None, max_length=120)
+
+
+class TestSuggestionRequest(BaseModel):
+    changed_files: list[str] = Field(default_factory=list, max_length=50)
+
+
+class QualityLinearSummaryRequest(BaseModel):
+    issue_id: str = Field(..., min_length=1, max_length=120)
+    quality_run_id: str | None = Field(default=None, max_length=120)
+
+
 class AssistantCommandRequest(BaseModel):
     input_text: str = Field(default="", max_length=2000)
     workspace_id: str | None = None
