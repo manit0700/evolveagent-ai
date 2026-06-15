@@ -185,23 +185,17 @@ class WorkspaceService:
         return True
 
     def relevant_memory(self, workspace_id: str, user_input: str, limit: int = 6, char_limit: int = 4000) -> tuple[str, list[dict]]:
-        words = {
-            token.strip(".,:;!?()[]{}").lower()
-            for token in user_input.split()
-            if len(token.strip(".,:;!?()[]{}")) > 3
-        }
-        scored = []
-        for item in self.list_memory(workspace_id, include_archived=False):
-            haystack = f"{item.get('title', '')} {item.get('content', '')} {' '.join(item.get('tags', []))}".lower()
-            score = self.memory_importance_score(item) + (float(item.get("quality_score") or 0) * 0.3)
-            if item.get("memory_tier") == "hot":
-                score += 20
-            if words:
-                score += sum(1 for word in words if word in haystack)
-            if score > 1 or item.get("importance") == "high":
-                scored.append((score, item))
-        scored.sort(key=lambda row: row[0], reverse=True)
-        selected = [item for _, item in scored[:limit]]
+        resolved = self.resolve_workspace_id(workspace_id)
+        semantic = self.memory_intelligence.semantic_search(resolved, user_input, limit=limit, include_archived=False)
+        selected = [row["memory"] for row in semantic.get("results", [])]
+        if len(selected) < limit:
+            selected_ids = {item.get("memory_id") for item in selected}
+            fallback = [
+                item
+                for item in self.list_memory(resolved, include_archived=False)
+                if item.get("memory_id") not in selected_ids and (item.get("importance") == "high" or item.get("pinned"))
+            ]
+            selected.extend(fallback[: max(limit - len(selected), 0)])
         self._record_memory_usage(workspace_id, [item.get("memory_id") for item in selected if item.get("memory_id")])
         parts = []
         remaining = char_limit

@@ -101,6 +101,7 @@ import {
   archiveWorkspaceMemory,
   consolidateWorkspaceMemory,
   pinWorkspaceMemory,
+  rebuildWorkspaceMemoryIndex,
   rescoreWorkspaceMemory,
   getWorkspaces,
   rejectPromptVersion,
@@ -1020,6 +1021,21 @@ function App() {
     }
   }
 
+  async function handleRebuildMemoryIndex() {
+    if (!workspaceId) return
+    setMemoryBusy(true)
+    try {
+      await rebuildWorkspaceMemoryIndex(workspaceId)
+      await refreshWorkspaceMemory(workspaceId)
+      setCopied('Memory index rebuilt')
+      window.setTimeout(() => setCopied(''), 1300)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setMemoryBusy(false)
+    }
+  }
+
   async function handleArchiveMemory(memory) {
     if (!workspaceId) return
     try {
@@ -1595,6 +1611,14 @@ function App() {
                       <span className="status-pill" key={tier.tier}>{formatType(tier.tier)} {tier.count}</span>
                     ))}
                   </div>
+                  {memoryIntelligence.vector_index && (
+                    <span>
+                      Index: {memoryIntelligence.vector_index.indexed_memories || 0} memories · {memoryIntelligence.vector_index.model}
+                    </span>
+                  )}
+                  {(memoryIntelligence.vector_index?.top_terms || []).length > 0 && (
+                    <p>Top terms: {memoryIntelligence.vector_index.top_terms.slice(0, 5).map((term) => term.term).join(', ')}</p>
+                  )}
                   {(memoryIntelligence.suggested_consolidations || []).length > 0 && (
                     <p>{memoryIntelligence.suggested_consolidations.length} duplicate group(s) can be consolidated.</p>
                   )}
@@ -1603,6 +1627,9 @@ function App() {
               <div className="inline-actions">
                 <button className="secondary-button" type="button" onClick={handleRescoreMemory} disabled={memoryBusy}>
                   Re-score
+                </button>
+                <button className="secondary-button" type="button" onClick={handleRebuildMemoryIndex} disabled={memoryBusy}>
+                  Rebuild index
                 </button>
                 <button className="secondary-button" type="button" onClick={() => handleConsolidateMemory(false)} disabled={memoryBusy}>
                   Preview merge

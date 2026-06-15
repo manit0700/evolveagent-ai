@@ -1257,6 +1257,93 @@ def test_workspace_memory_consolidation_and_archive_restore():
     assert archived_again.json()["memory_tier"] == "archived"
 
 
+def test_workspace_memory_vector_index_and_semantic_retrieval():
+    workspace = client.post(
+        "/api/workspaces",
+        json={"name": "Vector Memory", "description": "local sparse vector index"},
+    ).json()
+    workspace_id = workspace["workspace_id"]
+    backend_memory = client.post(
+        f"/api/workspaces/{workspace_id}/memory",
+        json={
+            "type": "project_fact",
+            "title": "API architecture",
+            "content": "Backend services use FastAPI route modules, pytest validation, and safe storage helpers.",
+            "source": "manual",
+            "importance": "medium",
+            "tags": ["server"],
+        },
+    ).json()
+    client.post(
+        f"/api/workspaces/{workspace_id}/memory",
+        json={
+            "type": "preference",
+            "title": "UI preference",
+            "content": "Use compact React panels and polished visual hierarchy.",
+            "source": "manual",
+            "importance": "medium",
+            "tags": ["frontend"],
+        },
+    )
+
+    rebuilt = client.post(f"/api/workspaces/{workspace_id}/memory/index/rebuild")
+    assert rebuilt.status_code == 200
+    assert rebuilt.json()["indexed_memories"] == 2
+
+    search = client.get(f"/api/workspaces/{workspace_id}/memory/search?q=server%20test%20coverage")
+    assert search.status_code == 200
+    body = search.json()
+    assert body["index"]["indexed_memories"] == 2
+    assert body["results"][0]["memory"]["memory_id"] == backend_memory["memory_id"]
+    assert body["results"][0]["vector_score"] > 0
+
+
+def test_archived_memory_is_excluded_from_run_context():
+    workspace = client.post(
+        "/api/workspaces",
+        json={"name": "Archived Context", "description": "archived memory should not be retrieved"},
+    ).json()
+    workspace_id = workspace["workspace_id"]
+    keep = client.post(
+        f"/api/workspaces/{workspace_id}/memory",
+        json={
+            "type": "project_fact",
+            "title": "Current stack",
+            "content": "Current stack is FastAPI with React and pytest.",
+            "source": "manual",
+            "importance": "high",
+            "tags": ["stack"],
+        },
+    ).json()
+    archived = client.post(
+        f"/api/workspaces/{workspace_id}/memory",
+        json={
+            "type": "project_fact",
+            "title": "Old stack",
+            "content": "Old stack used Flask and jQuery and should not guide current work.",
+            "source": "manual",
+            "importance": "high",
+            "tags": ["stack"],
+        },
+    ).json()
+    archive_response = client.post(f"/api/workspaces/{workspace_id}/memory/{archived['memory_id']}/archive")
+    assert archive_response.status_code == 200
+
+    run_response = client.post(
+        "/api/run",
+        json={
+            "workspace_id": workspace_id,
+            "user_input": "What stack should guide this project?",
+            "task_type": "auto",
+        },
+    )
+    assert run_response.status_code == 200
+    used = run_response.json()["workspace_memory_used"]
+    used_ids = {item["memory_id"] for item in used}
+    assert keep["memory_id"] in used_ids
+    assert archived["memory_id"] not in used_ids
+
+
 def test_linear_status_endpoint(monkeypatch):
     from app.config import settings
 
