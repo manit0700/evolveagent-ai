@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from collections import Counter, defaultdict
 from datetime import UTC, datetime
-from math import exp
+from math import exp, sqrt
 from uuid import uuid4
 
 from app.services.storage_service import StorageService
@@ -89,6 +89,7 @@ class MemoryIntelligenceService:
             "quality_score": score,
             "quality_reasons": reasons[:5],
             "semantic_terms": self.semantic_terms(memory),
+            "memory_vector_id": self.vector_id(memory),
             "memory_tier": self.tier_for(memory, score),
         }
 
@@ -119,6 +120,7 @@ class MemoryIntelligenceService:
             memory["updated_at"] = memory.get("updated_at") or now
             rescored.append(memory)
         self.storage.write_list("workspace_memory.json", memories)
+        self.rebuild_index(workspace_id)
         return self.summary(workspace_id, rescored)
 
     def summary(self, workspace_id: str, items: list[dict] | None = None) -> dict:
@@ -133,12 +135,22 @@ class MemoryIntelligenceService:
             "total_memories": len(scored),
             "average_quality_score": average,
             "tiers": [{"tier": tier, "count": count} for tier, count in tiers.most_common()],
+            "vector_index": self.index_summary(workspace_id),
             "hot_memories": [self.public_memory(item) for item in sorted(scored, key=lambda row: row.get("quality_score") or 0, reverse=True)[:5]],
             "suggested_consolidations": self.consolidation_preview(workspace_id)["groups"],
         }
 
     def semantic_search(self, workspace_id: str, query: str, limit: int = 10, include_archived: bool = False) -> dict:
-        query_terms = self.tokens(query)
+        if not query.strip():
+            return {"workspace_id": workspace_id, "query": query, "results": []}
+        self.ensure_index(workspace_id)
+        query_terms = self.tokens(self.expand_query(query))
+        query_vector = self.sparse_vector(query)
+        vector_entries = {
+            item.get("memory_id"): item
+            for item in self.storage.read_list("memory_vectors.json")
+            if item.get("workspace_id") == workspace_id
+        }
         results = []
         for memory in self.storage.read_list("workspace_memory.json"):
             if memory.get("workspace_id") != workspace_id:
@@ -146,25 +158,89 @@ class MemoryIntelligenceService:
             enriched = self.ensure_metadata(memory)
             if not include_archived and enriched.get("memory_tier") == "archived":
                 continue
-            memory_terms = set(enriched.get("semantic_terms") or self.semantic_terms(enriched))
+            vector_entry = vector_entries.get(memory.get("memory_id"))
+            memory_vector = vector_entry.get("vector", {}) if vector_entry else self.sparse_vector(self.memory_text(enriched))
+            memory_terms = set(vector_entry.get("terms", []) if vector_entry else enriched.get("semantic_terms") or self.semantic_terms(enriched))
             matched = sorted(memory_terms.intersection(query_terms))
+            cosine = self.cosine_similarity(query_vector, memory_vector)
             if query_terms:
-                semantic_score = len(matched) / max(len(query_terms), 1) * 60
+                semantic_score = len(matched) / max(len(query_terms), 1) * 35
             else:
                 semantic_score = 0
             quality_boost = float(enriched.get("quality_score") or 0) * 0.25
             pin_boost = 15 if enriched.get("pinned") else 0
-            score = round(semantic_score + quality_boost + pin_boost, 2)
-            if score > 8 or matched:
+            tier_boost = 10 if enriched.get("memory_tier") == "hot" else 0
+            score = round((cosine * 55) + semantic_score + quality_boost + pin_boost + tier_boost, 2)
+            if score > 12 or matched:
                 results.append({
                     "score": score,
+                    "vector_score": round(cosine, 4),
                     "matched_terms": matched,
                     "memory": self.public_memory(enriched),
                 })
         return {
             "workspace_id": workspace_id,
             "query": query,
+            "index": self.index_summary(workspace_id),
             "results": sorted(results, key=lambda row: row["score"], reverse=True)[:limit],
+        }
+
+    def rebuild_index(self, workspace_id: str) -> dict:
+        memories = [
+            self.ensure_metadata(item)
+            for item in self.storage.read_list("workspace_memory.json")
+            if item.get("workspace_id") == workspace_id
+        ]
+        all_vectors = [item for item in self.storage.read_list("memory_vectors.json") if item.get("workspace_id") != workspace_id]
+        now = datetime.now(UTC).isoformat()
+        entries = []
+        for memory in memories:
+            if memory.get("memory_tier") == "archived":
+                continue
+            vector = self.sparse_vector(self.memory_text(memory))
+            entries.append({
+                "vector_id": self.vector_id(memory),
+                "workspace_id": workspace_id,
+                "memory_id": memory.get("memory_id"),
+                "terms": sorted(vector.keys()),
+                "vector": vector,
+                "model": "local-sparse-keyword-v1",
+                "created_at": now,
+                "updated_at": now,
+            })
+        self.storage.write_list("memory_vectors.json", all_vectors + entries)
+        return {
+            "workspace_id": workspace_id,
+            "indexed_memories": len(entries),
+            "model": "local-sparse-keyword-v1",
+            "updated_at": now,
+        }
+
+    def ensure_index(self, workspace_id: str) -> None:
+        existing = [
+            item for item in self.storage.read_list("memory_vectors.json")
+            if item.get("workspace_id") == workspace_id
+        ]
+        active_memory_ids = {
+            item.get("memory_id")
+            for item in self.storage.read_list("workspace_memory.json")
+            if item.get("workspace_id") == workspace_id and self.ensure_metadata(item).get("memory_tier") != "archived"
+        }
+        indexed_ids = {item.get("memory_id") for item in existing}
+        if active_memory_ids != indexed_ids:
+            self.rebuild_index(workspace_id)
+
+    def index_summary(self, workspace_id: str) -> dict:
+        entries = [
+            item for item in self.storage.read_list("memory_vectors.json")
+            if item.get("workspace_id") == workspace_id
+        ]
+        terms = Counter(term for entry in entries for term in entry.get("terms", []))
+        return {
+            "workspace_id": workspace_id,
+            "indexed_memories": len(entries),
+            "model": "local-sparse-keyword-v1",
+            "top_terms": [{"term": term, "count": count} for term, count in terms.most_common(10)],
         }
 
     def consolidation_preview(self, workspace_id: str) -> dict:
@@ -212,6 +288,7 @@ class MemoryIntelligenceService:
                     memory.update(self.score_memory(memory))
                     break
         self.storage.write_list("workspace_memory.json", memories)
+        self.rebuild_index(workspace_id)
         return {"workspace_id": workspace_id, "applied": True, "archived_memory_ids": archived, "groups": preview["groups"]}
 
     def archive_memory(self, workspace_id: str, memory_id: str, archived: bool = True) -> dict | None:
@@ -230,6 +307,7 @@ class MemoryIntelligenceService:
             memory.pop("consolidated_into", None)
         memory.update(self.score_memory(memory))
         self.storage.write_list("workspace_memory.json", memories)
+        self.rebuild_index(workspace_id)
         return self.public_memory(memory)
 
     def find_duplicate_groups(self, memories: list[dict]) -> list[list[dict]]:
@@ -297,6 +375,7 @@ class MemoryIntelligenceService:
             "quality_score",
             "quality_reasons",
             "semantic_terms",
+            "memory_vector_id",
             "memory_tier",
             "consolidated_into",
             "created_at",
@@ -305,10 +384,55 @@ class MemoryIntelligenceService:
         return {key: enriched.get(key) for key in keys if key in enriched}
 
     def semantic_terms(self, memory: dict) -> list[str]:
-        text = f"{memory.get('title', '')} {memory.get('content', '')} {' '.join(memory.get('tags', []))}"
+        text = self.memory_text(memory)
         counts = Counter(self.token_list(text))
         ranked = sorted(counts.items(), key=lambda row: (-row[1], row[0]))
         return [term for term, _ in ranked[:18]]
+
+    def memory_text(self, memory: dict) -> str:
+        return f"{memory.get('title', '')} {memory.get('content', '')} {' '.join(memory.get('tags', []))}"
+
+    def vector_id(self, memory: dict) -> str:
+        return f"vec_{memory.get('memory_id') or uuid4()}"
+
+    def sparse_vector(self, text: str) -> dict[str, float]:
+        expanded = self.expand_query(text)
+        tokens = self.token_list(expanded)
+        counts = Counter(tokens)
+        if not counts:
+            return {}
+        max_count = max(counts.values())
+        return {
+            token: round((count / max_count) * (1.0 + min(len(token), 12) / 20), 4)
+            for token, count in sorted(counts.items())
+        }
+
+    def cosine_similarity(self, left: dict[str, float], right: dict[str, float]) -> float:
+        if not left or not right:
+            return 0.0
+        shared = set(left).intersection(right)
+        dot = sum(left[token] * right[token] for token in shared)
+        left_norm = sqrt(sum(value * value for value in left.values()))
+        right_norm = sqrt(sum(value * value for value in right.values()))
+        if not left_norm or not right_norm:
+            return 0.0
+        return dot / (left_norm * right_norm)
+
+    def expand_query(self, text: str) -> str:
+        synonyms = {
+            "backend": "api server fastapi python service route",
+            "frontend": "react ui interface component client",
+            "resume": "cv job internship application",
+            "test": "pytest build validation quality",
+            "tests": "pytest build validation quality",
+            "bug": "error issue fix failure",
+            "memory": "context recall knowledge preference",
+            "recording": "audio transcript meeting lecture",
+            "automation": "workflow approval command file edit",
+        }
+        terms = self.token_list(text)
+        additions = " ".join(synonyms.get(term, "") for term in terms)
+        return f"{text} {additions}".strip()
 
     def tokens(self, text: str) -> set[str]:
         return set(self.token_list(text))

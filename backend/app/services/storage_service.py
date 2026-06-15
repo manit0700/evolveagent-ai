@@ -36,6 +36,7 @@ class StorageService:
             "custom_agents.json",
             "workspaces.json",
             "workspace_memory.json",
+            "memory_vectors.json",
             "knowledge_links.json",
             "tool_registry.json",
             "plugin_manifests.json",
