@@ -38,6 +38,7 @@ backend/app/data/memory_vectors.json
 backend/app/data/memory_consolidation_jobs.json
 backend/app/data/knowledge_links.json
 backend/app/data/tool_registry.json
+backend/app/data/tool_execution_history.json
 backend/app/data/plugin_manifests.json
 backend/app/data/linear_links.json
 backend/app/data/codex_jobs.json

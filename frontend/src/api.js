@@ -950,6 +950,26 @@ export async function getSystemPrompts() {
   }
 }
 
+export async function getToolHistory(workspaceId, limit = 20) {
+  try {
+    const response = await fetch(`${API_BASE}/api/tools/history${query({ workspace_id: workspaceId, limit })}`)
+    if (!response.ok) return []
+    return response.json()
+  } catch {
+    return []
+  }
+}
+
+export async function getToolSummary(workspaceId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/tools/summary${query({ workspace_id: workspaceId })}`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
 export async function getSystemPrompt(agentName) {
   const response = await fetch(`${API_BASE}/api/system-prompts/${encodeURIComponent(agentName)}`)
   if (!response.ok) throw new Error(`System prompt failed with status ${response.status}`)
