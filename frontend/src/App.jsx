@@ -97,6 +97,8 @@ import {
   maintainWorkspaceMemoryTiers,
   getProviderStatus,
   runProviderSmokeTest,
+  getImageProviderStatus,
+  runImageSmokeTest,
   getQualityStatus,
   getWorkspaceMemory,
   getWorkspaceMemoryIntelligence,
@@ -305,6 +307,9 @@ function App() {
   const [providerStatus, setProviderStatus] = useState(null)
   const [providerCheck, setProviderCheck] = useState(null)
   const [providerCheckBusy, setProviderCheckBusy] = useState(false)
+  const [imageProviderStatus, setImageProviderStatus] = useState(null)
+  const [imageProviderCheck, setImageProviderCheck] = useState(null)
+  const [imageProviderBusy, setImageProviderBusy] = useState(false)
   const [analytics, setAnalytics] = useState(null)
   const [learningReport, setLearningReport] = useState(null)
   const [showAnalytics, setShowAnalytics] = useState(false)
@@ -489,6 +494,7 @@ function App() {
 
   async function refreshProviderStatus() {
     setProviderStatus(await getProviderStatus())
+    setImageProviderStatus(await getImageProviderStatus())
   }
 
   async function handleProviderCheck(provider) {
@@ -501,6 +507,19 @@ function App() {
       setError(err.message)
     } finally {
       setProviderCheckBusy(false)
+    }
+  }
+
+  async function handleImageProviderCheck() {
+    setImageProviderBusy(true)
+    try {
+      const result = await runImageSmokeTest({ live: false })
+      setImageProviderCheck(result)
+      setImageProviderStatus(await getImageProviderStatus())
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setImageProviderBusy(false)
     }
   }
 
@@ -2036,6 +2055,36 @@ function App() {
           {realModeWithoutRealProvider && (
             <p className="provider-warning">Real mode is enabled, but no real provider key is configured. Mock fallback will be used.</p>
           )}
+          {imageProviderStatus && (
+            <details className="developer-prompt-block">
+              <summary>Image provider</summary>
+              <div className="provider-row">
+                <strong>{imageProviderStatus.active_provider}</strong>
+                <div className="model-meta">
+                  <span>{imageProviderStatus.image_mode} mode</span>
+                  <span>{imageProviderStatus.active_model}</span>
+                  <span>{imageProviderStatus.image_size}</span>
+                  {imageProviderStatus.real_image_ready && <span>real ready</span>}
+                  <span>fallback {imageProviderStatus.fallback_provider}</span>
+                </div>
+                <p>{imageProviderStatus.status_message}</p>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={handleImageProviderCheck}
+                  disabled={imageProviderBusy}
+                >
+                  Check image provider
+                </button>
+              </div>
+              {imageProviderCheck && (
+                <div className={`command-result ${imageProviderCheck.success ? 'success' : 'failed'}`}>
+                  <strong>image check</strong>
+                  <pre>{imageProviderCheck.message}</pre>
+                </div>
+              )}
+            </details>
+          )}
         </section>
 
         <section className="sidebar-section">
@@ -2928,7 +2977,7 @@ function App() {
 
                   {imageResult && (
                     <div className="image-result-card">
-                      <img src={assetUrl(imageResult.image_url)} alt="Generated mock preview" />
+                      <img src={assetUrl(imageResult.image_url)} alt="Generated image preview" />
                       <div className="prompt-box">
                         <span>Prompt used</span>
                         <p>{imageResult.prompt}</p>
@@ -3532,7 +3581,7 @@ function App() {
                   <Sparkles size={17} />
                   <h2>Image Result</h2>
                 </div>
-                <img className="inspector-image" src={assetUrl(selectedRun.image_result.image_url)} alt="Generated mock preview" />
+                <img className="inspector-image" src={assetUrl(selectedRun.image_result.image_url)} alt="Generated image preview" />
                 <div className="model-meta">
                   <span>{selectedRun.image_result.provider}</span>
                   <span>{selectedRun.image_result.model}</span>

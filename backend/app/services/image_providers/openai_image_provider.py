@@ -31,7 +31,7 @@ class OpenAIImageProvider:
             model=model,
             prompt=prompt,
             n=1,
-            size="1024x1024",
+            size=settings.openai_image_size,
         )
         image_bytes = self._extract_image_bytes(result)
         image_id = f"{uuid4()}.png"
@@ -50,11 +50,11 @@ class OpenAIImageProvider:
     @staticmethod
     def _extract_image_bytes(result) -> bytes:
         image = result.data[0]
-        b64_json = getattr(image, "b64_json", None)
+        b64_json = getattr(image, "b64_json", None) or (image.get("b64_json") if isinstance(image, dict) else None)
         if b64_json:
             return base64.b64decode(b64_json)
 
-        url = getattr(image, "url", None)
+        url = getattr(image, "url", None) or (image.get("url") if isinstance(image, dict) else None)
         if url:
             response = httpx.get(url, timeout=30)
             response.raise_for_status()

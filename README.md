@@ -1,8 +1,8 @@
 # EvolveAgent AI
 
-**Current version:** v8.5 — Real Provider Activation and QA
+**Current version:** v9.0 — Real Image API
 
-**One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with real-provider readiness diagnostics, a focused Jarvis-style command center, governed tool execution history, plugin validation, real memory intelligence, local vector-style memory retrieval, Master Agent routing, Mission Control, Custom Agent Builder, Project Brain search, approval workflows, agent job scheduling, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
+**One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with real OpenAI image generation fallback support, real-provider readiness diagnostics, a focused Jarvis-style command center, governed tool execution history, plugin validation, real memory intelligence, local vector-style memory retrieval, Master Agent routing, Mission Control, Custom Agent Builder, Project Brain search, approval workflows, agent job scheduling, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
 
 ## Project Overview
 
@@ -10,7 +10,9 @@ EvolveAgent AI is a full-stack AI workbench built to demonstrate advanced multi-
 
 The app supports normal text requests, uploaded document analysis, recording/audio transcript summaries, mock image-generation previews, browser voice command input, Mission Control goal planning, custom agents, approval-gated app automation planning, human feedback, and analytics. Simple Mode keeps the user experience clean. Developer Mode exposes the workflow trace, provider metadata, judge results, per-agent evaluation, automation plans, learning reports, recording transcript metadata, file context, goal/task metadata, custom agent metadata, and raw JSON for demos and technical review.
 
-The current v8.5 checkpoint improves real-provider activation and QA: `/api/providers/status` returns readiness details, configured models, fallback information, and status messages, while Developer Mode can run safe dry provider checks without making paid API calls by default.
+The current v9.0 checkpoint completes the real image API path: `IMAGE_MODE=real` and `IMAGE_PROVIDER=openai` route image requests through OpenAI when configured, save generated images locally, expose image-provider readiness checks, and fall back to mock previews if the real provider is unavailable.
+
+The v8.5 checkpoint improved real-provider activation and QA: `/api/providers/status` returns readiness details, configured models, fallback information, and status messages, while Developer Mode can run safe dry provider checks without making paid API calls by default.
 
 The v8.0 checkpoint made the project more demo-ready: Simple Mode opens as a focused Jarvis-style command console with two clear entry points, Speak and Type, while Developer Mode keeps the detailed workbench for traces, tools, approvals, analytics, memory, jobs, and governance.
 
@@ -39,6 +41,8 @@ Workspace Memory lets users create separate workspaces for projects, switch betw
 - File upload and text extraction for `.txt`, `.md`, `.json`, `.csv`, code files, `.pdf`, and `.docx`
 - File-aware task detection for summary, resume review, code review, data analysis, and document analysis
 - Mock Image Agent with safe protected-character prompt rewriting
+- Real OpenAI image provider mode with mock fallback
+- Image-provider status and dry smoke-test endpoints
 - Per-agent evaluation with usefulness and clarity scores
 - Judge Agent workflow-level scoring
 - Evolution Agent recommendations based on judge and per-agent scores
@@ -680,6 +684,8 @@ OPENAI_API_KEY=
 OPENAI_TEXT_MODEL=gpt-4o-mini
 IMAGE_MODE=mock
 IMAGE_PROVIDER=mock_image
+OPENAI_IMAGE_MODEL=gpt-image-1.5
+OPENAI_IMAGE_SIZE=1024x1024
 TRANSCRIPTION_MODE=mock
 OPENAI_TRANSCRIPTION_MODEL=whisper-1
 ```
@@ -695,6 +701,16 @@ IMAGE_MODE=mock
 IMAGE_PROVIDER=mock_image
 TRANSCRIPTION_MODE=openai
 OPENAI_TRANSCRIPTION_MODEL=whisper-1
+```
+
+Real OpenAI image mode:
+
+```env
+IMAGE_MODE=real
+IMAGE_PROVIDER=openai
+OPENAI_API_KEY=your_key_here
+OPENAI_IMAGE_MODEL=gpt-image-1.5
+OPENAI_IMAGE_SIZE=1024x1024
 ```
 
 Optional real consensus providers:
@@ -713,6 +729,12 @@ Provider QA endpoints:
 - `GET /api/providers/status` returns mode, configured providers, default model, fallback provider, status message, and per-provider readiness details.
 - `POST /api/providers/smoke-test` supports dry checks by default: `{ "provider": "openai", "live": false }`.
 - Live provider checks are opt-in only: `{ "provider": "openai", "live": true }`.
+
+Image provider QA endpoints:
+
+- `GET /api/images/status` returns image mode, active provider, model, size, fallback provider, and readiness message.
+- `POST /api/images/smoke-test` supports dry checks by default: `{ "live": false }`.
+- Live image checks are opt-in only and may call a paid image API: `{ "live": true }`.
 
 Recommended real-mode verification:
 

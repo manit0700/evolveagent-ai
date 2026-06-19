@@ -1,5 +1,6 @@
 from app.config import settings
 from app.agents.image_agent import ImageAgent
+from app.models.response_models import ImageResult
 from app.services.image_service import ImageService
 
 
@@ -51,6 +52,48 @@ def test_real_image_mode_openai_failure_falls_back_to_mock(monkeypatch):
     assert result.provider == "mock_image"
     assert result.fallback_used is True
     assert result.fallback_error == "OpenAI image API unavailable"
+
+
+def test_real_image_mode_openai_success_uses_openai_provider(monkeypatch):
+    class SuccessfulOpenAIProvider:
+        def generate(self, prompt: str, safety_rewritten: bool = False):
+            return ImageResult(
+                image_url="/static/generated/test-openai.png",
+                prompt=prompt,
+                provider="openai",
+                model=settings.openai_image_model,
+                fallback_used=False,
+                safety_rewritten=safety_rewritten,
+            )
+
+    monkeypatch.setattr(settings, "image_mode", "real")
+    monkeypatch.setattr(settings, "image_provider", "openai")
+    monkeypatch.setattr(settings, "openai_api_key", "test-key")
+
+    service = ImageService()
+    service.openai_provider = SuccessfulOpenAIProvider()
+    result = service.generate("High quality image of a futuristic car")
+
+    assert result.provider == "openai"
+    assert result.model == settings.openai_image_model
+    assert result.fallback_used is False
+    assert result.image_url == "/static/generated/test-openai.png"
+
+
+def test_image_status_and_dry_smoke_test(monkeypatch):
+    monkeypatch.setattr(settings, "image_mode", "real")
+    monkeypatch.setattr(settings, "image_provider", "openai")
+    monkeypatch.setattr(settings, "openai_api_key", "test-key")
+
+    service = ImageService()
+    status = service.status()
+    smoke = service.smoke_test(live=False)
+
+    assert status["real_image_ready"] is True
+    assert status["active_provider"] == "openai"
+    assert smoke["success"] is True
+    assert smoke["live"] is False
+    assert smoke["provider"] == "openai"
 
 
 def test_image_agent_cleans_demo_numbering_and_prompt_command():

@@ -117,6 +117,29 @@ export async function runProviderSmokeTest(payload = {}) {
   return body
 }
 
+export async function getImageProviderStatus() {
+  try {
+    const response = await fetch(`${API_BASE}/api/images/status`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function runImageSmokeTest(payload = {}) {
+  const response = await fetch(`${API_BASE}/api/images/smoke-test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Image provider check failed with status ${response.status}`)
+  }
+  return body
+}
+
 export async function getAnalytics(workspaceId) {
   try {
     const response = await fetch(`${API_BASE}/api/analytics${query({ workspace_id: workspaceId })}`)

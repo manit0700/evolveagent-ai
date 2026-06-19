@@ -968,7 +968,11 @@ class MasterOrchestratorAgent:
         suggested_agents = self.dynamic_creator.suggest(task_type)
         image_agent_output, image_result = self.image_agent.run(request.user_input)
         agents_used = ["Image Agent", "Image Prompt Builder", "Image Safety Checker"]
-        final_output = "I created an image preview using a safe image prompt."
+        final_output = (
+            "I generated an image using a safe image prompt."
+            if image_result.provider != "mock_image"
+            else "I created an image preview using a safe image prompt."
+        )
         workflow_trace = [
             WorkflowStep(
                 step=1,
