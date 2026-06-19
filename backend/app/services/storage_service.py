@@ -40,6 +40,7 @@ class StorageService:
             "memory_consolidation_jobs.json",
             "knowledge_links.json",
             "tool_registry.json",
+            "tool_execution_history.json",
             "plugin_manifests.json",
             "linear_links.json",
             "codex_jobs.json",

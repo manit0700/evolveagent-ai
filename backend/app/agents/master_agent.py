@@ -42,6 +42,7 @@ from app.services.secret_scanner import SecretScanner
 from app.services.storage_service import StorageService
 from app.services.assistant_command_service import AssistantCommandService
 from app.services.knowledge_service import KnowledgeService
+from app.services.tool_execution_service import ToolExecutionService
 from app.services.tool_registry_service import ToolRegistryService
 from app.services.tool_router_service import ToolRouterService
 from app.services.workspace_service import WorkspaceService
@@ -72,11 +73,13 @@ class MasterOrchestratorAgent:
         self.knowledge_service = KnowledgeService(storage, self.workspace)
         self.assistant_commands = AssistantCommandService(self.workspace, self.knowledge_service)
         self.tool_registry = ToolRegistryService(storage, self.permission_service)
+        self.tool_execution = ToolExecutionService(storage)
         self.tool_router = ToolRouterService(
             self.tool_registry,
             self.assistant_commands,
             self.permission_service,
             self.secret_scanner,
+            self.tool_execution,
         )
         self.specialists = [ResearchAgent(), LogicAgent(), RiskAgent(), StrategyAgent()]
         self.writer = WritingAgent()

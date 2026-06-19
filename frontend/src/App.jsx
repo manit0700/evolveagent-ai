@@ -91,6 +91,8 @@ import {
   getSystemPrompts,
   getSystemPrompt,
   upsertSystemPrompt,
+  getToolHistory,
+  getToolSummary,
   maintainWorkspaceMemoryTiers,
   getProviderStatus,
   getQualityStatus,
@@ -350,6 +352,8 @@ function App() {
   const [knowledgeLinks, setKnowledgeLinks] = useState([])
   const [showToolsPanel, setShowToolsPanel] = useState(false)
   const [assistantCommands, setAssistantCommands] = useState([])
+  const [toolHistory, setToolHistory] = useState([])
+  const [toolSummary, setToolSummary] = useState(null)
   const [selectedCommand, setSelectedCommand] = useState('help')
   const [commandInput, setCommandInput] = useState('')
   const [commandResult, setCommandResult] = useState(null)
@@ -429,6 +433,7 @@ function App() {
     refreshApprovals(workspaceId)
     refreshAgentJobs(workspaceId)
     refreshSystemPrompts()
+    refreshToolHistory(workspaceId)
     refreshCodexJobs()
     refreshQualityStatus()
   }, [workspaceId, developerMode])
@@ -486,6 +491,15 @@ function App() {
     if (commands.length > 0 && !commands.find((command) => command.name === selectedCommand)) {
       setSelectedCommand(commands[0].name)
     }
+  }
+
+  async function refreshToolHistory(nextWorkspaceId = workspaceId) {
+    const [history, summary] = await Promise.all([
+      getToolHistory(nextWorkspaceId, 20),
+      getToolSummary(nextWorkspaceId),
+    ])
+    setToolHistory(history)
+    setToolSummary(summary)
   }
 
   async function refreshAnalytics(nextWorkspaceId = workspaceId) {
@@ -816,6 +830,7 @@ function App() {
         workspace_id: workspaceId,
       })
       setCommandResult(result)
+      await refreshToolHistory(workspaceId)
     } catch (err) {
       setError(err.message)
     }
@@ -1138,6 +1153,7 @@ function App() {
       await refreshMissionControl()
       await refreshAnalytics()
       await refreshLearningReport()
+      await refreshToolHistory(result.workspace_id || workspaceId)
     } catch (err) {
       setError(err.message)
     }
@@ -1289,6 +1305,7 @@ function App() {
       await refreshLearningReport()
       await refreshMissionControl()
       await refreshWorkspaceMemory(workspaceId)
+      await refreshToolHistory(data.workspace_id || workspaceId)
       setAttachedFiles([])
       setAttachedRecordings([])
       setVoiceUsed(false)
@@ -1858,6 +1875,52 @@ function App() {
                   <strong>{commandResult.command}</strong>
                   <pre>{commandResult.output}</pre>
                 </div>
+              )}
+              {developerMode && (
+                <details className="developer-prompt-block">
+                  <summary>Tool execution history</summary>
+                  {toolSummary ? (
+                    <div className="mini-grid">
+                      <div>
+                        <span>Total</span>
+                        <strong>{toolSummary.total_executions || 0}</strong>
+                      </div>
+                      <div>
+                        <span>Executed</span>
+                        <strong>{toolSummary.executed || 0}</strong>
+                      </div>
+                      <div>
+                        <span>Blocked</span>
+                        <strong>{toolSummary.blocked || 0}</strong>
+                      </div>
+                      <div>
+                        <span>Quality</span>
+                        <strong>{toolSummary.average_quality_score || 0}</strong>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="muted">Tool history is not available yet.</p>
+                  )}
+                  {toolHistory.length === 0 ? (
+                    <p className="muted">No tool executions have been recorded.</p>
+                  ) : (
+                    <div className="agent-list compact-list">
+                      {toolHistory.slice(0, 8).map((item) => (
+                        <div className="provider-row" key={item.execution_id}>
+                          <strong>{item.tool_name}</strong>
+                          <div className="model-meta">
+                            <span>{item.permission_level}</span>
+                            {item.executed && <span>executed</span>}
+                            {item.blocked && <span>blocked</span>}
+                            {item.approval_required && <span>approval</span>}
+                            <span>quality {item.quality_score}</span>
+                          </div>
+                          {item.result_summary && <p>{previewText(item.result_summary, 120)}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </details>
               )}
             </div>
           )}

@@ -112,6 +112,7 @@ class SecurityReport(BaseModel):
 
 
 class ToolTrace(BaseModel):
+    execution_id: str | None = None
     tool_name: str
     source: str = "built_in"
     permission_level: str = "read_only"
@@ -121,6 +122,10 @@ class ToolTrace(BaseModel):
     approval_required: bool = False
     sanitized_input: str = ""
     result_summary: str = ""
+    success: bool = False
+    quality_score: int = 0
+    quality_notes: str = ""
+    created_at: str | None = None
 
 
 class ProviderStatus(BaseModel):

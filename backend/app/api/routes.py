@@ -74,6 +74,7 @@ from app.services.kernel_service import KernelService
 from app.services.plugin_loader_service import PluginLoaderService
 from app.services.system_prompt_registry_service import SystemPromptRegistryService
 from app.services.test_quality_service import TestQualityService
+from app.services.tool_execution_service import ToolExecutionService
 from app.services.tool_registry_service import ToolRegistryService
 from app.services.user_preference_service import UserPreferenceService
 from app.services.workflow_strategy_service import WorkflowStrategyService
@@ -110,6 +111,7 @@ memory_intelligence_service = MemoryIntelligenceService(storage)
 knowledge_service = KnowledgeService(storage, workspace_service)
 assistant_commands = AssistantCommandService(workspace_service, knowledge_service)
 tool_registry = ToolRegistryService(storage, permission_service)
+tool_execution_service = ToolExecutionService(storage)
 plugin_loader = PluginLoaderService(storage, tool_registry, governance_service)
 plugin_loader.load_plugins()
 agent_scheduler = AgentSchedulerService(storage, governance_service, workspace_service)
@@ -591,6 +593,27 @@ def run_assistant_command(command_name: str, request: AssistantCommandRequest) -
 def list_tools(include_disabled: bool = Query(default=False)) -> list[dict]:
     plugin_loader.load_plugins()
     return tool_registry.list_tools(include_disabled=include_disabled)
+
+
+@router.get("/tools/history")
+def list_tool_execution_history(
+    workspace_id: str | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=200),
+) -> list[dict]:
+    return tool_execution_service.list_history(workspace_id=workspace_id, limit=limit)
+
+
+@router.get("/tools/summary")
+def get_tool_execution_summary(workspace_id: str | None = Query(default=None)) -> dict:
+    return tool_execution_service.summary(workspace_id=workspace_id)
+
+
+@router.get("/tools/history/{execution_id}")
+def get_tool_execution(execution_id: str) -> dict:
+    execution = tool_execution_service.get(execution_id)
+    if execution is None:
+        raise HTTPException(status_code=404, detail="Tool execution not found")
+    return execution
 
 
 @router.post("/tools/register")

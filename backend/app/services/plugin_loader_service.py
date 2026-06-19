@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -63,17 +64,44 @@ class PluginLoaderService:
     def _validate_manifest(self, manifest: dict[str, Any]) -> None:
         if not isinstance(manifest, dict):
             raise ValueError("Plugin manifest must be a JSON object.")
-        if not manifest.get("name"):
+        raw_name = str(manifest.get("name") or "").strip()
+        if not raw_name:
             raise ValueError("Plugin manifest requires a name.")
+        if len(raw_name) > 80:
+            raise ValueError("Plugin manifest name is too long.")
+        normalized_plugin = self.tool_registry.normalize_name(raw_name)
+        if not self._valid_normalized_name(normalized_plugin):
+            raise ValueError("Plugin manifest name contains unsupported characters.")
+        version = str(manifest.get("version", "0.1.0"))
+        if len(version) > 40:
+            raise ValueError("Plugin manifest version is too long.")
+        if not isinstance(manifest.get("description", ""), str):
+            raise ValueError("Plugin manifest description must be text.")
         tools = manifest.get("tools", [])
         if not isinstance(tools, list):
             raise ValueError("Plugin manifest tools must be a list.")
+        if len(tools) > 25:
+            raise ValueError("Plugin manifests can register at most 25 tools.")
+        seen_tool_names = set()
         for tool in tools:
             if not isinstance(tool, dict) or not tool.get("name"):
                 raise ValueError("Every plugin tool requires a name.")
+            normalized_tool = self.tool_registry.normalize_name(tool.get("name", ""))
+            if not self._valid_normalized_name(normalized_tool):
+                raise ValueError(f"Invalid plugin tool name {tool.get('name')}.")
+            if normalized_tool in seen_tool_names:
+                raise ValueError(f"Duplicate plugin tool name {normalized_tool}.")
+            seen_tool_names.add(normalized_tool)
+            if not isinstance(tool.get("description", ""), str):
+                raise ValueError(f"Plugin tool {tool.get('name')} description must be text.")
+            if "input_schema" in tool and not isinstance(tool.get("input_schema"), dict):
+                raise ValueError(f"Plugin tool {tool.get('name')} input_schema must be an object.")
             permission = tool.get("permission_level", "read_only")
             if permission not in {"read_only", "plan_only", "approve_to_edit", "approve_to_run", "blocked"}:
                 raise ValueError(f"Invalid permission level for plugin tool {tool.get('name')}.")
+
+    def _valid_normalized_name(self, name: str) -> bool:
+        return bool(re.fullmatch(r"[a-z0-9_]{1,80}", name or ""))
 
     def _log_invalid_plugin(self, path: Path, reason: str) -> None:
         if not self.governance:

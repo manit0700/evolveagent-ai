@@ -357,8 +357,57 @@ def test_tool_registry_and_router_trace():
     calculate_trace = next(item for item in run["tool_trace"] if item["tool_name"] == "calculate")
     assert calculate_trace["executed"] is True
     assert calculate_trace["permission_level"] == "read_only"
+    assert calculate_trace["execution_id"]
+    assert calculate_trace["quality_score"] >= 75
     assert "14" in calculate_trace["result_summary"]
 
+    history_response = client.get("/api/tools/history?limit=5")
+    assert history_response.status_code == 200
+    history = history_response.json()
+    assert any(item["execution_id"] == calculate_trace["execution_id"] for item in history)
+
+    summary_response = client.get("/api/tools/summary")
+    assert summary_response.status_code == 200
+    summary = summary_response.json()
+    assert summary["total_executions"] >= 1
+    assert summary["executed"] >= 1
+
+    execution_response = client.get(f"/api/tools/history/{calculate_trace['execution_id']}")
+    assert execution_response.status_code == 200
+    assert execution_response.json()["tool_name"] == "calculate"
+
+
+def test_tool_router_blocks_approval_tools_and_records_history():
+    client.post(
+        "/api/tools/register",
+        json={
+            "name": "needs approval demo",
+            "description": "A high-risk test tool.",
+            "permission_level": "approve_to_run",
+            "source": "assistant_command",
+        },
+    )
+    response = client.post(
+        "/api/run",
+        json={
+            "user_input": "Run needs approval demo",
+            "task_type": "general",
+        },
+    )
+    assert response.status_code == 200
+    run = response.json()
+    trace = next(item for item in run["tool_trace"] if item["tool_name"] == "needs_approval_demo")
+    assert trace["executed"] is False
+    assert trace["approval_required"] is True
+    assert trace["blocked"] is False
+    assert trace["quality_score"] == 50
+
+    execution_response = client.get(f"/api/tools/history/{trace['execution_id']}")
+    assert execution_response.status_code == 200
+    execution = execution_response.json()
+    assert execution["approval_required"] is True
+    assert execution["executed"] is False
+ 
 
 def test_agent_job_lifecycle_and_health():
     create_response = client.post(
@@ -440,6 +489,22 @@ def test_plugin_loader_registers_valid_plugins_and_skips_invalid(tmp_path):
         encoding="utf-8",
     )
     (plugin_dir / "bad.json").write_text('{"name": "Bad", "tools": [{"name": "oops", "permission_level": "root"}]}', encoding="utf-8")
+    (plugin_dir / "duplicate.json").write_text(
+        """
+        {
+          "name": "Duplicate Plugin",
+          "tools": [
+            {"name": "same_tool", "permission_level": "read_only"},
+            {"name": "same tool", "permission_level": "read_only"}
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
+    (plugin_dir / "bad_schema.json").write_text(
+        '{"name": "Bad Schema", "tools": [{"name": "schema_tool", "permission_level": "read_only", "input_schema": "string"}]}',
+        encoding="utf-8",
+    )
     temp_storage = StorageService(str(tmp_path / "data"))
     registry = ToolRegistryService(temp_storage)
     governance = GovernanceService(temp_storage)
@@ -454,7 +519,7 @@ def test_plugin_loader_registers_valid_plugins_and_skips_invalid(tmp_path):
     assert plugin_tool["source"] == "plugin"
     assert plugin_tool["permission_level"] == "read_only"
     summary = governance.summary()
-    assert summary["blocked_actions"] >= 1
+    assert summary["blocked_actions"] >= 3
 
 
 def test_chat_session_lifecycle():
