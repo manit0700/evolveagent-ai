@@ -226,6 +226,10 @@ class TranscriptionSmokeTestRequest(BaseModel):
     live: bool = Field(default=False, description="When false, only checks transcription-provider readiness without calling a paid API.")
 
 
+class RealApiErrorDecodeRequest(BaseModel):
+    error: str = Field(default="", max_length=4000)
+
+
 class QualityLinearSummaryRequest(BaseModel):
     issue_id: str = Field(..., min_length=1, max_length=120)
     quality_run_id: str | None = Field(default=None, max_length=120)
