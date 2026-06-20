@@ -163,6 +163,38 @@ export async function runTranscriptionSmokeTest(payload = {}) {
   return body
 }
 
+export async function getRealApiSummary() {
+  try {
+    const response = await fetch(`${API_BASE}/api/real-api/summary`)
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+export async function getRealApiLiveWarning(capability) {
+  const response = await fetch(`${API_BASE}/api/real-api/live-warning/${capability}`)
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Real API warning failed with status ${response.status}`)
+  }
+  return body
+}
+
+export async function decodeRealApiError(error) {
+  const response = await fetch(`${API_BASE}/api/real-api/decode-error`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ error }),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.detail || `Real API error decode failed with status ${response.status}`)
+  }
+  return body
+}
+
 export async function getAnalytics(workspaceId) {
   try {
     const response = await fetch(`${API_BASE}/api/analytics${query({ workspace_id: workspaceId })}`)

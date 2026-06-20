@@ -697,6 +697,45 @@ def test_transcription_live_smoke_requires_upload(monkeypatch):
     assert "uploaded audio file" in body["message"]
 
 
+def test_real_api_summary_and_live_warning(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "llm_mode", "real")
+    monkeypatch.setattr(settings, "default_provider", "openai")
+    monkeypatch.setattr(settings, "openai_api_key", "test-key")
+    monkeypatch.setattr(settings, "image_mode", "real")
+    monkeypatch.setattr(settings, "image_provider", "openai")
+    monkeypatch.setattr(settings, "transcription_mode", "openai")
+
+    response = client.get("/api/real-api/summary")
+    body = response.json()
+    assert response.status_code == 200
+    assert body["paid_api_ready"] is True
+    assert set(body["paid_capabilities"]) >= {"text", "image", "transcription"}
+    assert body["dry_checks_default"] is True
+    assert body["live_checks_require_confirmation"] is True
+    assert body["capabilities"]["image"]["ready"] is True
+
+    warning_response = client.get("/api/real-api/live-warning/image")
+    warning = warning_response.json()
+    assert warning_response.status_code == 200
+    assert warning["requires_confirmation"] is True
+    assert warning["capability"] == "image"
+    assert "paid" in warning["warning"].lower() or "billable" in warning["warning"].lower()
+
+
+def test_real_api_error_decoder():
+    response = client.post(
+        "/api/real-api/decode-error",
+        json={"error": "Error 429: rate limit reached for this model"},
+    )
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["category"] == "rate_limited"
+    assert "rate limit" in body["simple_message"].lower()
+
+
 def test_feedback_and_analytics_endpoints():
     run_response = client.post(
         "/api/run",

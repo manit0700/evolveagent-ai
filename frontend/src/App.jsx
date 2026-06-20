@@ -101,6 +101,8 @@ import {
   runImageSmokeTest,
   getTranscriptionProviderStatus,
   runTranscriptionSmokeTest,
+  getRealApiSummary,
+  getRealApiLiveWarning,
   getQualityStatus,
   getWorkspaceMemory,
   getWorkspaceMemoryIntelligence,
@@ -322,6 +324,9 @@ function App() {
   const [transcriptionProviderStatus, setTranscriptionProviderStatus] = useState(null)
   const [transcriptionProviderCheck, setTranscriptionProviderCheck] = useState(null)
   const [transcriptionProviderBusy, setTranscriptionProviderBusy] = useState(false)
+  const [realApiSummary, setRealApiSummary] = useState(null)
+  const [realApiWarning, setRealApiWarning] = useState(null)
+  const [realApiWarningBusy, setRealApiWarningBusy] = useState(false)
   const [analytics, setAnalytics] = useState(null)
   const [learningReport, setLearningReport] = useState(null)
   const [showAnalytics, setShowAnalytics] = useState(false)
@@ -508,6 +513,7 @@ function App() {
     setProviderStatus(await getProviderStatus())
     setImageProviderStatus(await getImageProviderStatus())
     setTranscriptionProviderStatus(await getTranscriptionProviderStatus())
+    setRealApiSummary(await getRealApiSummary())
   }
 
   async function handleProviderCheck(provider) {
@@ -546,6 +552,17 @@ function App() {
       setError(err.message)
     } finally {
       setTranscriptionProviderBusy(false)
+    }
+  }
+
+  async function handleRealApiWarning(capability) {
+    setRealApiWarningBusy(true)
+    try {
+      setRealApiWarning(await getRealApiLiveWarning(capability))
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setRealApiWarningBusy(false)
     }
   }
 
@@ -2146,6 +2163,52 @@ function App() {
                 <div className={`command-result ${transcriptionProviderCheck.success ? 'success' : 'failed'}`}>
                   <strong>transcription check</strong>
                   <pre>{transcriptionProviderCheck.message}</pre>
+                </div>
+              )}
+            </details>
+          )}
+          {realApiSummary && (
+            <details className="developer-prompt-block">
+              <summary>Real API control</summary>
+              <div className="provider-row">
+                <strong>{realApiSummary.paid_api_ready ? 'Paid APIs ready' : 'Mock-safe mode'}</strong>
+                <div className="model-meta">
+                  <span>dry checks default</span>
+                  <span>live checks require confirmation</span>
+                  <span>{realApiSummary.paid_capabilities?.length || 0} ready</span>
+                </div>
+                <p>
+                  Dry checks do not call paid APIs. Live text checks, image generation, and recording
+                  transcription can use paid provider APIs when their real modes are enabled.
+                </p>
+              </div>
+              <div className="agent-list compact-list">
+                {Object.entries(realApiSummary.capabilities || {}).map(([capability, item]) => (
+                  <div className="provider-row" key={capability}>
+                    <strong>{formatType(capability)}</strong>
+                    <div className="model-meta">
+                      <span>{item.mode}</span>
+                      <span>{item.provider}</span>
+                      <span>{item.model}</span>
+                      {item.ready && <span>ready</span>}
+                    </div>
+                    <p>{item.estimate_note}</p>
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      disabled={realApiWarningBusy}
+                      onClick={() => handleRealApiWarning(capability)}
+                    >
+                      Show live warning
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {realApiWarning && (
+                <div className="fallback-note">
+                  <strong>{formatType(realApiWarning.capability)} live API warning</strong>
+                  <p>{realApiWarning.warning}</p>
+                  <small>{realApiWarning.estimate_note}</small>
                 </div>
               )}
             </details>

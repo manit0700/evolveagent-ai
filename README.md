@@ -1,6 +1,6 @@
 # EvolveAgent AI
 
-**Current version:** v10.0 — Real API Control Center
+**Current version:** v11.0 — Real API QA + Cost Controls
 
 **One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with real API readiness diagnostics for text, image, and transcription providers, real OpenAI image/transcription fallback support, a focused Jarvis-style command center, governed tool execution history, plugin validation, real memory intelligence, local vector-style memory retrieval, Master Agent routing, Mission Control, Custom Agent Builder, Project Brain search, approval workflows, agent job scheduling, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
 
@@ -10,7 +10,9 @@ EvolveAgent AI is a full-stack AI workbench built to demonstrate advanced multi-
 
 The app supports normal text requests, uploaded document analysis, recording/audio transcript summaries, mock image-generation previews, browser voice command input, Mission Control goal planning, custom agents, approval-gated app automation planning, human feedback, and analytics. Simple Mode keeps the user experience clean. Developer Mode exposes the workflow trace, provider metadata, judge results, per-agent evaluation, automation plans, learning reports, recording transcript metadata, file context, goal/task metadata, custom agent metadata, and raw JSON for demos and technical review.
 
-The current v10.0 checkpoint adds a unified real-API control layer for text, image, and transcription capabilities. Developer Mode can now check text-provider readiness, image-provider readiness, and transcription-provider readiness through safe dry checks. Real API calls remain opt-in and every capability keeps mock fallback behavior for local demos and tests.
+The current v11.0 checkpoint adds real API QA and cost-control visibility. Developer Mode now includes a Real API Control panel with paid-capability readiness, dry-check defaults, live-call warnings, provider/model/size notes, and simple cost-estimate guidance before text, image, or transcription workflows use paid provider APIs.
+
+The v10.0 checkpoint added a unified real-API control layer for text, image, and transcription capabilities. Developer Mode can check text-provider readiness, image-provider readiness, and transcription-provider readiness through safe dry checks. Real API calls remain opt-in and every capability keeps mock fallback behavior for local demos and tests.
 
 The v9.0 checkpoint completed the real image API path: `IMAGE_MODE=real` and `IMAGE_PROVIDER=openai` route image requests through OpenAI when configured, save generated images locally, expose image-provider readiness checks, and fall back to mock previews if the real provider is unavailable.
 
@@ -746,6 +748,12 @@ Transcription provider QA endpoints:
 - `POST /api/transcription/smoke-test` supports dry checks by default: `{ "live": false }`.
 - Live transcription calls are handled through the recording upload flow because a real audio file is required.
 
+Real API control endpoints:
+
+- `GET /api/real-api/summary` returns text, image, and transcription readiness plus paid-call warnings and estimate notes.
+- `GET /api/real-api/live-warning/{capability}` returns a confirmation warning for `text`, `image`, or `transcription`.
+- `POST /api/real-api/decode-error` maps provider errors into user-friendly categories such as invalid key, quota/billing, model unsupported, rate limit, timeout, or generic provider error.
+
 Recommended real-mode verification:
 
 1. Set `LLM_MODE=real`, `DEFAULT_PROVIDER=openai`, and `OPENAI_API_KEY`.
@@ -868,6 +876,9 @@ npm run build
 - `POST /api/images/smoke-test`
 - `GET /api/transcription/status`
 - `POST /api/transcription/smoke-test`
+- `GET /api/real-api/summary`
+- `GET /api/real-api/live-warning/{capability}`
+- `POST /api/real-api/decode-error`
 - `POST /api/automation/apply`
 - `GET /api/learning/report`
 - `GET /api/learning/prompt-versions`

@@ -35,6 +35,7 @@ from app.models.request_models import (
     PromptDecisionRequest,
     PromptProposalRequest,
     QualityLinearSummaryRequest,
+    RealApiErrorDecodeRequest,
     ProviderSmokeTestRequest,
     QualityRunRequest,
     RenameChatRequest,
@@ -64,6 +65,7 @@ from app.services.file_service import FileService
 from app.services.image_service import ImageService
 from app.services.prompt_version_service import PromptVersionService
 from app.services.recording_service import RecordingService
+from app.services.real_api_control_service import RealApiControlService
 from app.services.safe_command_runner import SafeCommandRunner
 from app.services.safe_file_editor import SafeFileEditor
 from app.services.storage_service import StorageService
@@ -99,6 +101,7 @@ master_agent = MasterOrchestratorAgent(storage=storage, memory_agent=memory_agen
 file_service = FileService(storage)
 image_service = ImageService()
 recording_service = RecordingService(storage)
+real_api_control_service = RealApiControlService(llm_router, image_service, recording_service.transcription)
 safe_file_editor = SafeFileEditor()
 safe_command_runner = SafeCommandRunner()
 permission_service = PermissionService()
@@ -1362,6 +1365,21 @@ def get_transcription_provider_status() -> dict:
 @router.post("/transcription/smoke-test")
 def transcription_smoke_test(request: TranscriptionSmokeTestRequest) -> dict:
     return recording_service.transcription.smoke_test(live=request.live)
+
+
+@router.get("/real-api/summary")
+def get_real_api_summary() -> dict:
+    return real_api_control_service.summary()
+
+
+@router.get("/real-api/live-warning/{capability}")
+def get_real_api_live_warning(capability: str) -> dict:
+    return real_api_control_service.live_warning(capability)
+
+
+@router.post("/real-api/decode-error")
+def decode_real_api_error(request: RealApiErrorDecodeRequest) -> dict:
+    return real_api_control_service.decode_error(request.error)
 
 
 @router.get("/chats")
