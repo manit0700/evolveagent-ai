@@ -3141,7 +3141,7 @@ function App() {
                       {developerMode && message.role === 'assistant' && (
                         <div className="message-chips">
                           <span>{formatType(message.result.task_type)}</span>
-                          <span>{message.result.master_plan.confidence}% confidence</span>
+                          <span>{message.result.master_plan.confidence}% routing</span>
                           <span>score {message.result.judge_result.overall_score}</span>
                           <span>{runModeLabel(message.result, modeLabel)}</span>
                           <span>{message.result.memory_saved ? 'memory saved' : 'memory open'}</span>

@@ -937,7 +937,7 @@ class MasterOrchestratorAgent:
                 best_type = task_type
                 best_matches = matches
         if best_matches == 0:
-            return "general", 62
+            return "general", 78
         if best_type == "image_generation":
             return best_type, min(96, 85 + best_matches * 4)
         if best_type == "app_automation":

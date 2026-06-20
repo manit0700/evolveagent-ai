@@ -368,6 +368,13 @@ def test_system_explanation_confidence_is_high():
     assert confidence > 62
 
 
+def test_general_text_confidence_is_not_low():
+    task_type, confidence = MasterOrchestratorAgent.detect_task_type_with_confidence("Tell me how to organize my day")
+
+    assert task_type == "general"
+    assert confidence >= 75
+
+
 def test_image_generation_confidence_is_high():
     task_type, confidence = MasterOrchestratorAgent.detect_task_type_with_confidence("create me photo of spiderman")
 
