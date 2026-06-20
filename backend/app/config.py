@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     image_mode: str = Field(default="mock", alias="IMAGE_MODE")
     image_provider: str = Field(default="mock_image", alias="IMAGE_PROVIDER")
     openai_image_model: str = Field(default="gpt-image-1.5", alias="OPENAI_IMAGE_MODEL")
+    openai_image_size: str = Field(default="1024x1024", alias="OPENAI_IMAGE_SIZE")
     transcription_mode: str = Field(default="mock", alias="TRANSCRIPTION_MODE")
     openai_transcription_model: str = Field(default="whisper-1", alias="OPENAI_TRANSCRIPTION_MODEL")
     linear_api_key: str | None = Field(default=None, alias="LINEAR_API_KEY")

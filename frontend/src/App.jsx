@@ -97,6 +97,10 @@ import {
   maintainWorkspaceMemoryTiers,
   getProviderStatus,
   runProviderSmokeTest,
+  getImageProviderStatus,
+  runImageSmokeTest,
+  getTranscriptionProviderStatus,
+  runTranscriptionSmokeTest,
   getQualityStatus,
   getWorkspaceMemory,
   getWorkspaceMemoryIntelligence,
@@ -305,6 +309,12 @@ function App() {
   const [providerStatus, setProviderStatus] = useState(null)
   const [providerCheck, setProviderCheck] = useState(null)
   const [providerCheckBusy, setProviderCheckBusy] = useState(false)
+  const [imageProviderStatus, setImageProviderStatus] = useState(null)
+  const [imageProviderCheck, setImageProviderCheck] = useState(null)
+  const [imageProviderBusy, setImageProviderBusy] = useState(false)
+  const [transcriptionProviderStatus, setTranscriptionProviderStatus] = useState(null)
+  const [transcriptionProviderCheck, setTranscriptionProviderCheck] = useState(null)
+  const [transcriptionProviderBusy, setTranscriptionProviderBusy] = useState(false)
   const [analytics, setAnalytics] = useState(null)
   const [learningReport, setLearningReport] = useState(null)
   const [showAnalytics, setShowAnalytics] = useState(false)
@@ -489,6 +499,8 @@ function App() {
 
   async function refreshProviderStatus() {
     setProviderStatus(await getProviderStatus())
+    setImageProviderStatus(await getImageProviderStatus())
+    setTranscriptionProviderStatus(await getTranscriptionProviderStatus())
   }
 
   async function handleProviderCheck(provider) {
@@ -501,6 +513,32 @@ function App() {
       setError(err.message)
     } finally {
       setProviderCheckBusy(false)
+    }
+  }
+
+  async function handleImageProviderCheck() {
+    setImageProviderBusy(true)
+    try {
+      const result = await runImageSmokeTest({ live: false })
+      setImageProviderCheck(result)
+      setImageProviderStatus(await getImageProviderStatus())
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setImageProviderBusy(false)
+    }
+  }
+
+  async function handleTranscriptionProviderCheck() {
+    setTranscriptionProviderBusy(true)
+    try {
+      const result = await runTranscriptionSmokeTest({ live: false })
+      setTranscriptionProviderCheck(result)
+      setTranscriptionProviderStatus(await getTranscriptionProviderStatus())
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setTranscriptionProviderBusy(false)
     }
   }
 
@@ -2036,6 +2074,65 @@ function App() {
           {realModeWithoutRealProvider && (
             <p className="provider-warning">Real mode is enabled, but no real provider key is configured. Mock fallback will be used.</p>
           )}
+          {imageProviderStatus && (
+            <details className="developer-prompt-block">
+              <summary>Image provider</summary>
+              <div className="provider-row">
+                <strong>{imageProviderStatus.active_provider}</strong>
+                <div className="model-meta">
+                  <span>{imageProviderStatus.image_mode} mode</span>
+                  <span>{imageProviderStatus.active_model}</span>
+                  <span>{imageProviderStatus.image_size}</span>
+                  {imageProviderStatus.real_image_ready && <span>real ready</span>}
+                  <span>fallback {imageProviderStatus.fallback_provider}</span>
+                </div>
+                <p>{imageProviderStatus.status_message}</p>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={handleImageProviderCheck}
+                  disabled={imageProviderBusy}
+                >
+                  Check image provider
+                </button>
+              </div>
+              {imageProviderCheck && (
+                <div className={`command-result ${imageProviderCheck.success ? 'success' : 'failed'}`}>
+                  <strong>image check</strong>
+                  <pre>{imageProviderCheck.message}</pre>
+                </div>
+              )}
+            </details>
+          )}
+          {transcriptionProviderStatus && (
+            <details className="developer-prompt-block">
+              <summary>Transcription provider</summary>
+              <div className="provider-row">
+                <strong>{transcriptionProviderStatus.active_provider}</strong>
+                <div className="model-meta">
+                  <span>{transcriptionProviderStatus.transcription_mode} mode</span>
+                  <span>{transcriptionProviderStatus.active_model}</span>
+                  {transcriptionProviderStatus.real_transcription_ready && <span>real ready</span>}
+                  <span>fallback {transcriptionProviderStatus.fallback_provider}</span>
+                </div>
+                <p>{transcriptionProviderStatus.status_message}</p>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={handleTranscriptionProviderCheck}
+                  disabled={transcriptionProviderBusy}
+                >
+                  Check transcription provider
+                </button>
+              </div>
+              {transcriptionProviderCheck && (
+                <div className={`command-result ${transcriptionProviderCheck.success ? 'success' : 'failed'}`}>
+                  <strong>transcription check</strong>
+                  <pre>{transcriptionProviderCheck.message}</pre>
+                </div>
+              )}
+            </details>
+          )}
         </section>
 
         <section className="sidebar-section">
@@ -2928,7 +3025,7 @@ function App() {
 
                   {imageResult && (
                     <div className="image-result-card">
-                      <img src={assetUrl(imageResult.image_url)} alt="Generated mock preview" />
+                      <img src={assetUrl(imageResult.image_url)} alt="Generated image preview" />
                       <div className="prompt-box">
                         <span>Prompt used</span>
                         <p>{imageResult.prompt}</p>
@@ -3532,7 +3629,7 @@ function App() {
                   <Sparkles size={17} />
                   <h2>Image Result</h2>
                 </div>
-                <img className="inspector-image" src={assetUrl(selectedRun.image_result.image_url)} alt="Generated mock preview" />
+                <img className="inspector-image" src={assetUrl(selectedRun.image_result.image_url)} alt="Generated image preview" />
                 <div className="model-meta">
                   <span>{selectedRun.image_result.provider}</span>
                   <span>{selectedRun.image_result.model}</span>

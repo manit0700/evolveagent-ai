@@ -31,6 +31,7 @@ from app.models.request_models import (
     GitBranchRequest,
     GitCommitRequest,
     GitPushRequest,
+    ImageSmokeTestRequest,
     PromptDecisionRequest,
     PromptProposalRequest,
     QualityLinearSummaryRequest,
@@ -40,6 +41,7 @@ from app.models.request_models import (
     RunRequest,
     SimulationCreateRequest,
     TestSuggestionRequest,
+    TranscriptionSmokeTestRequest,
     UpdateCustomAgentRequest,
     UpdateGoalRequest,
     UpdateGoalTaskRequest,
@@ -59,6 +61,7 @@ from app.services.goal_service import GoalService
 from app.services.llm_router import llm_router
 from app.services.permission_service import PermissionService
 from app.services.file_service import FileService
+from app.services.image_service import ImageService
 from app.services.prompt_version_service import PromptVersionService
 from app.services.recording_service import RecordingService
 from app.services.safe_command_runner import SafeCommandRunner
@@ -94,6 +97,7 @@ storage = StorageService()
 memory_agent = MemoryAgent(storage)
 master_agent = MasterOrchestratorAgent(storage=storage, memory_agent=memory_agent)
 file_service = FileService(storage)
+image_service = ImageService()
 recording_service = RecordingService(storage)
 safe_file_editor = SafeFileEditor()
 safe_command_runner = SafeCommandRunner()
@@ -1338,6 +1342,26 @@ def get_provider_status() -> ProviderStatus:
 @router.post("/providers/smoke-test")
 def provider_smoke_test(request: ProviderSmokeTestRequest) -> dict:
     return llm_router.smoke_test(provider=request.provider, live=request.live)
+
+
+@router.get("/images/status")
+def get_image_provider_status() -> dict:
+    return image_service.status()
+
+
+@router.post("/images/smoke-test")
+def image_smoke_test(request: ImageSmokeTestRequest) -> dict:
+    return image_service.smoke_test(live=request.live, prompt=request.prompt)
+
+
+@router.get("/transcription/status")
+def get_transcription_provider_status() -> dict:
+    return recording_service.transcription.status()
+
+
+@router.post("/transcription/smoke-test")
+def transcription_smoke_test(request: TranscriptionSmokeTestRequest) -> dict:
+    return recording_service.transcription.smoke_test(live=request.live)
 
 
 @router.get("/chats")

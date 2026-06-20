@@ -640,6 +640,63 @@ def test_provider_smoke_test_dry_run_and_mocked_live(monkeypatch):
     assert live["output_preview"] == "provider ready"
 
 
+def test_image_provider_status_and_dry_smoke_test(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "image_mode", "real")
+    monkeypatch.setattr(settings, "image_provider", "openai")
+    monkeypatch.setattr(settings, "openai_api_key", "test-key")
+
+    status_response = client.get("/api/images/status")
+    status = status_response.json()
+    assert status_response.status_code == 200
+    assert status["real_image_ready"] is True
+    assert status["active_provider"] == "openai"
+    assert status["fallback_provider"] == "mock_image"
+
+    smoke_response = client.post("/api/images/smoke-test", json={"live": False})
+    smoke = smoke_response.json()
+    assert smoke_response.status_code == 200
+    assert smoke["success"] is True
+    assert smoke["live"] is False
+
+
+def test_transcription_provider_status_and_dry_smoke_test(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "transcription_mode", "openai")
+    monkeypatch.setattr(settings, "openai_api_key", "test-key")
+
+    status_response = client.get("/api/transcription/status")
+    status = status_response.json()
+    assert status_response.status_code == 200
+    assert status["real_transcription_ready"] is True
+    assert status["active_provider"] == "openai"
+    assert status["active_model"] == settings.openai_transcription_model
+    assert status["fallback_provider"] == "mock"
+
+    smoke_response = client.post("/api/transcription/smoke-test", json={"live": False})
+    smoke = smoke_response.json()
+    assert smoke_response.status_code == 200
+    assert smoke["success"] is True
+    assert smoke["live"] is False
+
+
+def test_transcription_live_smoke_requires_upload(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "transcription_mode", "openai")
+    monkeypatch.setattr(settings, "openai_api_key", "test-key")
+
+    response = client.post("/api/transcription/smoke-test", json={"live": True})
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["success"] is False
+    assert body["live"] is True
+    assert "uploaded audio file" in body["message"]
+
+
 def test_feedback_and_analytics_endpoints():
     run_response = client.post(
         "/api/run",

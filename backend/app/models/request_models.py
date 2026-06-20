@@ -217,6 +217,15 @@ class ProviderSmokeTestRequest(BaseModel):
     live: bool = Field(default=False, description="When false, only checks configuration/readiness without calling a paid API.")
 
 
+class ImageSmokeTestRequest(BaseModel):
+    live: bool = Field(default=False, description="When false, only checks image-provider readiness without calling a paid API.")
+    prompt: str = Field(default="A futuristic AI assistant in a holographic interface", max_length=1000)
+
+
+class TranscriptionSmokeTestRequest(BaseModel):
+    live: bool = Field(default=False, description="When false, only checks transcription-provider readiness without calling a paid API.")
+
+
 class QualityLinearSummaryRequest(BaseModel):
     issue_id: str = Field(..., min_length=1, max_length=120)
     quality_run_id: str | None = Field(default=None, max_length=120)
