@@ -322,6 +322,59 @@ def test_on_goal_task_updated_completes_linear_with_summary(tmp_path, monkeypatc
     assert "EVO-169" in comment_body
 
 
+def test_sync_issue_updates_cached_linear_status(tmp_path):
+    from app.services.linear_orchestration_service import LinearOrchestrationService
+
+    storage = StorageService(data_dir=str(tmp_path))
+    linear = MagicMock()
+    linear.get_linear_issue.return_value = {
+        "id": "issue-277",
+        "identifier": "EVO-277",
+        "title": "Research Agent",
+        "description": "Add governed research workflow",
+        "status": "Done",
+        "url": "https://linear.app/EVO-277",
+    }
+    linear.map_issue_to_goal.return_value = {
+        "goal_title": "Research Agent",
+        "goal_summary": "Add governed research workflow",
+        "tasks": [{"title": "Research Agent", "description": "Build it", "phase": "Execution"}],
+    }
+
+    links = LinearLinkService(storage)
+    goals = GoalService(storage)
+    goal, task_graph = goals.create_from_plan(linear.map_issue_to_goal.return_value)
+    links.create_or_update_link(
+        {
+            "linear_issue_id": "issue-277",
+            "linear_identifier": "EVO-277",
+            "goal_id": goal.goal_id,
+            "task_id": task_graph.tasks[0].task_id,
+            "branch_name": "linear/evo-277",
+            "status": "selected",
+            "linear_status": "In Progress",
+        }
+    )
+
+    workspace_service = MagicMock()
+    workspace_service.resolve_workspace_id.return_value = "workspace-1"
+    orchestration = LinearOrchestrationService(
+        storage=storage,
+        linear_service=linear,
+        link_service=links,
+        goal_service=goals,
+        governance_service=MagicMock(),
+        master_agent=MagicMock(),
+        workspace_service=workspace_service,
+        git_service=MagicMock(),
+    )
+
+    result = orchestration.sync_issue("issue-277")
+
+    assert result["link"]["linear_status"] == "Done"
+    assert links.get_link_by_issue("issue-277")["linear_status"] == "Done"
+
+
 def test_cursor_handoff_builds_prompts_and_brief(tmp_path):
     from app.services.linear_cursor_handoff_service import LinearCursorHandoffService
 

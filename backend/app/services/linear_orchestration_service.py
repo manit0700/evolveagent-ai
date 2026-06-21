@@ -74,6 +74,7 @@ class LinearOrchestrationService:
                         "linear_url": issue.get("url"),
                         "workspace_id": resolved_workspace,
                         "status": "synced",
+                        "linear_status": issue.get("status"),
                     }
                 )
                 self._log("linear_issue_synced", f"Updated sync for {issue.get('identifier')}", workspace_id=resolved_workspace)
@@ -95,6 +96,7 @@ class LinearOrchestrationService:
                 "task_id": first_task.get("task_id") if first_task else None,
                 "workspace_id": resolved_workspace,
                 "status": "synced",
+                "linear_status": issue.get("status"),
                 "branch_name": branch_name,
             }
         )
