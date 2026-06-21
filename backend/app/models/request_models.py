@@ -320,3 +320,9 @@ class UpdateSystemPromptRequest(BaseModel):
     agent_name: str = Field(..., min_length=1, max_length=120)
     prompt: str = Field(..., min_length=1, max_length=8000)
     reason: str | None = Field(default=None, max_length=1000)
+
+
+class ResearchSearchRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=4000)
+    workspace_id: str | None = None
+    max_results: int = Field(default=5, ge=1, le=10)

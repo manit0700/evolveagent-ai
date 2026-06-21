@@ -42,6 +42,7 @@ from app.models.request_models import (
     ResearchCitationCreateRequest,
     ResearchSessionCreateRequest,
     ResearchSourceCreateRequest,
+    ResearchSearchRequest,
     RunRequest,
     SimulationCreateRequest,
     TestSuggestionRequest,
@@ -70,6 +71,7 @@ from app.services.prompt_version_service import PromptVersionService
 from app.services.recording_service import RecordingService
 from app.services.real_api_control_service import RealApiControlService
 from app.services.research_session_service import ResearchSessionService
+from app.services.research_search_service import ResearchSearchService
 from app.services.safe_command_runner import SafeCommandRunner
 from app.services.safe_file_editor import SafeFileEditor
 from app.services.storage_service import StorageService
@@ -141,6 +143,12 @@ test_quality_service = TestQualityService(
 app_builder_service = AppBuilderService(storage, governance_service)
 debate_simulation_service = DebateSimulationService(storage, governance_service)
 research_session_service = ResearchSessionService(storage, workspace_service, governance_service)
+research_search_service = ResearchSearchService(
+    storage=storage,
+    workspace_service=workspace_service,
+    governance_service=governance_service,
+    research_session_service=research_session_service,
+)
 linear_orchestration = LinearOrchestrationService(
     storage=storage,
     linear_service=linear_service,
@@ -424,6 +432,57 @@ def get_research_report(research_id: str) -> dict:
     if not report:
         raise HTTPException(status_code=404, detail="Research session not found")
     return report
+
+
+@router.post("/research/search")
+def run_controlled_search(request: ResearchSearchRequest) -> dict:
+    return research_search_service.search(
+        query=request.query,
+        workspace_id=request.workspace_id,
+        max_results=request.max_results,
+    )
+
+
+@router.post("/research/sessions/{research_id}/search")
+def run_session_controlled_search(research_id: str, request: ResearchSearchRequest) -> dict:
+    session = research_session_service.get_session(research_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Research session not found")
+
+    search_res = research_search_service.search(
+        query=request.query,
+        workspace_id=request.workspace_id,
+        max_results=request.max_results,
+    )
+
+    added_sources = []
+    for item in search_res["results"]:
+        payload = {
+            "title": item["title"],
+            "url": item["url"],
+            "publisher": item["publisher"],
+            "snippet": item["snippet"],
+            "fetched": True,
+        }
+        source = research_session_service.add_source(research_id, payload)
+        if source:
+            added_sources.append(source)
+
+    research_search_service.log_sources_added(
+        research_id=research_id,
+        query=request.query,
+        workspace_id=session.get("workspace_id"),
+        num_sources=len(search_res["results"]),
+    )
+
+    updated_session = research_session_service.get_session(research_id)
+    if not updated_session:
+        raise HTTPException(status_code=404, detail="Research session not found")
+    return {
+        **updated_session,
+        "search_result": search_res,
+        "sources_added": added_sources,
+    }
 
 
 @router.post("/workspaces")
