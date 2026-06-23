@@ -60,6 +60,7 @@ from app.models.request_models import (
     LinearCursorVerifyRequest,
     MemoryConsolidationJobRequest,
     MemoryConsolidateRequest,
+    NotionExportRequest,
     RegisterToolRequest,
     UpdateSystemPromptRequest,
 )
@@ -106,6 +107,7 @@ from app.services.digital_twin_service import DigitalTwinService
 from app.services.secret_scanner import SecretScanner
 from app.services.compliance_service import ComplianceService
 from app.services.slack_notification_service import SlackNotificationService
+from app.services.notion_export_service import NotionExportService
 
 router = APIRouter()
 storage = StorageService()
@@ -159,6 +161,7 @@ research_search_service = ResearchSearchService(
 digital_twin_service = DigitalTwinService(storage, workspace_service, governance_service)
 compliance_service = ComplianceService(storage, governance_service)
 slack_notifications = SlackNotificationService(storage, governance_service)
+notion_exports = NotionExportService(storage, governance_service)
 linear_orchestration = LinearOrchestrationService(
     storage=storage,
     linear_service=linear_service,
@@ -816,10 +819,31 @@ def send_slack_test_notification(request: SlackTestNotificationRequest) -> dict:
     )
 
 
+@router.get("/integrations/notion/status")
+def get_notion_integration_status() -> dict:
+    return notion_exports.status()
+
+
+@router.get("/integrations/notion/exports")
+def list_notion_exports(limit: int = Query(default=50, ge=1, le=200)) -> list[dict]:
+    return notion_exports.list_exports(limit=limit)
+
+
+@router.post("/integrations/notion/export")
+def export_to_notion(request: NotionExportRequest) -> dict:
+    resolved_workspace_id = workspace_service.resolve_workspace_id(request.workspace_id) if request.workspace_id else None
+    return notion_exports.export_page(
+        title=request.title,
+        content=request.content,
+        workspace_id=resolved_workspace_id,
+    )
+
+
 @router.post("/run", response_model=RunResponse)
 def run_workflow(request: RunRequest) -> RunResponse:
     response = kernel_service.run_workflow(request)
     slack_notifications.notify_run_completed(response)
+    notion_exports.export_run_completed(response)
     return response
 
 
