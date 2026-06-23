@@ -54,3 +54,4 @@ backend/app/data/research_citations.json
 backend/app/data/digital_twin_profiles.json
 *.log
 logs/
+evolveagent-ai/
