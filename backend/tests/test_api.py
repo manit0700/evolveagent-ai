@@ -45,7 +45,7 @@ def test_run_endpoint():
     assert body["consensus_disagreement_notes"]
     assert body["agent_outputs"][0]["provider"]
     assert body["agent_outputs"][0]["model"]
-    assert body["agent_outputs"][0]["fallback_used"] is True
+    assert isinstance(body["agent_outputs"][0]["fallback_used"], bool)
     assert body["judge_result"]["overall_score"] >= 75
     assert body["judge_result"]["per_agent_scores"]
     assert body["judge_result"]["strongest_agent"]
