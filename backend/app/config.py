@@ -57,6 +57,10 @@ class Settings(BaseSettings):
     slack_notifications_enabled: bool = Field(default=False, alias="SLACK_NOTIFICATIONS_ENABLED")
     slack_webhook_url: str | None = Field(default=None, alias="SLACK_WEBHOOK_URL")
     slack_default_channel: str | None = Field(default=None, alias="SLACK_DEFAULT_CHANNEL")
+    notion_sync_enabled: bool = Field(default=False, alias="NOTION_SYNC_ENABLED")
+    notion_api_key: str | None = Field(default=None, alias="NOTION_API_KEY")
+    notion_parent_page_id: str | None = Field(default=None, alias="NOTION_PARENT_PAGE_ID")
+    notion_version: str = Field(default="2022-06-28", alias="NOTION_VERSION")
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",

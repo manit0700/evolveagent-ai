@@ -354,3 +354,9 @@ class SlackTestNotificationRequest(BaseModel):
     text: str = Field(default="EvolveAgent AI Slack notification test.", max_length=2000)
     channel: str | None = Field(default=None, max_length=120)
     workspace_id: str | None = None
+
+
+class NotionExportRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    content: str = Field(..., min_length=1, max_length=20_000)
+    workspace_id: str | None = None

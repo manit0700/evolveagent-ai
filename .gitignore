@@ -55,6 +55,7 @@ backend/app/data/digital_twin_profiles.json
 backend/app/data/compliance_policies.json
 backend/app/data/compliance_reports.json
 backend/app/data/slack_notifications.json
+backend/app/data/notion_exports.json
 *.log
 logs/
 evolveagent-ai/

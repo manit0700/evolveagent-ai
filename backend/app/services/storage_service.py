@@ -57,6 +57,7 @@ class StorageService:
             "compliance_policies.json",
             "compliance_reports.json",
             "slack_notifications.json",
+            "notion_exports.json",
         ):
             self._ensure_file(filename)
 

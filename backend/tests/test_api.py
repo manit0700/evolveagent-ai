@@ -146,6 +146,87 @@ def test_slack_test_notification_posts_and_redacts(monkeypatch):
     assert "[REDACTED_SECRET]" in captured["json"]["text"]
 
 
+def test_notion_integration_status_disabled(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "notion_sync_enabled", False)
+    monkeypatch.setattr(settings, "notion_api_key", None)
+    monkeypatch.setattr(settings, "notion_parent_page_id", None)
+
+    response = client.get("/api/integrations/notion/status")
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["enabled"] is False
+    assert body["configured"] is False
+    assert body["parent_page_set"] is False
+
+
+def test_notion_export_skips_without_config(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "notion_sync_enabled", True)
+    monkeypatch.setattr(settings, "notion_api_key", None)
+    monkeypatch.setattr(settings, "notion_parent_page_id", None)
+
+    response = client.post(
+        "/api/integrations/notion/export",
+        json={"title": "Weekly run summary", "content": "Completed workflow summary."},
+    )
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["exported"] is False
+    assert body["skipped"] is True
+    assert body["reason"] == "Notion API key or parent page ID is not configured."
+
+
+def test_notion_export_posts_page_and_redacts(monkeypatch):
+    from app.config import settings
+
+    captured = {}
+
+    class FakeResponse:
+        status_code = 200
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"id": "notion-page-1", "url": "https://notion.so/notion-page-1"}
+
+    def fake_post(url, headers, json, timeout):
+        captured["url"] = url
+        captured["headers"] = headers
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(settings, "notion_sync_enabled", True)
+    monkeypatch.setattr(settings, "notion_api_key", "secret-notion-key")
+    monkeypatch.setattr(settings, "notion_parent_page_id", "parent-page-id")
+    monkeypatch.setattr(settings, "notion_version", "2022-06-28")
+    monkeypatch.setattr("app.services.notion_export_service.httpx.post", fake_post)
+
+    response = client.post(
+        "/api/integrations/notion/export",
+        json={"title": "Run summary", "content": "Completed workflow with token=SHOULD_NOT_LEAK."},
+    )
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["exported"] is True
+    assert body["skipped"] is False
+    assert body["redaction_count"] == 1
+    assert body["notion_page_id"] == "notion-page-1"
+    assert captured["url"] == "https://api.notion.com/v1/pages"
+    assert captured["headers"]["Notion-Version"] == "2022-06-28"
+    assert captured["json"]["parent"]["page_id"] == "parent-page-id"
+    block_text = captured["json"]["children"][0]["paragraph"]["rich_text"][0]["text"]["content"]
+    assert "SHOULD_NOT_LEAK" not in block_text
+    assert "[REDACTED_SECRET]" in block_text
+
+
 def test_run_blocks_high_risk_prompt_and_logs_governance():
     response = client.post(
         "/api/run",
