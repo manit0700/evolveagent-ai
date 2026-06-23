@@ -108,6 +108,12 @@ class NotionExportService:
             response = httpx.post(NOTION_PAGES_URL, headers=headers, json=payload, timeout=20.0)
             response.raise_for_status()
             body = response.json()
+        except httpx.HTTPStatusError as exc:
+            detail = exc.response.text[:1000] if exc.response is not None else str(exc)
+            record = {**base_record, "exported": False, "skipped": False, "error": detail}
+            self._persist(record)
+            self._log_governance(record, blocked=True)
+            return record
         except httpx.HTTPError as exc:
             record = {**base_record, "exported": False, "skipped": False, "error": str(exc)}
             self._persist(record)
@@ -130,7 +136,7 @@ class NotionExportService:
         paragraphs = self._paragraph_chunks(content)
         return {
             "parent": {"page_id": settings.notion_parent_page_id},
-            "properties": {"title": {"title": [{"text": {"content": title[:200] or "EvolveAgent AI Export"}}]}},
+            "properties": {"title": [{"text": {"content": title[:200] or "EvolveAgent AI Export"}}]},
             "children": [
                 {
                     "object": "block",
