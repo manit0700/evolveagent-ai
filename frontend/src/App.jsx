@@ -2214,6 +2214,9 @@ function App() {
                     {!slackStatus.enabled && (
                       <p className="muted">Set SLACK_NOTIFICATIONS_ENABLED=true and SLACK_WEBHOOK_URL in .env to enable.</p>
                     )}
+                    {slackStatus.enabled && !slackStatus.configured && (
+                      <p className="muted">Enabled but webhook not configured. Set SLACK_WEBHOOK_URL in .env.</p>
+                    )}
                     {slackStatus.enabled && slackStatus.configured && (
                       <button
                         className="secondary-button full-width"
@@ -2221,14 +2224,14 @@ function App() {
                         onClick={handleSlackTest}
                         disabled={slackBusy}
                       >
-                        Send test notification
+                        {slackBusy ? 'Sending...' : 'Send test notification'}
                       </button>
                     )}
                   </>
                 ) : (
                   <p className="muted">Slack status unavailable.</p>
                 )}
-                {slackNotifications.length > 0 && (
+                {slackNotifications.length > 0 ? (
                   <details className="developer-prompt-block">
                     <summary>Recent notifications ({slackNotifications.length})</summary>
                     {slackNotifications.slice(0, 5).map((item, index) => (
@@ -2239,7 +2242,9 @@ function App() {
                       </div>
                     ))}
                   </details>
-                )}
+                ) : slackStatus?.enabled ? (
+                  <p className="muted">No notifications yet.</p>
+                ) : null}
               </div>
 
               <div className="integration-card">
@@ -2267,6 +2272,9 @@ function App() {
                     {!notionStatus.enabled && (
                       <p className="muted">Set NOTION_SYNC_ENABLED=true, NOTION_API_KEY, and NOTION_PARENT_PAGE_ID in .env to enable.</p>
                     )}
+                    {notionStatus.enabled && !notionStatus.configured && (
+                      <p className="muted">Enabled but not fully configured. Set NOTION_API_KEY and NOTION_PARENT_PAGE_ID in .env.</p>
+                    )}
                     {notionStatus.enabled && notionStatus.configured && (
                       <button
                         className="secondary-button full-width"
@@ -2274,14 +2282,14 @@ function App() {
                         onClick={handleNotionTestExport}
                         disabled={notionBusy}
                       >
-                        Send test export
+                        {notionBusy ? 'Exporting...' : 'Send test export'}
                       </button>
                     )}
                   </>
                 ) : (
                   <p className="muted">Notion status unavailable.</p>
                 )}
-                {notionExports.length > 0 && (
+                {notionExports.length > 0 ? (
                   <details className="developer-prompt-block">
                     <summary>Recent exports ({notionExports.length})</summary>
                     {notionExports.slice(0, 5).map((item, index) => (
@@ -2292,7 +2300,9 @@ function App() {
                       </div>
                     ))}
                   </details>
-                )}
+                ) : notionStatus?.enabled ? (
+                  <p className="muted">No exports yet.</p>
+                ) : null}
               </div>
 
               <button
