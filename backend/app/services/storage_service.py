@@ -82,6 +82,10 @@ class StorageService:
             "business_proposals.json",
             "business_marketing_calendar.json",
             "business_kpis.json",
+            "chief_daily_plans.json",
+            "chief_weekly_plans.json",
+            "chief_followups.json",
+            "chief_priority_scores.json",
         ):
             self._ensure_file(filename)
 

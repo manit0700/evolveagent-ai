@@ -1756,3 +1756,25 @@ export function getBusinessMarketingItems(workspaceId) {
 export function createBusinessMarketingItem(payload) {
   return postJson('/api/business/marketing-calendar', payload)
 }
+
+export function getChiefDashboard(workspaceId) {
+  return getJson(`/api/chief-of-staff/dashboard${query({ workspace_id: workspaceId })}`)
+}
+export function getChiefPriorities(workspaceId) {
+  return getJson(`/api/chief-of-staff/priorities${query({ workspace_id: workspaceId })}`)
+}
+export function getChiefFollowups(workspaceId) {
+  return getJson(`/api/chief-of-staff/followups${query({ workspace_id: workspaceId })}`)
+}
+export function createChiefDailyPlan(workspaceId) {
+  return postJson('/api/chief-of-staff/daily-plan', { workspace_id: workspaceId })
+}
+export function createChiefWeeklyPlan(workspaceId) {
+  return postJson('/api/chief-of-staff/weekly-plan', { workspace_id: workspaceId })
+}
+export function createChiefFollowup(payload) {
+  return postJson('/api/chief-of-staff/followups', payload)
+}
+export function updateChiefFollowup(followupId, payload) {
+  return patchJson(`/api/chief-of-staff/followups/${followupId}`, payload)
+}

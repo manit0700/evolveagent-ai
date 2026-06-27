@@ -79,6 +79,10 @@ backend/app/data/business_documents.json
 backend/app/data/business_proposals.json
 backend/app/data/business_marketing_calendar.json
 backend/app/data/business_kpis.json
+backend/app/data/chief_daily_plans.json
+backend/app/data/chief_weekly_plans.json
+backend/app/data/chief_followups.json
+backend/app/data/chief_priority_scores.json
 backend/app/data/*.tmp
 *.log
 logs/
