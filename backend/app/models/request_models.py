@@ -611,3 +611,31 @@ class BusinessMarketingItemUpdateRequest(BaseModel):
     scheduled_for: str | None = Field(default=None, max_length=60)
     status: str | None = Field(default=None, pattern="^(planned|drafted|approved|posted_manually)$")
     draft_content: str | None = Field(default=None, max_length=4000)
+
+
+# ----------------------------------------------------------------------
+# v19.0 AI Chief of Staff
+# ----------------------------------------------------------------------
+class ChiefPlanRequest(BaseModel):
+    workspace_id: str | None = None
+
+
+class ChiefFollowupCreateRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    description: str = Field(default="", max_length=2000)
+    source_type: str = Field(default="manual", pattern="^(manual|goal|business|support|approval|risk)$")
+    source_id: str | None = Field(default=None, max_length=120)
+    due_date: str = Field(default="", max_length=10)
+    priority: str = Field(default="medium", pattern="^(low|medium|high)$")
+    status: str = Field(default="open", pattern="^(open|done|snoozed|archived)$")
+    workspace_id: str | None = None
+
+
+class ChiefFollowupUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+    source_type: str | None = Field(default=None, pattern="^(manual|goal|business|support|approval|risk)$")
+    source_id: str | None = Field(default=None, max_length=120)
+    due_date: str | None = Field(default=None, max_length=10)
+    priority: str | None = Field(default=None, pattern="^(low|medium|high)$")
+    status: str | None = Field(default=None, pattern="^(open|done|snoozed|archived)$")

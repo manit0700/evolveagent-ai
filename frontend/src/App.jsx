@@ -110,6 +110,13 @@ import {
   createBusinessProposal,
   getBusinessMarketingItems,
   createBusinessMarketingItem,
+  getChiefDashboard,
+  getChiefPriorities,
+  getChiefFollowups,
+  createChiefDailyPlan,
+  createChiefWeeklyPlan,
+  createChiefFollowup,
+  updateChiefFollowup,
   getGoal,
   getGoals,
   getHistory,
@@ -531,6 +538,16 @@ function App() {
   const [proposalClient, setProposalClient] = useState('')
   const [marketingTitle, setMarketingTitle] = useState('')
   const [marketingChannel, setMarketingChannel] = useState('email')
+  const [showChiefPanel, setShowChiefPanel] = useState(false)
+  const [chiefDashboard, setChiefDashboard] = useState(null)
+  const [chiefPriorities, setChiefPriorities] = useState([])
+  const [chiefFollowups, setChiefFollowups] = useState([])
+  const [chiefOverdueCount, setChiefOverdueCount] = useState(0)
+  const [chiefBusy, setChiefBusy] = useState(false)
+  const [chiefError, setChiefError] = useState(null)
+  const [followupTitle, setFollowupTitle] = useState('')
+  const [followupDueDate, setFollowupDueDate] = useState('')
+  const [followupPriority, setFollowupPriority] = useState('medium')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -638,6 +655,7 @@ function App() {
     refreshOrgPanel()
     refreshAgentMarketplace(workspaceId)
     refreshBusinessPanel(workspaceId)
+    refreshChiefPanel(workspaceId)
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -1113,6 +1131,59 @@ function App() {
       setMarketingTitle('')
       setMarketingChannel('email')
     })
+  }
+
+  async function refreshChiefPanel(nextWorkspaceId = workspaceId) {
+    const [dashboard, priorities, followups] = await Promise.all([
+      getChiefDashboard(nextWorkspaceId),
+      getChiefPriorities(nextWorkspaceId),
+      getChiefFollowups(nextWorkspaceId),
+    ])
+    setChiefDashboard(dashboard)
+    setChiefPriorities(priorities?.priority_items || [])
+    setChiefFollowups(followups?.followups || [])
+    setChiefOverdueCount(followups?.overdue_count || 0)
+  }
+
+  async function runChiefAction(action) {
+    setChiefBusy(true)
+    setChiefError(null)
+    try {
+      await action()
+      await refreshChiefPanel(workspaceId)
+    } catch (error) {
+      setChiefError(error.message || 'Chief of Staff action failed')
+    } finally {
+      setChiefBusy(false)
+    }
+  }
+
+  async function handleCreateDailyPlan() {
+    await runChiefAction(() => createChiefDailyPlan(workspaceId))
+  }
+
+  async function handleCreateWeeklyPlan() {
+    await runChiefAction(() => createChiefWeeklyPlan(workspaceId))
+  }
+
+  async function handleCreateFollowup(event) {
+    event.preventDefault()
+    if (!followupTitle.trim()) return
+    await runChiefAction(async () => {
+      await createChiefFollowup({
+        title: followupTitle.trim(),
+        due_date: followupDueDate.trim(),
+        priority: followupPriority,
+        workspace_id: workspaceId,
+      })
+      setFollowupTitle('')
+      setFollowupDueDate('')
+      setFollowupPriority('medium')
+    })
+  }
+
+  async function handleMarkFollowupDone(followupId) {
+    await runChiefAction(() => updateChiefFollowup(followupId, { status: 'done' }))
   }
 
   async function refreshAppBuilderTemplates() {
@@ -4576,6 +4647,106 @@ function App() {
                 )}
 
                 <p className="muted">Drafts only — EvolveAgent never sends email, processes payments, or contacts an external CRM.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowChiefPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Chief of Staff
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showChiefPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>AI Chief of Staff · v19.0</strong>
+                  <span>Daily/weekly plans, ranked priorities, and follow-ups from your local data — recommendations only.</span>
+                </div>
+                {chiefDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Priorities</span><strong>{(chiefDashboard.priority_items || []).length}</strong></div>
+                    <div><span>Open f/ups</span><strong>{(chiefDashboard.open_followups || []).length}</strong></div>
+                    <div><span>Overdue</span><strong>{(chiefDashboard.overdue_followups || []).length}</strong></div>
+                    <div><span>Blocked</span><strong>{(chiefDashboard.blocked_items || []).length}</strong></div>
+                    <div><span>Risks</span><strong>{chiefDashboard.risk_summary?.open_risk_count ?? 0}</strong></div>
+                    <div><span>Today</span><strong>{chiefDashboard.today}</strong></div>
+                  </div>
+                )}
+                {chiefDashboard?.recommended_next_action && (
+                  <p className="muted">Next: {chiefDashboard.recommended_next_action}</p>
+                )}
+                {chiefError && <p className="error-text">{chiefError}</p>}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleCreateDailyPlan} disabled={chiefBusy}>Daily plan</button>
+                  <button type="button" onClick={handleCreateWeeklyPlan} disabled={chiefBusy}>Weekly plan</button>
+                  <button type="button" onClick={() => refreshChiefPanel(workspaceId)} disabled={chiefBusy}>Refresh</button>
+                </div>
+
+                {chiefDashboard?.daily_plan && (
+                  <div className="agent-template-card">
+                    <strong>Daily plan · {chiefDashboard.daily_plan.date}</strong>
+                    <span>{chiefDashboard.daily_plan.summary}</span>
+                  </div>
+                )}
+                {chiefDashboard?.weekly_plan && (
+                  <div className="agent-template-card">
+                    <strong>Weekly plan · {chiefDashboard.weekly_plan.week_start}</strong>
+                    <span>{chiefDashboard.weekly_plan.summary}</span>
+                  </div>
+                )}
+
+                {chiefPriorities.length > 0 && (
+                  <>
+                    <h3>Ranked priorities</h3>
+                    {chiefPriorities.slice(0, 6).map((item) => (
+                      <div className="agent-template-card" key={item.item_id}>
+                        <strong>{item.title}</strong>
+                        <p className="muted">{item.item_type} · score {item.priority_score}</p>
+                        <p className="muted">{item.reason}</p>
+                        <p className="muted">→ {item.recommended_action}</p>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                <form className="stacked-form" onSubmit={handleCreateFollowup}>
+                  <h3>New follow-up</h3>
+                  <input type="text" placeholder="Title" value={followupTitle} onChange={(event) => setFollowupTitle(event.target.value)} />
+                  <input type="text" placeholder="Due date YYYY-MM-DD" value={followupDueDate} onChange={(event) => setFollowupDueDate(event.target.value)} />
+                  <select value={followupPriority} onChange={(event) => setFollowupPriority(event.target.value)}>
+                    <option value="low">low</option>
+                    <option value="medium">medium</option>
+                    <option value="high">high</option>
+                  </select>
+                  <button type="submit" disabled={chiefBusy || !followupTitle.trim()}>Add follow-up</button>
+                </form>
+
+                {chiefFollowups.filter((item) => item.status === 'open' || item.status === 'snoozed').length > 0 && (
+                  <>
+                    <h3>Open follow-ups {chiefOverdueCount > 0 ? `(${chiefOverdueCount} overdue)` : ''}</h3>
+                    {chiefFollowups
+                      .filter((item) => item.status === 'open' || item.status === 'snoozed')
+                      .slice(0, 8)
+                      .map((followup) => (
+                        <div className="agent-template-card" key={followup.followup_id}>
+                          <strong>{followup.title}</strong>
+                          <p className="muted">{followup.priority} · due {followup.due_date || 'n/a'} · {followup.status}</p>
+                          <div className="inline-actions">
+                            <button type="button" onClick={() => handleMarkFollowupDone(followup.followup_id)} disabled={chiefBusy}>
+                              Mark done
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </>
+                )}
+
+                <p className="muted">Recommendations only — no reminders are sent, no calendar/email is written, nothing runs automatically.</p>
               </div>
             )}
           </section>
