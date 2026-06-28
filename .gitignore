@@ -121,6 +121,12 @@ backend/app/data/universal_workflows.json
 backend/app/data/universal_actions.json
 backend/app/data/universal_handoffs.json
 backend/app/data/universal_operator_audit.json
+backend/app/data/team_members.json
+backend/app/data/team_assignments.json
+backend/app/data/team_standups.json
+backend/app/data/team_sprints.json
+backend/app/data/team_reviews.json
+backend/app/data/team_manager_reports.json
 backend/app/data/*.tmp
 *.log
 logs/

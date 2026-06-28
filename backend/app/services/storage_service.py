@@ -124,6 +124,12 @@ class StorageService:
             "universal_actions.json",
             "universal_handoffs.json",
             "universal_operator_audit.json",
+            "team_members.json",
+            "team_assignments.json",
+            "team_standups.json",
+            "team_sprints.json",
+            "team_reviews.json",
+            "team_manager_reports.json",
         ):
             self._ensure_file(filename)
 
