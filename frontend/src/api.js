@@ -2155,3 +2155,25 @@ export function createComplianceChecklist(payload) {
 export function createComplianceAuditPackage(payload) {
   return postJson('/api/compliance/audit-packages', payload || {})
 }
+
+export function getExecutiveBoardDashboard() {
+  return getJson('/api/executive-board/dashboard')
+}
+export function getExecutiveBoardSessions() {
+  return getJson('/api/executive-board/sessions')
+}
+export function getExecutiveBoardReports() {
+  return getJson('/api/executive-board/reports')
+}
+export function createExecutiveBoardSession(payload) {
+  return postJson('/api/executive-board/sessions', payload)
+}
+export function reviewExecutiveBoardSession(sessionId) {
+  return postJson(`/api/executive-board/sessions/${sessionId}/review`, {})
+}
+export function voteExecutiveBoardSession(sessionId, payload) {
+  return postJson(`/api/executive-board/sessions/${sessionId}/vote`, payload)
+}
+export function reportExecutiveBoardSession(sessionId) {
+  return postJson(`/api/executive-board/sessions/${sessionId}/report`, {})
+}

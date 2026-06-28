@@ -234,6 +234,13 @@ import {
   reviewComplianceContract,
   createComplianceChecklist,
   createComplianceAuditPackage,
+  getExecutiveBoardDashboard,
+  getExecutiveBoardSessions,
+  getExecutiveBoardReports,
+  createExecutiveBoardSession,
+  reviewExecutiveBoardSession,
+  voteExecutiveBoardSession,
+  reportExecutiveBoardSession,
   getGoal,
   getGoals,
   getHistory,
@@ -825,6 +832,16 @@ function App() {
   const [contractContent, setContractContent] = useState('')
   const [complianceArtifact, setComplianceArtifact] = useState(null)
   const [checklistFramework, setChecklistFramework] = useState('hipaa')
+  const [showBoardPanel, setShowBoardPanel] = useState(false)
+  const [boardDashboard, setBoardDashboard] = useState(null)
+  const [boardSessions, setBoardSessions] = useState([])
+  const [boardSessionId, setBoardSessionId] = useState('')
+  const [boardArtifact, setBoardArtifact] = useState(null)
+  const [boardBusy, setBoardBusy] = useState(false)
+  const [boardError, setBoardError] = useState(null)
+  const [boardDecision, setBoardDecision] = useState('')
+  const [boardVoteRole, setBoardVoteRole] = useState('CEO')
+  const [boardVoteValue, setBoardVoteValue] = useState('approve')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -948,6 +965,7 @@ function App() {
     refreshTeamPanel()
     refreshBizOpsPanel()
     refreshComplianceIntelPanel()
+    refreshBoardPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2311,6 +2329,58 @@ function App() {
 
   async function handleCreateCompliancePolicy() {
     await runComplianceIntelAction(() => createCompliancePolicy({ name: 'New policy', category: 'general' }))
+  }
+
+  async function refreshBoardPanel() {
+    const [dashboard, sessions] = await Promise.all([
+      getExecutiveBoardDashboard(),
+      getExecutiveBoardSessions(),
+    ])
+    setBoardDashboard(dashboard)
+    setBoardSessions(sessions?.sessions || [])
+  }
+
+  async function runBoardAction(action) {
+    setBoardBusy(true)
+    setBoardError(null)
+    try {
+      const value = await action()
+      await refreshBoardPanel()
+      return value
+    } catch (error) {
+      setBoardError(error.message || 'Executive board action failed')
+      return null
+    } finally {
+      setBoardBusy(false)
+    }
+  }
+
+  async function handleCreateBoardSession(event) {
+    event.preventDefault()
+    if (!boardDecision.trim()) return
+    const session = await runBoardAction(() => createExecutiveBoardSession({ title: boardDecision.trim(), decision: boardDecision.trim() }))
+    if (session) {
+      setBoardDecision('')
+      setBoardSessionId(session.session_id)
+      setBoardArtifact({ kind: 'session', data: session })
+    }
+  }
+
+  async function handleBoardReview() {
+    if (!boardSessionId) return
+    const review = await runBoardAction(() => reviewExecutiveBoardSession(boardSessionId))
+    if (review) setBoardArtifact({ kind: 'review', data: review })
+  }
+
+  async function handleBoardVote() {
+    if (!boardSessionId) return
+    await runBoardAction(() => voteExecutiveBoardSession(boardSessionId, { role: boardVoteRole, vote: boardVoteValue }))
+  }
+
+  async function handleBoardReport() {
+    if (!boardSessionId) return
+    const report = await runBoardAction(() => reportExecutiveBoardSession(boardSessionId))
+    if (report) setBoardArtifact({ kind: 'report', data: report })
   }
 
   async function refreshAppBuilderTemplates() {
@@ -7313,6 +7383,81 @@ function App() {
                 )}
 
                 <p className="muted">Not legal advice — produces checklists, warnings, and audit material for human review.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowBoardPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Executive Board
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showBoardPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>AI Executive Board · v35.0</strong>
+                  <span>Review a decision from CEO/CTO/CFO/COO/Legal/Product/Marketing/Security perspectives. Advises and summarizes — does not execute.</span>
+                </div>
+                {boardDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Sessions</span><strong>{boardDashboard.total_sessions}</strong></div>
+                    <div><span>Reviewed</span><strong>{boardDashboard.reviewed_sessions}</strong></div>
+                    <div><span>Votes</span><strong>{boardDashboard.total_votes}</strong></div>
+                    <div><span>Reports</span><strong>{boardDashboard.total_reports}</strong></div>
+                  </div>
+                )}
+                {boardError && <p className="error-text">{boardError}</p>}
+
+                <form className="stacked-form" onSubmit={handleCreateBoardSession}>
+                  <h3>New decision review</h3>
+                  <textarea placeholder="Describe the decision/question for the board" value={boardDecision} onChange={(event) => setBoardDecision(event.target.value)} rows={2} />
+                  <button type="submit" disabled={boardBusy || !boardDecision.trim()}>Create session</button>
+                </form>
+
+                {boardSessions.length > 0 && (
+                  <>
+                    <h3>Sessions</h3>
+                    <select value={boardSessionId} onChange={(event) => { setBoardSessionId(event.target.value); setBoardArtifact(null) }}>
+                      <option value="">Select session…</option>
+                      {boardSessions.map((session) => (
+                        <option key={session.session_id} value={session.session_id}>{session.title}</option>
+                      ))}
+                    </select>
+                    <div className="inline-actions">
+                      <button type="button" onClick={handleBoardReview} disabled={boardBusy || !boardSessionId}>Review</button>
+                      <button type="button" onClick={handleBoardReport} disabled={boardBusy || !boardSessionId}>Report</button>
+                    </div>
+                    <div className="inline-actions">
+                      <select value={boardVoteRole} onChange={(event) => setBoardVoteRole(event.target.value)}>
+                        {['CEO', 'CTO', 'CFO', 'COO', 'Legal/Compliance', 'Product', 'Marketing', 'Security'].map((role) => (
+                          <option key={role} value={role}>{role}</option>
+                        ))}
+                      </select>
+                      <select value={boardVoteValue} onChange={(event) => setBoardVoteValue(event.target.value)}>
+                        <option value="approve">approve</option>
+                        <option value="reject">reject</option>
+                        <option value="abstain">abstain</option>
+                      </select>
+                      <button type="button" onClick={handleBoardVote} disabled={boardBusy || !boardSessionId}>Cast vote</button>
+                    </div>
+                  </>
+                )}
+
+                {boardArtifact && (
+                  <div className="agent-template-card">
+                    <strong>{boardArtifact.kind}</strong>
+                    <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '180px', overflow: 'auto', margin: 0 }}>
+                      {JSON.stringify(boardArtifact.data, null, 2).slice(0, 1400)}
+                    </pre>
+                  </div>
+                )}
+
+                <p className="muted">Advisory only — the board reviews and recommends from multiple perspectives; it does not execute any action.</p>
               </div>
             )}
           </section>
