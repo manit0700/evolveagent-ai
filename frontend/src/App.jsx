@@ -184,6 +184,15 @@ import {
   createLifeReminder,
   createLifeDeadline,
   createLifeDailyPlan,
+  getUniversalOperatorDashboard,
+  getUniversalOperatorSessions,
+  getUniversalOperatorWorkflows,
+  getUniversalOperatorAudit,
+  createUniversalOperatorSession,
+  createUniversalOperatorWorkflow,
+  planUniversalOperatorWorkflow,
+  decideUniversalOperatorAction,
+  createUniversalOperatorHandoff,
   getGoal,
   getGoals,
   getHistory,
@@ -720,6 +729,17 @@ function App() {
   const [lifeDeadlineKind, setLifeDeadlineKind] = useState('school')
   const [lifeDeadlineDue, setLifeDeadlineDue] = useState('')
   const [lifeDailyPlan, setLifeDailyPlan] = useState(null)
+  const [showUniversalPanel, setShowUniversalPanel] = useState(false)
+  const [universalDashboard, setUniversalDashboard] = useState(null)
+  const [universalSessions, setUniversalSessions] = useState([])
+  const [universalWorkflows, setUniversalWorkflows] = useState([])
+  const [universalAudit, setUniversalAudit] = useState([])
+  const [universalBusy, setUniversalBusy] = useState(false)
+  const [universalError, setUniversalError] = useState(null)
+  const [universalSurface, setUniversalSurface] = useState('cross_app')
+  const [universalGoal, setUniversalGoal] = useState('')
+  const [universalSteps, setUniversalSteps] = useState('')
+  const [universalPlannedActions, setUniversalPlannedActions] = useState([])
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -838,6 +858,7 @@ function App() {
     refreshTrainingPanel()
     refreshAvatarPanel()
     refreshLifePanel(workspaceId)
+    refreshUniversalPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -1892,6 +1913,67 @@ function App() {
   async function handleGenerateLifeDailyPlan() {
     const plan = await runLifeAction(() => createLifeDailyPlan(workspaceId))
     if (plan) setLifeDailyPlan(plan)
+  }
+
+  async function refreshUniversalPanel() {
+    const [dashboard, sessions, workflows, audit] = await Promise.all([
+      getUniversalOperatorDashboard(),
+      getUniversalOperatorSessions(),
+      getUniversalOperatorWorkflows(),
+      getUniversalOperatorAudit(),
+    ])
+    setUniversalDashboard(dashboard)
+    setUniversalSessions(sessions?.sessions || [])
+    setUniversalWorkflows(workflows?.workflows || [])
+    setUniversalAudit(audit?.audit || [])
+  }
+
+  async function runUniversalAction(action) {
+    setUniversalBusy(true)
+    setUniversalError(null)
+    try {
+      const value = await action()
+      await refreshUniversalPanel()
+      return value
+    } catch (error) {
+      setUniversalError(error.message || 'Universal operator action failed')
+      return null
+    } finally {
+      setUniversalBusy(false)
+    }
+  }
+
+  async function handleCreateUniversalSession() {
+    await runUniversalAction(() => createUniversalOperatorSession({ surface: universalSurface }))
+  }
+
+  async function handleCreateUniversalWorkflow(event) {
+    event.preventDefault()
+    if (!universalGoal.trim()) return
+    await runUniversalAction(async () => {
+      const steps = universalSteps.split('\n').map((s) => s.trim()).filter(Boolean)
+      await createUniversalOperatorWorkflow({ goal: universalGoal.trim(), steps })
+      setUniversalGoal('')
+      setUniversalSteps('')
+    })
+  }
+
+  async function handlePlanUniversalWorkflow(workflowId) {
+    const plan = await runUniversalAction(() => planUniversalOperatorWorkflow(workflowId))
+    if (plan) setUniversalPlannedActions(plan.planned_actions || [])
+  }
+
+  async function handleDecideUniversalAction(actionId, decision) {
+    await runUniversalAction(async () => {
+      const updated = await decideUniversalOperatorAction(actionId, decision)
+      setUniversalPlannedActions((current) =>
+        current.map((item) => (item.action_id === actionId ? { ...item, status: updated.status } : item)),
+      )
+    })
+  }
+
+  async function handleCreateUniversalHandoff() {
+    await runUniversalAction(() => createUniversalOperatorHandoff({ from_device: 'laptop', to_device: 'phone', summary: 'Continue current workflow' }))
   }
 
   async function refreshAppBuilderTemplates() {
@@ -6420,6 +6502,100 @@ function App() {
                 )}
 
                 <p className="muted">Local planning only — nothing is synced to a real calendar or sent anywhere.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowUniversalPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Universal Operator
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showUniversalPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Universal App Operator · v30.0</strong>
+                  <span>Plan cross-app/desktop/browser workflows with a permission model and audit trail. Mock/planning-first — no real app automation.</span>
+                </div>
+                {universalDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Sessions</span><strong>{universalDashboard.total_sessions}</strong></div>
+                    <div><span>Workflows</span><strong>{universalDashboard.total_workflows}</strong></div>
+                    <div><span>Actions</span><strong>{universalDashboard.total_actions}</strong></div>
+                    <div><span>Sensitive</span><strong>{universalDashboard.sensitive_actions}</strong></div>
+                    <div><span>Awaiting</span><strong>{universalDashboard.actions_awaiting_approval}</strong></div>
+                    <div><span>Handoffs</span><strong>{universalDashboard.total_handoffs}</strong></div>
+                  </div>
+                )}
+                {universalError && <p className="error-text">{universalError}</p>}
+                <div className="inline-actions">
+                  <select value={universalSurface} onChange={(event) => setUniversalSurface(event.target.value)}>
+                    <option value="cross_app">cross_app</option>
+                    <option value="desktop">desktop</option>
+                    <option value="browser">browser</option>
+                    <option value="mobile">mobile</option>
+                  </select>
+                  <button type="button" onClick={handleCreateUniversalSession} disabled={universalBusy}>New session</button>
+                  <button type="button" onClick={handleCreateUniversalHandoff} disabled={universalBusy}>Device handoff</button>
+                  <button type="button" onClick={() => refreshUniversalPanel()} disabled={universalBusy}>Refresh</button>
+                </div>
+
+                <form className="stacked-form" onSubmit={handleCreateUniversalWorkflow}>
+                  <h3>New cross-app workflow</h3>
+                  <input type="text" placeholder="Goal" value={universalGoal} onChange={(event) => setUniversalGoal(event.target.value)} />
+                  <textarea placeholder="Steps (one per line, e.g. Read inbox / Draft reply / Send email)" value={universalSteps} onChange={(event) => setUniversalSteps(event.target.value)} rows={3} />
+                  <button type="submit" disabled={universalBusy || !universalGoal.trim()}>Create workflow</button>
+                </form>
+
+                {universalWorkflows.length > 0 && (
+                  <>
+                    <h3>Workflows</h3>
+                    {universalWorkflows.slice(0, 6).map((workflow) => (
+                      <div className="agent-template-card" key={workflow.workflow_id}>
+                        <strong>{workflow.goal}</strong>
+                        <p className="muted">{workflow.status} · {(workflow.steps || []).length} step(s)</p>
+                        <div className="inline-actions">
+                          <button type="button" onClick={() => handlePlanUniversalWorkflow(workflow.workflow_id)} disabled={universalBusy}>Plan</button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {universalPlannedActions.length > 0 && (
+                  <>
+                    <h3>Planned actions</h3>
+                    {universalPlannedActions.map((action) => (
+                      <div className="agent-template-card" key={action.action_id}>
+                        <strong>{action.permission_level}{action.sensitive ? ' · sensitive' : ''}</strong>
+                        <span>{action.description}</span>
+                        <p className="muted">Status: {action.status}</p>
+                        {action.requires_approval && (
+                          <div className="inline-actions">
+                            <button type="button" onClick={() => handleDecideUniversalAction(action.action_id, 'approve')} disabled={universalBusy}>Approve</button>
+                            <button type="button" onClick={() => handleDecideUniversalAction(action.action_id, 'reject')} disabled={universalBusy}>Reject</button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {universalAudit.length > 0 && (
+                  <>
+                    <h3>Audit trail</h3>
+                    {universalAudit.slice(0, 6).map((entry) => (
+                      <p className="muted" key={entry.audit_id}>{entry.event_type}: {entry.detail}</p>
+                    ))}
+                  </>
+                )}
+
+                <p className="muted">Mock/planning-first — no real desktop/browser/app automation; sensitive actions (send/delete/pay/share) require approval; nothing is executed.</p>
               </div>
             )}
           </section>

@@ -119,6 +119,11 @@ class StorageService:
             "life_reminders.json",
             "life_deadlines.json",
             "life_plans.json",
+            "universal_operator_sessions.json",
+            "universal_workflows.json",
+            "universal_actions.json",
+            "universal_handoffs.json",
+            "universal_operator_audit.json",
         ):
             self._ensure_file(filename)
 
