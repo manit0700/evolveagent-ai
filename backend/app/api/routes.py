@@ -76,6 +76,12 @@ from app.models.request_models import (
     UniversalWorkflowCreateRequest,
     UniversalActionDecisionRequest,
     UniversalHandoffCreateRequest,
+    TeamMemberCreateRequest,
+    TeamMemberUpdateRequest,
+    TeamAssignmentCreateRequest,
+    TeamAssignmentUpdateRequest,
+    TeamSprintCreateRequest,
+    TeamSprintReviewRequest,
     CreateAgentJobRequest,
     CreateKnowledgeLinkRequest,
     CreateChatRequest,
@@ -194,6 +200,7 @@ from app.services.training_lab_service import TrainingLabService
 from app.services.avatar_persona_service import AvatarPersonaService
 from app.services.life_os_service import LifeOSService
 from app.services.universal_operator_service import UniversalOperatorService
+from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
 from app.services.sla_monitoring_service import SLAMonitoringService
@@ -271,6 +278,7 @@ training_lab_service = TrainingLabService(storage, governance_service, SecretSca
 avatar_persona_service = AvatarPersonaService(storage, governance_service, image_service)
 life_os_service = LifeOSService(storage, governance_service)
 universal_operator_service = UniversalOperatorService(storage, governance_service)
+team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
 sla_monitoring_service = SLAMonitoringService(storage)
@@ -2585,6 +2593,88 @@ def list_universal_operator_handoffs() -> dict:
 @router.post("/universal-operator/handoffs")
 def create_universal_operator_handoff(request: UniversalHandoffCreateRequest) -> dict:
     return universal_operator_service.create_handoff(request.model_dump())
+
+
+# ----------------------------------------------------------------------
+# v31.0 AI Team Lead / Manager Mode
+# ----------------------------------------------------------------------
+@router.get("/team-manager/dashboard")
+def get_team_manager_dashboard() -> dict:
+    return team_manager_service.dashboard()
+
+
+@router.get("/team-manager/analytics")
+def get_team_manager_analytics() -> dict:
+    return team_manager_service.analytics()
+
+
+@router.get("/team-manager/members")
+def list_team_members() -> dict:
+    members = team_manager_service.list_members()
+    return {"members": members, "count": len(members)}
+
+
+@router.post("/team-manager/members")
+def create_team_member(request: TeamMemberCreateRequest) -> dict:
+    return team_manager_service.create_member(request.model_dump())
+
+
+@router.patch("/team-manager/members/{member_id}")
+def update_team_member(member_id: str, request: TeamMemberUpdateRequest) -> dict:
+    try:
+        return team_manager_service.update_member(member_id, request.model_dump(exclude_unset=True))
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Member not found") from error
+
+
+@router.get("/team-manager/assignments")
+def list_team_assignments() -> dict:
+    assignments = team_manager_service.list_assignments()
+    return {"assignments": assignments, "count": len(assignments)}
+
+
+@router.post("/team-manager/assignments")
+def create_team_assignment(request: TeamAssignmentCreateRequest) -> dict:
+    return team_manager_service.create_assignment(request.model_dump())
+
+
+@router.patch("/team-manager/assignments/{assignment_id}")
+def update_team_assignment(assignment_id: str, request: TeamAssignmentUpdateRequest) -> dict:
+    try:
+        return team_manager_service.update_assignment(assignment_id, request.model_dump(exclude_unset=True))
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Assignment not found") from error
+
+
+@router.get("/team-manager/standups")
+def list_team_standups() -> dict:
+    standups = team_manager_service.list_standups()
+    return {"standups": standups, "count": len(standups)}
+
+
+@router.post("/team-manager/standups")
+def create_team_standup() -> dict:
+    return team_manager_service.create_standup()
+
+
+@router.get("/team-manager/sprints")
+def list_team_sprints() -> dict:
+    sprints = team_manager_service.list_sprints()
+    return {"sprints": sprints, "count": len(sprints)}
+
+
+@router.post("/team-manager/sprints")
+def create_team_sprint(request: TeamSprintCreateRequest) -> dict:
+    return team_manager_service.create_sprint(request.model_dump())
+
+
+@router.post("/team-manager/sprints/{sprint_id}/review")
+def create_team_sprint_review(sprint_id: str, request: TeamSprintReviewRequest | None = None) -> dict:
+    payload = request.model_dump() if request else {}
+    try:
+        return team_manager_service.create_review(sprint_id, payload)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Sprint not found") from error
 
 
 @router.get("/governance")
