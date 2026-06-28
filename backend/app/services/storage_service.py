@@ -105,6 +105,15 @@ class StorageService:
             "device_operator_sessions.json",
             "device_operator_actions.json",
             "device_operator_audit.json",
+            "training_datasets.json",
+            "training_examples.json",
+            "training_exports.json",
+            "training_runs.json",
+            "training_comparisons.json",
+            "avatar_personas.json",
+            "voice_response_settings.json",
+            "meeting_voice_sessions.json",
+            "persona_consent_records.json",
         ):
             self._ensure_file(filename)
 

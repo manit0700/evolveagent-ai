@@ -156,6 +156,23 @@ import {
   createDeviceOperatorSession,
   planDeviceOperatorSession,
   confirmDeviceOperatorAction,
+  getTrainingLabDashboard,
+  getTrainingDatasets,
+  getTrainingDataset,
+  createTrainingDataset,
+  addTrainingExample,
+  updateTrainingExample,
+  exportTrainingDataset,
+  createTrainingRun,
+  getAvatarDashboard,
+  getAvatarPersona,
+  updateAvatarPersona,
+  getAvatarVoiceSettings,
+  updateAvatarVoiceSettings,
+  getAvatarMeetingSessions,
+  createAvatarMeetingSession,
+  createAvatarConsent,
+  generateAvatarImage,
   getGoal,
   getGoals,
   getHistory,
@@ -652,6 +669,28 @@ function App() {
   const [deviceCommand, setDeviceCommand] = useState('')
   const [deviceScreenText, setDeviceScreenText] = useState('')
   const [devicePlannedActions, setDevicePlannedActions] = useState([])
+  const [showTrainingPanel, setShowTrainingPanel] = useState(false)
+  const [trainingDashboard, setTrainingDashboard] = useState(null)
+  const [trainingDatasets, setTrainingDatasets] = useState([])
+  const [trainingDatasetId, setTrainingDatasetId] = useState('')
+  const [trainingExamples, setTrainingExamples] = useState([])
+  const [trainingExport, setTrainingExport] = useState(null)
+  const [trainingBusy, setTrainingBusy] = useState(false)
+  const [trainingError, setTrainingError] = useState(null)
+  const [datasetName, setDatasetName] = useState('')
+  const [examplePrompt, setExamplePrompt] = useState('')
+  const [exampleCompletion, setExampleCompletion] = useState('')
+  const [showAvatarPanel, setShowAvatarPanel] = useState(false)
+  const [avatarDashboard, setAvatarDashboard] = useState(null)
+  const [avatarMeetings, setAvatarMeetings] = useState([])
+  const [avatarBusy, setAvatarBusy] = useState(false)
+  const [avatarError, setAvatarError] = useState(null)
+  const [avatarName, setAvatarName] = useState('')
+  const [avatarTone, setAvatarTone] = useState('friendly')
+  const [avatarVoiceMode, setAvatarVoiceMode] = useState('text_only')
+  const [meetingTitle, setMeetingTitle] = useState('')
+  const [avatarDescription, setAvatarDescription] = useState('')
+  const [avatarStyle, setAvatarStyle] = useState('illustrated')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -767,6 +806,8 @@ function App() {
     refreshHealingPanel()
     refreshCompanyBrainPanel()
     refreshDevicePanel()
+    refreshTrainingPanel()
+    refreshAvatarPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -1615,6 +1656,133 @@ function App() {
         current.map((item) => (item.action_id === actionId ? { ...item, status: updated.status } : item)),
       )
     })
+  }
+
+  async function refreshTrainingPanel() {
+    const [dashboard, datasets] = await Promise.all([
+      getTrainingLabDashboard(),
+      getTrainingDatasets(),
+    ])
+    setTrainingDashboard(dashboard)
+    setTrainingDatasets(datasets?.datasets || [])
+  }
+
+  async function loadTrainingExamples(datasetId) {
+    if (!datasetId) {
+      setTrainingExamples([])
+      return
+    }
+    const detail = await getTrainingDataset(datasetId)
+    setTrainingExamples(detail?.examples || [])
+  }
+
+  async function runTrainingAction(action) {
+    setTrainingBusy(true)
+    setTrainingError(null)
+    try {
+      const value = await action()
+      await refreshTrainingPanel()
+      if (trainingDatasetId) await loadTrainingExamples(trainingDatasetId)
+      return value
+    } catch (error) {
+      setTrainingError(error.message || 'Training lab action failed')
+      return null
+    } finally {
+      setTrainingBusy(false)
+    }
+  }
+
+  async function handleCreateDataset(event) {
+    event.preventDefault()
+    if (!datasetName.trim()) return
+    const dataset = await runTrainingAction(() => createTrainingDataset({ name: datasetName.trim() }))
+    if (dataset) {
+      setDatasetName('')
+      setTrainingDatasetId(dataset.dataset_id)
+      await loadTrainingExamples(dataset.dataset_id)
+    }
+  }
+
+  async function handleSelectTrainingDataset(datasetId) {
+    setTrainingDatasetId(datasetId)
+    setTrainingExport(null)
+    await loadTrainingExamples(datasetId)
+  }
+
+  async function handleAddExample(event) {
+    event.preventDefault()
+    if (!trainingDatasetId || !examplePrompt.trim()) return
+    await runTrainingAction(async () => {
+      await addTrainingExample(trainingDatasetId, { prompt: examplePrompt.trim(), completion: exampleCompletion.trim() })
+      setExamplePrompt('')
+      setExampleCompletion('')
+    })
+  }
+
+  async function handleSetExampleStatus(exampleId, status) {
+    await runTrainingAction(() => updateTrainingExample(exampleId, { status }))
+  }
+
+  async function handleExportDataset() {
+    if (!trainingDatasetId) return
+    const result = await runTrainingAction(() => exportTrainingDataset(trainingDatasetId))
+    if (result) setTrainingExport(result)
+  }
+
+  async function handleCreateTrainingRun() {
+    await runTrainingAction(() => createTrainingRun({ dataset_id: trainingDatasetId || null }))
+  }
+
+  async function refreshAvatarPanel() {
+    const [dashboard, meetings] = await Promise.all([
+      getAvatarDashboard(),
+      getAvatarMeetingSessions(),
+    ])
+    setAvatarDashboard(dashboard)
+    setAvatarMeetings(meetings?.meeting_sessions || [])
+    if (dashboard?.persona?.avatar_name && !avatarName) setAvatarName(dashboard.persona.avatar_name)
+    if (dashboard?.voice_settings?.voice_mode) setAvatarVoiceMode(dashboard.voice_settings.voice_mode)
+  }
+
+  async function runAvatarAction(action) {
+    setAvatarBusy(true)
+    setAvatarError(null)
+    try {
+      await action()
+      await refreshAvatarPanel()
+    } catch (error) {
+      setAvatarError(error.message || 'Avatar action failed')
+    } finally {
+      setAvatarBusy(false)
+    }
+  }
+
+  async function handleSavePersona(event) {
+    event.preventDefault()
+    await runAvatarAction(() => updateAvatarPersona({ avatar_name: avatarName.trim() || undefined, tone: avatarTone }))
+  }
+
+  async function handleSaveVoiceMode(mode) {
+    setAvatarVoiceMode(mode)
+    await runAvatarAction(() => updateAvatarVoiceSettings({ voice_mode: mode }))
+  }
+
+  async function handleCreateMeetingSession(event) {
+    event.preventDefault()
+    if (!meetingTitle.trim()) return
+    await runAvatarAction(async () => {
+      await createAvatarMeetingSession({ title: meetingTitle.trim() })
+      setMeetingTitle('')
+    })
+  }
+
+  async function handleGrantConsent() {
+    await runAvatarAction(() => createAvatarConsent({ scope: 'persona_behavior', granted: true }))
+  }
+
+  async function handleGenerateAvatarImage(event) {
+    event.preventDefault()
+    await runAvatarAction(() => generateAvatarImage({ description: avatarDescription.trim(), style: avatarStyle }))
   }
 
   async function refreshAppBuilderTemplates() {
@@ -5804,6 +5972,219 @@ function App() {
                 )}
 
                 <p className="muted">Mock/planning-first — no real phone automation; send/pay/delete/share/password/call/post/submit require approval; dangerous actions blocked.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowTrainingPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Training Lab
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showTrainingPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Private Training Lab · v27.0</strong>
+                  <span>Prepare approved, sanitized fine-tuning datasets. The app does not train the base model automatically.</span>
+                </div>
+                {trainingDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Datasets</span><strong>{trainingDashboard.total_datasets}</strong></div>
+                    <div><span>Examples</span><strong>{trainingDashboard.total_examples}</strong></div>
+                    <div><span>Approved</span><strong>{trainingDashboard.approved_examples}</strong></div>
+                    <div><span>Redacted</span><strong>{trainingDashboard.examples_with_redactions}</strong></div>
+                    <div><span>Exports</span><strong>{trainingDashboard.total_exports}</strong></div>
+                    <div><span>Runs</span><strong>{trainingDashboard.total_runs}</strong></div>
+                  </div>
+                )}
+                {trainingError && <p className="error-text">{trainingError}</p>}
+
+                <form className="stacked-form" onSubmit={handleCreateDataset}>
+                  <h3>New dataset</h3>
+                  <input type="text" placeholder="Dataset name" value={datasetName} onChange={(event) => setDatasetName(event.target.value)} />
+                  <button type="submit" disabled={trainingBusy || !datasetName.trim()}>Create</button>
+                </form>
+
+                {trainingDatasets.length > 0 && (
+                  <>
+                    <h3>Datasets</h3>
+                    <select value={trainingDatasetId} onChange={(event) => handleSelectTrainingDataset(event.target.value)}>
+                      <option value="">Select dataset…</option>
+                      {trainingDatasets.map((dataset) => (
+                        <option key={dataset.dataset_id} value={dataset.dataset_id}>{dataset.name}</option>
+                      ))}
+                    </select>
+                    <div className="inline-actions">
+                      <button type="button" onClick={handleExportDataset} disabled={trainingBusy || !trainingDatasetId}>Export approved (JSONL)</button>
+                      <button type="button" onClick={handleCreateTrainingRun} disabled={trainingBusy}>Mock run</button>
+                    </div>
+                  </>
+                )}
+
+                <form className="stacked-form" onSubmit={handleAddExample}>
+                  <h3>Add example (auto-redacted)</h3>
+                  <textarea placeholder="Prompt" value={examplePrompt} onChange={(event) => setExamplePrompt(event.target.value)} rows={2} />
+                  <textarea placeholder="Completion" value={exampleCompletion} onChange={(event) => setExampleCompletion(event.target.value)} rows={2} />
+                  <button type="submit" disabled={trainingBusy || !trainingDatasetId || !examplePrompt.trim()}>Add example</button>
+                </form>
+
+                {trainingExamples.length > 0 && (
+                  <>
+                    <h3>Examples</h3>
+                    {trainingExamples.slice(0, 8).map((example) => (
+                      <div className="agent-template-card" key={example.example_id}>
+                        <strong>{example.status}</strong>
+                        <span>{example.prompt.slice(0, 120)}</span>
+                        {(example.redaction?.secrets_detected || example.redaction?.pii_detected) && (
+                          <p className="muted">Redacted: {[...(example.redaction.secret_types || []), ...(example.redaction.pii_types || [])].join(', ')}</p>
+                        )}
+                        <div className="inline-actions">
+                          <button type="button" onClick={() => handleSetExampleStatus(example.example_id, 'approved')} disabled={trainingBusy}>Approve</button>
+                          <button type="button" onClick={() => handleSetExampleStatus(example.example_id, 'rejected')} disabled={trainingBusy}>Reject</button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {trainingExport && (
+                  <div className="agent-template-card">
+                    <strong>Export · {trainingExport.approved_example_count} approved</strong>
+                    <p className="muted">Excluded non-approved: {trainingExport.excluded_non_approved}</p>
+                    <p className="muted">{trainingExport.safety_note}</p>
+                  </div>
+                )}
+
+                <p className="muted">No auto-training — only approved + sanitized examples export; secrets and PII are redacted before inclusion.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowAvatarPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Avatar / Voice Twin
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showAvatarPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Personal AI Avatar / Voice Twin · v28.0</strong>
+                  <span>Persona, voice-response, and meeting-assistant settings. The avatar is always an AI — no impersonation, no voice cloning.</span>
+                </div>
+                {avatarDashboard && (
+                  <div className="provider-card">
+                    <div><span>Avatar</span><strong>{avatarDashboard.persona?.avatar_name}</strong></div>
+                    <div><span>Tone</span><strong>{avatarDashboard.persona?.tone}</strong></div>
+                    <div><span>Voice</span><strong>{avatarDashboard.voice_settings?.voice_mode}</strong></div>
+                    <div><span>Consent</span><strong>{String(avatarDashboard.latest_consent_granted)}</strong></div>
+                  </div>
+                )}
+                {avatarError && <p className="error-text">{avatarError}</p>}
+
+                {avatarDashboard?.persona?.avatar_image?.image_url && (
+                  <div className="agent-template-card">
+                    <strong>Avatar</strong>
+                    <img
+                      src={avatarDashboard.persona.avatar_image.image_url}
+                      alt={`${avatarDashboard.persona.avatar_name} avatar`}
+                      style={{ width: '120px', height: '120px', borderRadius: '12px', objectFit: 'cover', marginTop: '8px' }}
+                    />
+                    <p className="muted">
+                      {avatarDashboard.persona.avatar_image.mock_preview ? 'Mock preview' : avatarDashboard.persona.avatar_image.provider} ·
+                      {' '}{avatarDashboard.persona.avatar_image.style}
+                    </p>
+                    <p className="muted">{avatarDashboard.persona.avatar_image.note}</p>
+                  </div>
+                )}
+
+                <form className="stacked-form" onSubmit={handleGenerateAvatarImage}>
+                  <h3>Generate avatar (looks like you)</h3>
+                  <textarea
+                    placeholder="Describe how it should look (e.g. short black hair, glasses, friendly smile, hoodie)"
+                    value={avatarDescription}
+                    onChange={(event) => setAvatarDescription(event.target.value)}
+                    rows={2}
+                  />
+                  <select value={avatarStyle} onChange={(event) => setAvatarStyle(event.target.value)}>
+                    <option value="illustrated">illustrated</option>
+                    <option value="cartoon">cartoon</option>
+                    <option value="minimal">minimal</option>
+                    <option value="3d_stylized">3d_stylized</option>
+                    <option value="pixel">pixel</option>
+                  </select>
+                  <button type="submit" disabled={avatarBusy}>Generate avatar</button>
+                  <p className="muted">Stylized avatar from your description (mock preview unless real image mode is enabled). Not a photo-real clone; never claims to be you.</p>
+                </form>
+
+                <form className="stacked-form" onSubmit={handleSavePersona}>
+                  <h3>Persona</h3>
+                  <input type="text" placeholder="Avatar name" value={avatarName} onChange={(event) => setAvatarName(event.target.value)} />
+                  <select value={avatarTone} onChange={(event) => setAvatarTone(event.target.value)}>
+                    <option value="friendly">friendly</option>
+                    <option value="professional">professional</option>
+                    <option value="concise">concise</option>
+                    <option value="encouraging">encouraging</option>
+                    <option value="neutral">neutral</option>
+                  </select>
+                  <button type="submit" disabled={avatarBusy}>Save persona</button>
+                </form>
+
+                <h3>Voice response mode</h3>
+                <div className="inline-actions">
+                  {['text_only', 'spoken_summary_ready', 'disabled'].map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => handleSaveVoiceMode(mode)}
+                      disabled={avatarBusy}
+                      className={avatarVoiceMode === mode ? 'active' : ''}
+                    >
+                      {mode}
+                    </button>
+                  ))}
+                </div>
+
+                <form className="stacked-form" onSubmit={handleCreateMeetingSession}>
+                  <h3>Meeting assistant session</h3>
+                  <input type="text" placeholder="Meeting title" value={meetingTitle} onChange={(event) => setMeetingTitle(event.target.value)} />
+                  <button type="submit" disabled={avatarBusy || !meetingTitle.trim()}>Create session</button>
+                </form>
+
+                {avatarMeetings.length > 0 && (
+                  <>
+                    <h3>Recent meeting sessions</h3>
+                    {avatarMeetings.slice(0, 5).map((session) => (
+                      <div className="agent-template-card" key={session.meeting_session_id}>
+                        <strong>{session.title}</strong>
+                        <p className="muted">{session.status} · consent required</p>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                <div className="inline-actions">
+                  <button type="button" onClick={handleGrantConsent} disabled={avatarBusy}>Record consent</button>
+                  <button type="button" onClick={() => refreshAvatarPanel()} disabled={avatarBusy}>Refresh</button>
+                </div>
+
+                {avatarDashboard?.safety_rules && (
+                  <>
+                    <h3>Safety</h3>
+                    {avatarDashboard.safety_rules.map((rule, index) => (
+                      <p className="muted" key={index}>• {rule}</p>
+                    ))}
+                  </>
+                )}
               </div>
             )}
           </section>

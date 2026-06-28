@@ -782,3 +782,69 @@ class DevicePlanRequest(BaseModel):
 class DeviceConfirmActionRequest(BaseModel):
     action_id: str = Field(..., min_length=1, max_length=120)
     approve: bool = Field(default=False)
+
+
+# ----------------------------------------------------------------------
+# v27.0 Private Training Lab
+# ----------------------------------------------------------------------
+class TrainingDatasetCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=160)
+    description: str = Field(default="", max_length=2000)
+    purpose: str = Field(default="fine_tuning_preparation", max_length=200)
+
+
+class TrainingExampleCreateRequest(BaseModel):
+    prompt: str = Field(..., min_length=1, max_length=20000)
+    completion: str = Field(default="", max_length=20000)
+    approved: bool = Field(default=False)
+
+
+class TrainingExampleUpdateRequest(BaseModel):
+    status: str | None = Field(default=None, pattern="^(pending|approved|rejected)$")
+    prompt: str | None = Field(default=None, max_length=20000)
+    completion: str | None = Field(default=None, max_length=20000)
+
+
+class TrainingRunCreateRequest(BaseModel):
+    dataset_id: str | None = Field(default=None, max_length=120)
+    base_model: str = Field(default="", max_length=120)
+    method: str = Field(default="lora", max_length=60)
+
+
+class TrainingComparisonRequest(BaseModel):
+    baseline_model: str = Field(default="", max_length=120)
+    candidate_model: str = Field(default="", max_length=120)
+    metric: str = Field(default="win_rate", max_length=80)
+    baseline_score: float = Field(default=0)
+    candidate_score: float = Field(default=0)
+
+
+# ----------------------------------------------------------------------
+# v28.0 Personal AI Avatar / Voice Twin
+# ----------------------------------------------------------------------
+class AvatarPersonaUpdateRequest(BaseModel):
+    avatar_name: str | None = Field(default=None, max_length=80)
+    tone: str | None = Field(default=None, pattern="^(friendly|professional|concise|encouraging|neutral)$")
+    format: str | None = Field(default=None, pattern="^(bullets|paragraph|step_by_step|summary_first)$")
+    style: str | None = Field(default=None, max_length=200)
+
+
+class AvatarVoiceSettingsUpdateRequest(BaseModel):
+    voice_mode: str | None = Field(default=None, pattern="^(text_only|spoken_summary_ready|disabled)$")
+    spoken_summary_max_chars: int | None = Field(default=None, ge=100, le=2000)
+
+
+class AvatarMeetingSessionRequest(BaseModel):
+    title: str = Field(default="", max_length=200)
+    context: str = Field(default="", max_length=4000)
+
+
+class AvatarConsentRequest(BaseModel):
+    scope: str = Field(default="persona_behavior", max_length=120)
+    granted: bool = Field(default=False)
+    note: str = Field(default="", max_length=1000)
+
+
+class AvatarImageRequest(BaseModel):
+    description: str = Field(default="", max_length=600, description="Self-description for a stylized avatar (not a photo-real clone).")
+    style: str = Field(default="illustrated", pattern="^(illustrated|cartoon|minimal|3d_stylized|pixel)$")

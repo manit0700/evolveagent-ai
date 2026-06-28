@@ -1902,3 +1902,59 @@ export function planDeviceOperatorSession(sessionId, payload) {
 export function confirmDeviceOperatorAction(sessionId, actionId, approve) {
   return postJson(`/api/device-operator/sessions/${sessionId}/confirm-action`, { action_id: actionId, approve })
 }
+
+export function getTrainingLabDashboard() {
+  return getJson('/api/training-lab/dashboard')
+}
+export function getTrainingDatasets() {
+  return getJson('/api/training-lab/datasets')
+}
+export function getTrainingDataset(datasetId) {
+  return getJson(`/api/training-lab/datasets/${datasetId}`)
+}
+export function createTrainingDataset(payload) {
+  return postJson('/api/training-lab/datasets', payload)
+}
+export function addTrainingExample(datasetId, payload) {
+  return postJson(`/api/training-lab/datasets/${datasetId}/examples`, payload)
+}
+export function updateTrainingExample(exampleId, payload) {
+  return patchJson(`/api/training-lab/examples/${exampleId}`, payload)
+}
+export function exportTrainingDataset(datasetId) {
+  return postJson(`/api/training-lab/datasets/${datasetId}/export`, {})
+}
+export function createTrainingRun(payload) {
+  return postJson('/api/training-lab/runs', payload)
+}
+export function createTrainingComparison(payload) {
+  return postJson('/api/training-lab/comparisons', payload)
+}
+
+export function getAvatarDashboard() {
+  return getJson('/api/avatar/dashboard')
+}
+export function getAvatarPersona() {
+  return getJson('/api/avatar/persona')
+}
+export function updateAvatarPersona(payload) {
+  return patchJson('/api/avatar/persona', payload)
+}
+export function getAvatarVoiceSettings() {
+  return getJson('/api/avatar/voice-settings')
+}
+export function updateAvatarVoiceSettings(payload) {
+  return patchJson('/api/avatar/voice-settings', payload)
+}
+export function getAvatarMeetingSessions() {
+  return getJson('/api/avatar/meeting-sessions')
+}
+export function createAvatarMeetingSession(payload) {
+  return postJson('/api/avatar/meeting-sessions', payload)
+}
+export function createAvatarConsent(payload) {
+  return postJson('/api/avatar/consent', payload)
+}
+export function generateAvatarImage(payload) {
+  return postJson('/api/avatar/persona/avatar-image', payload)
+}

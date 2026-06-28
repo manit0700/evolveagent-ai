@@ -56,6 +56,16 @@ from app.models.request_models import (
     DeviceSessionCreateRequest,
     DevicePlanRequest,
     DeviceConfirmActionRequest,
+    TrainingDatasetCreateRequest,
+    TrainingExampleCreateRequest,
+    TrainingExampleUpdateRequest,
+    TrainingRunCreateRequest,
+    TrainingComparisonRequest,
+    AvatarPersonaUpdateRequest,
+    AvatarVoiceSettingsUpdateRequest,
+    AvatarMeetingSessionRequest,
+    AvatarConsentRequest,
+    AvatarImageRequest,
     CreateAgentJobRequest,
     CreateKnowledgeLinkRequest,
     CreateChatRequest,
@@ -170,6 +180,8 @@ from app.services.agent_network_service import AgentNetworkService
 from app.services.self_healing_service import SelfHealingService
 from app.services.company_brain_service import CompanyBrainService
 from app.services.device_operator_service import DeviceOperatorService
+from app.services.training_lab_service import TrainingLabService
+from app.services.avatar_persona_service import AvatarPersonaService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
 from app.services.sla_monitoring_service import SLAMonitoringService
@@ -243,6 +255,8 @@ agent_network_service = AgentNetworkService(storage, governance_service)
 self_healing_service = SelfHealingService(storage, governance_service, safe_command_runner)
 company_brain_service = CompanyBrainService(storage, governance_service)
 device_operator_service = DeviceOperatorService(storage, governance_service)
+training_lab_service = TrainingLabService(storage, governance_service, SecretScanner())
+avatar_persona_service = AvatarPersonaService(storage, governance_service, image_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
 sla_monitoring_service = SLAMonitoringService(storage)
@@ -2301,6 +2315,132 @@ def confirm_device_operator_action(session_id: str, request: DeviceConfirmAction
         return device_operator_service.confirm_action(session_id, request.action_id, request.approve)
     except ValueError as error:
         raise HTTPException(status_code=404, detail="Action not found") from error
+
+
+# ----------------------------------------------------------------------
+# v27.0 Private Training Lab (dataset preparation only — no auto-training)
+# ----------------------------------------------------------------------
+@router.get("/training-lab/dashboard")
+def get_training_lab_dashboard() -> dict:
+    return training_lab_service.dashboard()
+
+
+@router.get("/training-lab/datasets")
+def list_training_datasets() -> dict:
+    datasets = training_lab_service.list_datasets()
+    return {"datasets": datasets, "count": len(datasets)}
+
+
+@router.post("/training-lab/datasets")
+def create_training_dataset(request: TrainingDatasetCreateRequest) -> dict:
+    return training_lab_service.create_dataset(request.model_dump())
+
+
+@router.get("/training-lab/runs")
+def list_training_runs() -> dict:
+    runs = training_lab_service.list_runs()
+    return {"runs": runs, "count": len(runs)}
+
+
+@router.post("/training-lab/runs")
+def create_training_run(request: TrainingRunCreateRequest) -> dict:
+    return training_lab_service.create_run(request.model_dump())
+
+
+@router.get("/training-lab/comparisons")
+def list_training_comparisons() -> dict:
+    comparisons = training_lab_service.list_comparisons()
+    return {"comparisons": comparisons, "count": len(comparisons)}
+
+
+@router.post("/training-lab/comparisons")
+def create_training_comparison(request: TrainingComparisonRequest) -> dict:
+    return training_lab_service.create_comparison(request.model_dump())
+
+
+@router.patch("/training-lab/examples/{example_id}")
+def update_training_example(example_id: str, request: TrainingExampleUpdateRequest) -> dict:
+    try:
+        return training_lab_service.update_example(example_id, request.model_dump(exclude_unset=True))
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Example not found") from error
+
+
+@router.get("/training-lab/datasets/{dataset_id}")
+def get_training_dataset(dataset_id: str) -> dict:
+    dataset = training_lab_service.get_dataset(dataset_id)
+    if dataset is None:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+    examples = training_lab_service.list_examples(dataset_id)
+    return {"dataset": dataset, "examples": examples, "example_count": len(examples)}
+
+
+@router.post("/training-lab/datasets/{dataset_id}/examples")
+def add_training_example(dataset_id: str, request: TrainingExampleCreateRequest) -> dict:
+    try:
+        return training_lab_service.add_example(dataset_id, request.prompt, request.completion, request.approved)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Dataset not found") from error
+
+
+@router.post("/training-lab/datasets/{dataset_id}/export")
+def export_training_dataset(dataset_id: str) -> dict:
+    try:
+        return training_lab_service.export_dataset(dataset_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Dataset not found") from error
+
+
+# ----------------------------------------------------------------------
+# v28.0 Personal AI Avatar / Voice Twin (settings + shell; no impersonation/cloning)
+# ----------------------------------------------------------------------
+@router.get("/avatar/dashboard")
+def get_avatar_dashboard() -> dict:
+    return avatar_persona_service.dashboard()
+
+
+@router.get("/avatar/persona")
+def get_avatar_persona() -> dict:
+    return avatar_persona_service.get_persona()
+
+
+@router.patch("/avatar/persona")
+def update_avatar_persona(request: AvatarPersonaUpdateRequest) -> dict:
+    return avatar_persona_service.update_persona(request.model_dump(exclude_unset=True))
+
+
+@router.get("/avatar/voice-settings")
+def get_avatar_voice_settings() -> dict:
+    return avatar_persona_service.get_voice_settings()
+
+
+@router.patch("/avatar/voice-settings")
+def update_avatar_voice_settings(request: AvatarVoiceSettingsUpdateRequest) -> dict:
+    return avatar_persona_service.update_voice_settings(request.model_dump(exclude_unset=True))
+
+
+@router.post("/avatar/meeting-sessions")
+def create_avatar_meeting_session(request: AvatarMeetingSessionRequest) -> dict:
+    return avatar_persona_service.create_meeting_session(request.model_dump())
+
+
+@router.get("/avatar/meeting-sessions")
+def list_avatar_meeting_sessions() -> dict:
+    sessions = avatar_persona_service.list_meeting_sessions()
+    return {"meeting_sessions": sessions, "count": len(sessions)}
+
+
+@router.post("/avatar/consent")
+def create_avatar_consent(request: AvatarConsentRequest) -> dict:
+    return avatar_persona_service.create_consent(request.model_dump())
+
+
+@router.post("/avatar/persona/avatar-image")
+def generate_avatar_image(request: AvatarImageRequest) -> dict:
+    try:
+        return avatar_persona_service.generate_avatar_image(request.description, request.style)
+    except ValueError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
 
 
 @router.get("/governance")
