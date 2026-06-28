@@ -72,6 +72,10 @@ from app.models.request_models import (
     LifeReminderCreateRequest,
     LifeDeadlineCreateRequest,
     LifeDailyPlanRequest,
+    UniversalSessionCreateRequest,
+    UniversalWorkflowCreateRequest,
+    UniversalActionDecisionRequest,
+    UniversalHandoffCreateRequest,
     CreateAgentJobRequest,
     CreateKnowledgeLinkRequest,
     CreateChatRequest,
@@ -189,6 +193,7 @@ from app.services.device_operator_service import DeviceOperatorService
 from app.services.training_lab_service import TrainingLabService
 from app.services.avatar_persona_service import AvatarPersonaService
 from app.services.life_os_service import LifeOSService
+from app.services.universal_operator_service import UniversalOperatorService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
 from app.services.sla_monitoring_service import SLAMonitoringService
@@ -265,6 +270,7 @@ device_operator_service = DeviceOperatorService(storage, governance_service)
 training_lab_service = TrainingLabService(storage, governance_service, SecretScanner())
 avatar_persona_service = AvatarPersonaService(storage, governance_service, image_service)
 life_os_service = LifeOSService(storage, governance_service)
+universal_operator_service = UniversalOperatorService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
 sla_monitoring_service = SLAMonitoringService(storage)
@@ -2516,6 +2522,69 @@ def create_life_deadline(request: LifeDeadlineCreateRequest) -> dict:
 def create_life_daily_plan(request: LifeDailyPlanRequest | None = None) -> dict:
     workspace_id = request.workspace_id if request else None
     return life_os_service.generate_daily_plan(workspace_id)
+
+
+# ----------------------------------------------------------------------
+# v30.0 Universal App Operator (mock, planning-first; no real app automation)
+# ----------------------------------------------------------------------
+@router.get("/universal-operator/dashboard")
+def get_universal_operator_dashboard() -> dict:
+    return universal_operator_service.dashboard()
+
+
+@router.get("/universal-operator/audit")
+def get_universal_operator_audit() -> dict:
+    audit = universal_operator_service.audit_log()
+    return {"audit": audit, "count": len(audit)}
+
+
+@router.get("/universal-operator/sessions")
+def list_universal_operator_sessions() -> dict:
+    sessions = universal_operator_service.list_sessions()
+    return {"sessions": sessions, "count": len(sessions)}
+
+
+@router.post("/universal-operator/sessions")
+def create_universal_operator_session(request: UniversalSessionCreateRequest) -> dict:
+    return universal_operator_service.create_session(request.model_dump())
+
+
+@router.get("/universal-operator/workflows")
+def list_universal_operator_workflows() -> dict:
+    workflows = universal_operator_service.list_workflows()
+    return {"workflows": workflows, "count": len(workflows)}
+
+
+@router.post("/universal-operator/workflows")
+def create_universal_operator_workflow(request: UniversalWorkflowCreateRequest) -> dict:
+    return universal_operator_service.create_workflow(request.model_dump())
+
+
+@router.post("/universal-operator/workflows/{workflow_id}/plan")
+def plan_universal_operator_workflow(workflow_id: str) -> dict:
+    try:
+        return universal_operator_service.plan_workflow(workflow_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Workflow not found") from error
+
+
+@router.post("/universal-operator/actions/{action_id}/decision")
+def decide_universal_operator_action(action_id: str, request: UniversalActionDecisionRequest) -> dict:
+    try:
+        return universal_operator_service.decide_action(action_id, request.decision)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Action not found") from error
+
+
+@router.get("/universal-operator/handoffs")
+def list_universal_operator_handoffs() -> dict:
+    handoffs = universal_operator_service.list_handoffs()
+    return {"handoffs": handoffs, "count": len(handoffs)}
+
+
+@router.post("/universal-operator/handoffs")
+def create_universal_operator_handoff(request: UniversalHandoffCreateRequest) -> dict:
+    return universal_operator_service.create_handoff(request.model_dump())
 
 
 @router.get("/governance")

@@ -901,3 +901,31 @@ class LifeDeadlineCreateRequest(BaseModel):
 
 class LifeDailyPlanRequest(BaseModel):
     workspace_id: str | None = None
+
+
+# ----------------------------------------------------------------------
+# v30.0 Universal App Operator
+# ----------------------------------------------------------------------
+class UniversalSessionCreateRequest(BaseModel):
+    label: str = Field(default="", max_length=160)
+    surface: str = Field(default="cross_app", pattern="^(desktop|browser|mobile|cross_app)$")
+    apps: list[str] = Field(default_factory=list)
+    workspace_id: str | None = None
+
+
+class UniversalWorkflowCreateRequest(BaseModel):
+    goal: str = Field(..., min_length=1, max_length=2000)
+    steps: list[str] = Field(default_factory=list)
+    session_id: str | None = Field(default=None, max_length=120)
+    workspace_id: str | None = None
+
+
+class UniversalActionDecisionRequest(BaseModel):
+    decision: str = Field(..., pattern="^(approve|reject)$")
+
+
+class UniversalHandoffCreateRequest(BaseModel):
+    workflow_id: str | None = Field(default=None, max_length=120)
+    from_device: str = Field(default="", max_length=120)
+    to_device: str = Field(default="", max_length=120)
+    summary: str = Field(default="", max_length=1000)

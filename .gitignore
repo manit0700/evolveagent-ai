@@ -116,6 +116,11 @@ backend/app/data/life_tasks.json
 backend/app/data/life_reminders.json
 backend/app/data/life_deadlines.json
 backend/app/data/life_plans.json
+backend/app/data/universal_operator_sessions.json
+backend/app/data/universal_workflows.json
+backend/app/data/universal_actions.json
+backend/app/data/universal_handoffs.json
+backend/app/data/universal_operator_audit.json
 backend/app/data/*.tmp
 *.log
 logs/

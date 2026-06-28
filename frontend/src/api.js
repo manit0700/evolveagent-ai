@@ -1992,3 +1992,34 @@ export function createLifeDeadline(payload) {
 export function createLifeDailyPlan(workspaceId) {
   return postJson('/api/life-os/daily-plan', { workspace_id: workspaceId })
 }
+
+export function getUniversalOperatorDashboard() {
+  return getJson('/api/universal-operator/dashboard')
+}
+export function getUniversalOperatorSessions() {
+  return getJson('/api/universal-operator/sessions')
+}
+export function getUniversalOperatorWorkflows() {
+  return getJson('/api/universal-operator/workflows')
+}
+export function getUniversalOperatorAudit() {
+  return getJson('/api/universal-operator/audit')
+}
+export function getUniversalOperatorHandoffs() {
+  return getJson('/api/universal-operator/handoffs')
+}
+export function createUniversalOperatorSession(payload) {
+  return postJson('/api/universal-operator/sessions', payload)
+}
+export function createUniversalOperatorWorkflow(payload) {
+  return postJson('/api/universal-operator/workflows', payload)
+}
+export function planUniversalOperatorWorkflow(workflowId) {
+  return postJson(`/api/universal-operator/workflows/${workflowId}/plan`, {})
+}
+export function decideUniversalOperatorAction(actionId, decision) {
+  return postJson(`/api/universal-operator/actions/${actionId}/decision`, { decision })
+}
+export function createUniversalOperatorHandoff(payload) {
+  return postJson('/api/universal-operator/handoffs', payload)
+}
