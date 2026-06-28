@@ -1129,3 +1129,35 @@ class InnovationPrototypeRequest(BaseModel):
 
 class InnovationReportRequest(BaseModel):
     title: str = Field(default="", max_length=200)
+
+
+# ----------------------------------------------------------------------
+# v37.0 AI Simulation World
+# ----------------------------------------------------------------------
+class SimulationWorldCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=160)
+    description: str = Field(default="", max_length=2000)
+
+
+class SimulationPersonaCreateRequest(BaseModel):
+    world_id: str | None = Field(default=None, max_length=120)
+    name: str = Field(..., min_length=1, max_length=160)
+    persona_type: str = Field(default="user", pattern="^(user|customer|stakeholder|other)$")
+    goals: list[str] = Field(default_factory=list)
+    pain_points: list[str] = Field(default_factory=list)
+
+
+class SimWorldScenarioCreateRequest(BaseModel):
+    world_id: str | None = Field(default=None, max_length=120)
+    title: str = Field(..., min_length=1, max_length=200)
+    scenario_type: str = Field(default="business", pattern="^(business|product|project|bug|risk|launch)$")
+    description: str = Field(default="", max_length=4000)
+    assumptions: list[str] = Field(default_factory=list)
+
+
+class SimulationCompareRequest(BaseModel):
+    scenario_ids: list[str] = Field(default_factory=list)
+
+
+class SimulationReportRequest(BaseModel):
+    title: str = Field(default="", max_length=200)

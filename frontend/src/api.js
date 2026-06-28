@@ -2220,3 +2220,37 @@ export function createInnovationPrototype(payload) {
 export function createInnovationReport(payload) {
   return postJson('/api/innovation-lab/reports', payload || {})
 }
+
+export function getSimWorldDashboard() {
+  return getJson('/api/simulation-world/dashboard')
+}
+export function getSimWorldWorlds() {
+  return getJson('/api/simulation-world/worlds')
+}
+export function getSimWorldPersonas() {
+  return getJson('/api/simulation-world/personas')
+}
+export function getSimWorldScenarios() {
+  return getJson('/api/simulation-world/scenarios')
+}
+export function getSimWorldReports() {
+  return getJson('/api/simulation-world/reports')
+}
+export function createSimWorldWorld(payload) {
+  return postJson('/api/simulation-world/worlds', payload)
+}
+export function createSimWorldPersona(payload) {
+  return postJson('/api/simulation-world/personas', payload)
+}
+export function createSimWorldScenario(payload) {
+  return postJson('/api/simulation-world/scenarios', payload)
+}
+export function runSimWorldScenario(scenarioId) {
+  return postJson(`/api/simulation-world/scenarios/${scenarioId}/run`, {})
+}
+export function compareSimWorldScenarios(scenarioIds) {
+  return postJson('/api/simulation-world/compare', { scenario_ids: scenarioIds })
+}
+export function createSimWorldReport(payload) {
+  return postJson('/api/simulation-world/reports', payload || {})
+}

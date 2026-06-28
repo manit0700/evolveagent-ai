@@ -97,6 +97,11 @@ from app.models.request_models import (
     InnovationExperimentRequest,
     InnovationPrototypeRequest,
     InnovationReportRequest,
+    SimulationWorldCreateRequest,
+    SimulationPersonaCreateRequest,
+    SimWorldScenarioCreateRequest,
+    SimulationCompareRequest,
+    SimulationReportRequest,
     TeamMemberCreateRequest,
     TeamMemberUpdateRequest,
     TeamAssignmentCreateRequest,
@@ -226,6 +231,7 @@ from app.services.business_operator_advanced_service import BusinessOperatorAdva
 from app.services.compliance_intelligence_service import ComplianceIntelligenceService
 from app.services.executive_board_service import ExecutiveBoardService
 from app.services.innovation_lab_service import InnovationLabService
+from app.services.simulation_world_service import SimulationWorldService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -309,6 +315,7 @@ business_operator_advanced_service = BusinessOperatorAdvancedService(storage, go
 compliance_intelligence_service = ComplianceIntelligenceService(storage, governance_service, SecretScanner())
 executive_board_service = ExecutiveBoardService(storage, governance_service)
 innovation_lab_service = InnovationLabService(storage, governance_service)
+simulation_world_service = SimulationWorldService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -3058,6 +3065,71 @@ def list_innovation_reports() -> dict:
 @router.post("/innovation-lab/reports")
 def create_innovation_report(request: InnovationReportRequest | None = None) -> dict:
     return innovation_lab_service.create_report(request.model_dump() if request else {})
+
+
+# ----------------------------------------------------------------------
+# v37.0 AI Simulation World (deterministic mock sandbox — no real actions)
+# ----------------------------------------------------------------------
+@router.get("/simulation-world/dashboard")
+def get_simulation_world_dashboard() -> dict:
+    return simulation_world_service.dashboard()
+
+
+@router.get("/simulation-world/worlds")
+def list_simulation_worlds() -> dict:
+    worlds = simulation_world_service.list_worlds()
+    return {"worlds": worlds, "count": len(worlds)}
+
+
+@router.post("/simulation-world/worlds")
+def create_simulation_world(request: SimulationWorldCreateRequest) -> dict:
+    return simulation_world_service.create_world(request.model_dump())
+
+
+@router.get("/simulation-world/personas")
+def list_simulation_personas() -> dict:
+    personas = simulation_world_service.list_personas()
+    return {"personas": personas, "count": len(personas)}
+
+
+@router.post("/simulation-world/personas")
+def create_simulation_persona(request: SimulationPersonaCreateRequest) -> dict:
+    return simulation_world_service.create_persona(request.model_dump())
+
+
+@router.get("/simulation-world/scenarios")
+def list_simulation_scenarios() -> dict:
+    scenarios = simulation_world_service.list_scenarios()
+    return {"scenarios": scenarios, "count": len(scenarios)}
+
+
+@router.post("/simulation-world/scenarios")
+def create_simulation_scenario(request: SimWorldScenarioCreateRequest) -> dict:
+    return simulation_world_service.create_scenario(request.model_dump())
+
+
+@router.post("/simulation-world/scenarios/{scenario_id}/run")
+def run_simulation_scenario(scenario_id: str) -> dict:
+    try:
+        return simulation_world_service.run_scenario(scenario_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Scenario not found") from error
+
+
+@router.post("/simulation-world/compare")
+def compare_simulation_scenarios(request: SimulationCompareRequest) -> dict:
+    return simulation_world_service.compare(request.scenario_ids)
+
+
+@router.get("/simulation-world/reports")
+def list_simulation_world_reports() -> dict:
+    reports = simulation_world_service.list_reports()
+    return {"reports": reports, "count": len(reports)}
+
+
+@router.post("/simulation-world/reports")
+def create_simulation_world_report(request: SimulationReportRequest | None = None) -> dict:
+    return simulation_world_service.create_report(request.model_dump() if request else {})
 
 
 @router.get("/governance")

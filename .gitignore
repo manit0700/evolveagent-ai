@@ -149,6 +149,12 @@ backend/app/data/innovation_ideas.json
 backend/app/data/innovation_experiments.json
 backend/app/data/innovation_prototypes.json
 backend/app/data/innovation_reports.json
+backend/app/data/simulation_worlds.json
+backend/app/data/simulation_scenarios.json
+backend/app/data/simulation_personas.json
+backend/app/data/simulation_events.json
+backend/app/data/simulation_outcomes.json
+backend/app/data/simulation_reports.json
 backend/app/data/team_members.json
 backend/app/data/team_assignments.json
 backend/app/data/team_standups.json
