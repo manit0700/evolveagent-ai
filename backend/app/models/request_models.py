@@ -1057,3 +1057,21 @@ class ComplianceChecklistRequest(BaseModel):
 
 class ComplianceAuditPackageRequest(BaseModel):
     title: str = Field(default="", max_length=200)
+
+
+# ----------------------------------------------------------------------
+# v35.0 AI Executive Board
+# ----------------------------------------------------------------------
+class ExecutiveBoardSessionCreateRequest(BaseModel):
+    title: str = Field(default="", max_length=200)
+    decision: str = Field(..., min_length=1, max_length=2000)
+    context: str = Field(default="", max_length=4000)
+
+
+class ExecutiveBoardVoteRequest(BaseModel):
+    role: str = Field(
+        default="CEO",
+        pattern="^(CEO|CTO|CFO|COO|Legal/Compliance|Product|Marketing|Security)$",
+    )
+    vote: str = Field(default="abstain", pattern="^(approve|reject|abstain)$")
+    rationale: str = Field(default="", max_length=1000)
