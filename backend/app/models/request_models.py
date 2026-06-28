@@ -932,6 +932,19 @@ class UniversalHandoffCreateRequest(BaseModel):
 
 
 # ----------------------------------------------------------------------
+# v32.0 Autonomous SaaS Builder
+# ----------------------------------------------------------------------
+class SaaSProjectCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=160)
+    idea: str = Field(default="", max_length=4000)
+
+
+class SaaSFeedbackCreateRequest(BaseModel):
+    type: str = Field(default="feature", pattern="^(feature|bug|improvement|question)$")
+    title: str = Field(..., min_length=1, max_length=200)
+    detail: str = Field(default="", max_length=2000)
+    linked_phase: str = Field(default="", max_length=60)
+    status: str = Field(default="open", pattern="^(open|planned|resolved|wont_do)$")
 # v31.0 AI Team Lead / Manager Mode
 # ----------------------------------------------------------------------
 class TeamMemberCreateRequest(BaseModel):

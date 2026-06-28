@@ -193,6 +193,16 @@ import {
   planUniversalOperatorWorkflow,
   decideUniversalOperatorAction,
   createUniversalOperatorHandoff,
+  getSaasBuilderDashboard,
+  getSaasProjects,
+  getSaasProject,
+  getSaasFeedback,
+  createSaasProject,
+  validateSaasProject,
+  roadmapSaasProject,
+  architectureSaasProject,
+  launchAssetsSaasProject,
+  createSaasFeedback,
   getTeamManagerDashboard,
   getTeamMembers,
   getTeamAssignments,
@@ -751,6 +761,18 @@ function App() {
   const [universalGoal, setUniversalGoal] = useState('')
   const [universalSteps, setUniversalSteps] = useState('')
   const [universalPlannedActions, setUniversalPlannedActions] = useState([])
+  const [showSaasPanel, setShowSaasPanel] = useState(false)
+  const [saasDashboard, setSaasDashboard] = useState(null)
+  const [saasProjects, setSaasProjects] = useState([])
+  const [saasProjectId, setSaasProjectId] = useState('')
+  const [saasArtifact, setSaasArtifact] = useState(null)
+  const [saasFeedback, setSaasFeedback] = useState([])
+  const [saasBusy, setSaasBusy] = useState(false)
+  const [saasError, setSaasError] = useState(null)
+  const [saasName, setSaasName] = useState('')
+  const [saasIdea, setSaasIdea] = useState('')
+  const [saasFeedbackTitle, setSaasFeedbackTitle] = useState('')
+  const [saasFeedbackType, setSaasFeedbackType] = useState('feature')
   const [showTeamPanel, setShowTeamPanel] = useState(false)
   const [teamDashboard, setTeamDashboard] = useState(null)
   const [teamMembers, setTeamMembers] = useState([])
@@ -884,6 +906,7 @@ function App() {
     refreshAvatarPanel()
     refreshLifePanel(workspaceId)
     refreshUniversalPanel()
+    refreshSaasPanel()
     refreshTeamPanel()
   }, [workspaceId, developerMode])
 
@@ -2071,6 +2094,75 @@ function App() {
 
   async function handleReviewSprint(sprintId) {
     await runTeamAction(() => reviewTeamSprint(sprintId, {}))
+  }
+
+  async function refreshSaasPanel() {
+    const [dashboard, projects] = await Promise.all([
+      getSaasBuilderDashboard(),
+      getSaasProjects(),
+    ])
+    setSaasDashboard(dashboard)
+    setSaasProjects(projects?.projects || [])
+  }
+
+  async function runSaasAction(action) {
+    setSaasBusy(true)
+    setSaasError(null)
+    try {
+      const value = await action()
+      await refreshSaasPanel()
+      return value
+    } catch (error) {
+      setSaasError(error.message || 'SaaS builder action failed')
+      return null
+    } finally {
+      setSaasBusy(false)
+    }
+  }
+
+  async function loadSaasFeedback(projectId) {
+    if (!projectId) {
+      setSaasFeedback([])
+      return
+    }
+    const result = await getSaasFeedback(projectId)
+    setSaasFeedback(result?.feedback || [])
+  }
+
+  async function handleCreateSaasProject(event) {
+    event.preventDefault()
+    if (!saasName.trim()) return
+    const project = await runSaasAction(() => createSaasProject({ name: saasName.trim(), idea: saasIdea.trim() }))
+    if (project) {
+      setSaasName('')
+      setSaasIdea('')
+      setSaasProjectId(project.project_id)
+      setSaasArtifact(null)
+      await loadSaasFeedback(project.project_id)
+    }
+  }
+
+  async function handleSaasStep(kind) {
+    if (!saasProjectId) return
+    const fn = {
+      validate: validateSaasProject,
+      roadmap: roadmapSaasProject,
+      architecture: architectureSaasProject,
+      launch: launchAssetsSaasProject,
+    }[kind]
+    const artifact = await runSaasAction(() => fn(saasProjectId))
+    if (artifact) setSaasArtifact({ kind, data: artifact })
+  }
+
+  async function handleCreateSaasFeedback(event) {
+    event.preventDefault()
+    if (!saasProjectId || !saasFeedbackTitle.trim()) return
+    await runSaasAction(async () => {
+      await createSaasFeedback(saasProjectId, { title: saasFeedbackTitle.trim(), type: saasFeedbackType })
+      setSaasFeedbackTitle('')
+      setSaasFeedbackType('feature')
+      await loadSaasFeedback(saasProjectId)
+    })
   }
 
   async function refreshAppBuilderTemplates() {
@@ -6808,6 +6900,99 @@ function App() {
                 )}
 
                 <p className="muted">Local planning only — no external messages sent and no real project state is changed.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowSaasPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                SaaS Builder
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showSaasPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Autonomous SaaS Builder · v32.0</strong>
+                  <span>Plan and draft a SaaS: validation, roadmap, architecture, launch assets, feedback loop. Plans/drafts only — no deploy or payments.</span>
+                </div>
+                {saasDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Projects</span><strong>{saasDashboard.total_projects}</strong></div>
+                    <div><span>Validations</span><strong>{saasDashboard.total_validations}</strong></div>
+                    <div><span>Roadmaps</span><strong>{saasDashboard.total_roadmaps}</strong></div>
+                    <div><span>Feedback</span><strong>{saasDashboard.total_feedback}</strong></div>
+                  </div>
+                )}
+                {saasError && <p className="error-text">{saasError}</p>}
+
+                <form className="stacked-form" onSubmit={handleCreateSaasProject}>
+                  <h3>New SaaS project</h3>
+                  <input type="text" placeholder="Project name" value={saasName} onChange={(event) => setSaasName(event.target.value)} />
+                  <textarea placeholder="Idea (target user, pain, solution)" value={saasIdea} onChange={(event) => setSaasIdea(event.target.value)} rows={2} />
+                  <button type="submit" disabled={saasBusy || !saasName.trim()}>Create project</button>
+                </form>
+
+                {saasProjects.length > 0 && (
+                  <>
+                    <h3>Projects</h3>
+                    <select
+                      value={saasProjectId}
+                      onChange={(event) => {
+                        setSaasProjectId(event.target.value)
+                        setSaasArtifact(null)
+                        loadSaasFeedback(event.target.value)
+                      }}
+                    >
+                      <option value="">Select project…</option>
+                      {saasProjects.map((project) => (
+                        <option key={project.project_id} value={project.project_id}>{project.name}</option>
+                      ))}
+                    </select>
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => handleSaasStep('validate')} disabled={saasBusy || !saasProjectId}>Validate</button>
+                      <button type="button" onClick={() => handleSaasStep('roadmap')} disabled={saasBusy || !saasProjectId}>Roadmap</button>
+                      <button type="button" onClick={() => handleSaasStep('architecture')} disabled={saasBusy || !saasProjectId}>Architecture</button>
+                      <button type="button" onClick={() => handleSaasStep('launch')} disabled={saasBusy || !saasProjectId}>Launch assets</button>
+                    </div>
+                  </>
+                )}
+
+                {saasArtifact && (
+                  <div className="agent-template-card">
+                    <strong>{saasArtifact.kind} (draft)</strong>
+                    <pre className="muted" style={{ whiteSpace: 'pre-wrap', maxHeight: '160px', overflow: 'auto', margin: 0 }}>
+                      {JSON.stringify(saasArtifact.data, null, 2).slice(0, 1200)}
+                    </pre>
+                  </div>
+                )}
+
+                <form className="stacked-form" onSubmit={handleCreateSaasFeedback}>
+                  <h3>Feedback / bug</h3>
+                  <input type="text" placeholder="Title" value={saasFeedbackTitle} onChange={(event) => setSaasFeedbackTitle(event.target.value)} />
+                  <select value={saasFeedbackType} onChange={(event) => setSaasFeedbackType(event.target.value)}>
+                    <option value="feature">feature</option>
+                    <option value="bug">bug</option>
+                    <option value="improvement">improvement</option>
+                    <option value="question">question</option>
+                  </select>
+                  <button type="submit" disabled={saasBusy || !saasProjectId || !saasFeedbackTitle.trim()}>Log feedback</button>
+                </form>
+
+                {saasFeedback.length > 0 && (
+                  <>
+                    <h3>Feedback</h3>
+                    {saasFeedback.slice(0, 6).map((item) => (
+                      <p className="muted" key={item.feedback_id}>• [{item.type}] {item.title} ({item.status})</p>
+                    ))}
+                  </>
+                )}
+
+                <p className="muted">Plans and drafts only — no deploy, no payments, no account creation; nothing is built without the existing approval flow.</p>
               </div>
             )}
           </section>
