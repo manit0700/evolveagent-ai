@@ -156,6 +156,43 @@ import {
   createDeviceOperatorSession,
   planDeviceOperatorSession,
   confirmDeviceOperatorAction,
+  getTrainingLabDashboard,
+  getTrainingDatasets,
+  getTrainingDataset,
+  createTrainingDataset,
+  addTrainingExample,
+  updateTrainingExample,
+  exportTrainingDataset,
+  createTrainingRun,
+  getAvatarDashboard,
+  getAvatarPersona,
+  updateAvatarPersona,
+  getAvatarVoiceSettings,
+  updateAvatarVoiceSettings,
+  getAvatarMeetingSessions,
+  createAvatarMeetingSession,
+  createAvatarConsent,
+  generateAvatarImage,
+  getLifeOsDashboard,
+  getLifeSchedule,
+  getLifeTasks,
+  getLifeReminders,
+  getLifeDeadlines,
+  createLifeScheduleItem,
+  createLifeTask,
+  updateLifeTask,
+  createLifeReminder,
+  createLifeDeadline,
+  createLifeDailyPlan,
+  getUniversalOperatorDashboard,
+  getUniversalOperatorSessions,
+  getUniversalOperatorWorkflows,
+  getUniversalOperatorAudit,
+  createUniversalOperatorSession,
+  createUniversalOperatorWorkflow,
+  planUniversalOperatorWorkflow,
+  decideUniversalOperatorAction,
+  createUniversalOperatorHandoff,
   getGoal,
   getGoals,
   getHistory,
@@ -652,6 +689,57 @@ function App() {
   const [deviceCommand, setDeviceCommand] = useState('')
   const [deviceScreenText, setDeviceScreenText] = useState('')
   const [devicePlannedActions, setDevicePlannedActions] = useState([])
+  const [showTrainingPanel, setShowTrainingPanel] = useState(false)
+  const [trainingDashboard, setTrainingDashboard] = useState(null)
+  const [trainingDatasets, setTrainingDatasets] = useState([])
+  const [trainingDatasetId, setTrainingDatasetId] = useState('')
+  const [trainingExamples, setTrainingExamples] = useState([])
+  const [trainingExport, setTrainingExport] = useState(null)
+  const [trainingBusy, setTrainingBusy] = useState(false)
+  const [trainingError, setTrainingError] = useState(null)
+  const [datasetName, setDatasetName] = useState('')
+  const [examplePrompt, setExamplePrompt] = useState('')
+  const [exampleCompletion, setExampleCompletion] = useState('')
+  const [showAvatarPanel, setShowAvatarPanel] = useState(false)
+  const [avatarDashboard, setAvatarDashboard] = useState(null)
+  const [avatarMeetings, setAvatarMeetings] = useState([])
+  const [avatarBusy, setAvatarBusy] = useState(false)
+  const [avatarError, setAvatarError] = useState(null)
+  const [avatarName, setAvatarName] = useState('')
+  const [avatarTone, setAvatarTone] = useState('friendly')
+  const [avatarVoiceMode, setAvatarVoiceMode] = useState('text_only')
+  const [meetingTitle, setMeetingTitle] = useState('')
+  const [avatarDescription, setAvatarDescription] = useState('')
+  const [avatarStyle, setAvatarStyle] = useState('illustrated')
+  const [showLifePanel, setShowLifePanel] = useState(false)
+  const [lifeDashboard, setLifeDashboard] = useState(null)
+  const [lifeTasks, setLifeTasks] = useState([])
+  const [lifeReminders, setLifeReminders] = useState([])
+  const [lifeDeadlines, setLifeDeadlines] = useState([])
+  const [lifeBusy, setLifeBusy] = useState(false)
+  const [lifeError, setLifeError] = useState(null)
+  const [lifeTaskTitle, setLifeTaskTitle] = useState('')
+  const [lifeTaskPriority, setLifeTaskPriority] = useState('medium')
+  const [lifeTaskDue, setLifeTaskDue] = useState('')
+  const [lifeScheduleTitle, setLifeScheduleTitle] = useState('')
+  const [lifeScheduleDate, setLifeScheduleDate] = useState('')
+  const [lifeReminderTitle, setLifeReminderTitle] = useState('')
+  const [lifeReminderOn, setLifeReminderOn] = useState('')
+  const [lifeDeadlineTitle, setLifeDeadlineTitle] = useState('')
+  const [lifeDeadlineKind, setLifeDeadlineKind] = useState('school')
+  const [lifeDeadlineDue, setLifeDeadlineDue] = useState('')
+  const [lifeDailyPlan, setLifeDailyPlan] = useState(null)
+  const [showUniversalPanel, setShowUniversalPanel] = useState(false)
+  const [universalDashboard, setUniversalDashboard] = useState(null)
+  const [universalSessions, setUniversalSessions] = useState([])
+  const [universalWorkflows, setUniversalWorkflows] = useState([])
+  const [universalAudit, setUniversalAudit] = useState([])
+  const [universalBusy, setUniversalBusy] = useState(false)
+  const [universalError, setUniversalError] = useState(null)
+  const [universalSurface, setUniversalSurface] = useState('cross_app')
+  const [universalGoal, setUniversalGoal] = useState('')
+  const [universalSteps, setUniversalSteps] = useState('')
+  const [universalPlannedActions, setUniversalPlannedActions] = useState([])
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -767,6 +855,10 @@ function App() {
     refreshHealingPanel()
     refreshCompanyBrainPanel()
     refreshDevicePanel()
+    refreshTrainingPanel()
+    refreshAvatarPanel()
+    refreshLifePanel(workspaceId)
+    refreshUniversalPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -1617,6 +1709,273 @@ function App() {
     })
   }
 
+  async function refreshTrainingPanel() {
+    const [dashboard, datasets] = await Promise.all([
+      getTrainingLabDashboard(),
+      getTrainingDatasets(),
+    ])
+    setTrainingDashboard(dashboard)
+    setTrainingDatasets(datasets?.datasets || [])
+  }
+
+  async function loadTrainingExamples(datasetId) {
+    if (!datasetId) {
+      setTrainingExamples([])
+      return
+    }
+    const detail = await getTrainingDataset(datasetId)
+    setTrainingExamples(detail?.examples || [])
+  }
+
+  async function runTrainingAction(action) {
+    setTrainingBusy(true)
+    setTrainingError(null)
+    try {
+      const value = await action()
+      await refreshTrainingPanel()
+      if (trainingDatasetId) await loadTrainingExamples(trainingDatasetId)
+      return value
+    } catch (error) {
+      setTrainingError(error.message || 'Training lab action failed')
+      return null
+    } finally {
+      setTrainingBusy(false)
+    }
+  }
+
+  async function handleCreateDataset(event) {
+    event.preventDefault()
+    if (!datasetName.trim()) return
+    const dataset = await runTrainingAction(() => createTrainingDataset({ name: datasetName.trim() }))
+    if (dataset) {
+      setDatasetName('')
+      setTrainingDatasetId(dataset.dataset_id)
+      await loadTrainingExamples(dataset.dataset_id)
+    }
+  }
+
+  async function handleSelectTrainingDataset(datasetId) {
+    setTrainingDatasetId(datasetId)
+    setTrainingExport(null)
+    await loadTrainingExamples(datasetId)
+  }
+
+  async function handleAddExample(event) {
+    event.preventDefault()
+    if (!trainingDatasetId || !examplePrompt.trim()) return
+    await runTrainingAction(async () => {
+      await addTrainingExample(trainingDatasetId, { prompt: examplePrompt.trim(), completion: exampleCompletion.trim() })
+      setExamplePrompt('')
+      setExampleCompletion('')
+    })
+  }
+
+  async function handleSetExampleStatus(exampleId, status) {
+    await runTrainingAction(() => updateTrainingExample(exampleId, { status }))
+  }
+
+  async function handleExportDataset() {
+    if (!trainingDatasetId) return
+    const result = await runTrainingAction(() => exportTrainingDataset(trainingDatasetId))
+    if (result) setTrainingExport(result)
+  }
+
+  async function handleCreateTrainingRun() {
+    await runTrainingAction(() => createTrainingRun({ dataset_id: trainingDatasetId || null }))
+  }
+
+  async function refreshAvatarPanel() {
+    const [dashboard, meetings] = await Promise.all([
+      getAvatarDashboard(),
+      getAvatarMeetingSessions(),
+    ])
+    setAvatarDashboard(dashboard)
+    setAvatarMeetings(meetings?.meeting_sessions || [])
+    if (dashboard?.persona?.avatar_name && !avatarName) setAvatarName(dashboard.persona.avatar_name)
+    if (dashboard?.voice_settings?.voice_mode) setAvatarVoiceMode(dashboard.voice_settings.voice_mode)
+  }
+
+  async function runAvatarAction(action) {
+    setAvatarBusy(true)
+    setAvatarError(null)
+    try {
+      await action()
+      await refreshAvatarPanel()
+    } catch (error) {
+      setAvatarError(error.message || 'Avatar action failed')
+    } finally {
+      setAvatarBusy(false)
+    }
+  }
+
+  async function handleSavePersona(event) {
+    event.preventDefault()
+    await runAvatarAction(() => updateAvatarPersona({ avatar_name: avatarName.trim() || undefined, tone: avatarTone }))
+  }
+
+  async function handleSaveVoiceMode(mode) {
+    setAvatarVoiceMode(mode)
+    await runAvatarAction(() => updateAvatarVoiceSettings({ voice_mode: mode }))
+  }
+
+  async function handleCreateMeetingSession(event) {
+    event.preventDefault()
+    if (!meetingTitle.trim()) return
+    await runAvatarAction(async () => {
+      await createAvatarMeetingSession({ title: meetingTitle.trim() })
+      setMeetingTitle('')
+    })
+  }
+
+  async function handleGrantConsent() {
+    await runAvatarAction(() => createAvatarConsent({ scope: 'persona_behavior', granted: true }))
+  }
+
+  async function handleGenerateAvatarImage(event) {
+    event.preventDefault()
+    await runAvatarAction(() => generateAvatarImage({ description: avatarDescription.trim(), style: avatarStyle }))
+  }
+
+  async function refreshLifePanel(nextWorkspaceId = workspaceId) {
+    const [dashboard, tasks, reminders, deadlines] = await Promise.all([
+      getLifeOsDashboard(nextWorkspaceId),
+      getLifeTasks(nextWorkspaceId),
+      getLifeReminders(nextWorkspaceId),
+      getLifeDeadlines(nextWorkspaceId),
+    ])
+    setLifeDashboard(dashboard)
+    setLifeTasks(tasks?.ranked || [])
+    setLifeReminders(reminders?.reminders || [])
+    setLifeDeadlines(deadlines?.deadlines || [])
+  }
+
+  async function runLifeAction(action) {
+    setLifeBusy(true)
+    setLifeError(null)
+    try {
+      const value = await action()
+      await refreshLifePanel(workspaceId)
+      return value
+    } catch (error) {
+      setLifeError(error.message || 'Life OS action failed')
+      return null
+    } finally {
+      setLifeBusy(false)
+    }
+  }
+
+  async function handleCreateLifeTask(event) {
+    event.preventDefault()
+    if (!lifeTaskTitle.trim()) return
+    await runLifeAction(async () => {
+      await createLifeTask({ title: lifeTaskTitle.trim(), priority: lifeTaskPriority, due_date: lifeTaskDue.trim(), workspace_id: workspaceId })
+      setLifeTaskTitle('')
+      setLifeTaskPriority('medium')
+      setLifeTaskDue('')
+    })
+  }
+
+  async function handleCompleteLifeTask(taskId) {
+    await runLifeAction(() => updateLifeTask(taskId, { status: 'done' }))
+  }
+
+  async function handleCreateLifeSchedule(event) {
+    event.preventDefault()
+    if (!lifeScheduleTitle.trim()) return
+    await runLifeAction(async () => {
+      await createLifeScheduleItem({ title: lifeScheduleTitle.trim(), date: lifeScheduleDate.trim(), workspace_id: workspaceId })
+      setLifeScheduleTitle('')
+      setLifeScheduleDate('')
+    })
+  }
+
+  async function handleCreateLifeReminder(event) {
+    event.preventDefault()
+    if (!lifeReminderTitle.trim()) return
+    await runLifeAction(async () => {
+      await createLifeReminder({ title: lifeReminderTitle.trim(), remind_on: lifeReminderOn.trim(), workspace_id: workspaceId })
+      setLifeReminderTitle('')
+      setLifeReminderOn('')
+    })
+  }
+
+  async function handleCreateLifeDeadline(event) {
+    event.preventDefault()
+    if (!lifeDeadlineTitle.trim()) return
+    await runLifeAction(async () => {
+      await createLifeDeadline({ title: lifeDeadlineTitle.trim(), kind: lifeDeadlineKind, due_date: lifeDeadlineDue.trim(), workspace_id: workspaceId })
+      setLifeDeadlineTitle('')
+      setLifeDeadlineKind('school')
+      setLifeDeadlineDue('')
+    })
+  }
+
+  async function handleGenerateLifeDailyPlan() {
+    const plan = await runLifeAction(() => createLifeDailyPlan(workspaceId))
+    if (plan) setLifeDailyPlan(plan)
+  }
+
+  async function refreshUniversalPanel() {
+    const [dashboard, sessions, workflows, audit] = await Promise.all([
+      getUniversalOperatorDashboard(),
+      getUniversalOperatorSessions(),
+      getUniversalOperatorWorkflows(),
+      getUniversalOperatorAudit(),
+    ])
+    setUniversalDashboard(dashboard)
+    setUniversalSessions(sessions?.sessions || [])
+    setUniversalWorkflows(workflows?.workflows || [])
+    setUniversalAudit(audit?.audit || [])
+  }
+
+  async function runUniversalAction(action) {
+    setUniversalBusy(true)
+    setUniversalError(null)
+    try {
+      const value = await action()
+      await refreshUniversalPanel()
+      return value
+    } catch (error) {
+      setUniversalError(error.message || 'Universal operator action failed')
+      return null
+    } finally {
+      setUniversalBusy(false)
+    }
+  }
+
+  async function handleCreateUniversalSession() {
+    await runUniversalAction(() => createUniversalOperatorSession({ surface: universalSurface }))
+  }
+
+  async function handleCreateUniversalWorkflow(event) {
+    event.preventDefault()
+    if (!universalGoal.trim()) return
+    await runUniversalAction(async () => {
+      const steps = universalSteps.split('\n').map((s) => s.trim()).filter(Boolean)
+      await createUniversalOperatorWorkflow({ goal: universalGoal.trim(), steps })
+      setUniversalGoal('')
+      setUniversalSteps('')
+    })
+  }
+
+  async function handlePlanUniversalWorkflow(workflowId) {
+    const plan = await runUniversalAction(() => planUniversalOperatorWorkflow(workflowId))
+    if (plan) setUniversalPlannedActions(plan.planned_actions || [])
+  }
+
+  async function handleDecideUniversalAction(actionId, decision) {
+    await runUniversalAction(async () => {
+      const updated = await decideUniversalOperatorAction(actionId, decision)
+      setUniversalPlannedActions((current) =>
+        current.map((item) => (item.action_id === actionId ? { ...item, status: updated.status } : item)),
+      )
+    })
+  }
+
+  async function handleCreateUniversalHandoff() {
+    await runUniversalAction(() => createUniversalOperatorHandoff({ from_device: 'laptop', to_device: 'phone', summary: 'Continue current workflow' }))
+  }
+
   async function refreshAppBuilderTemplates() {
     const templates = await getAppBuilderTemplates()
     setAppBuilderTemplates(templates)
@@ -1682,13 +2041,13 @@ function App() {
     setError('')
     try {
       await createAgentJob({
-        title: 'Test agent job',
+        title: 'Diagnostic health check',
         job_type: 'health_check',
         workspace_id: workspaceId,
-        payload: { source: 'developer_ui', note: 'Manual test job' },
+        payload: { source: 'developer_ui', note: 'Manual diagnostic check' },
       })
       await refreshAgentJobs(workspaceId)
-      setCopied('Test agent job created')
+      setCopied('Diagnostic job created')
       window.setTimeout(() => setCopied(''), 2000)
     } catch (err) {
       setError(err.message)
@@ -5309,14 +5668,14 @@ function App() {
               <div className="mission-panel">
                 <div className="agent-template-card">
                   <strong>Multi-Modal Agent · v21.0</strong>
-                  <span>Describe a screenshot, UI bug, diagram, or whiteboard to get a structured plan. Mock/local analysis only.</span>
+                  <span>Describe a screenshot, UI bug, diagram, or whiteboard to get a structured plan. Local, demo-safe analysis.</span>
                 </div>
                 {multimodalDashboard && (
                   <div className="analytics-mini-grid">
                     <div><span>Items</span><strong>{multimodalDashboard.total_items}</strong></div>
                     <div><span>Analyses</span><strong>{multimodalDashboard.total_analyses}</strong></div>
                     <div><span>Issues</span><strong>{multimodalDashboard.total_issues_found}</strong></div>
-                    <div><span>Mock</span><strong>{multimodalDashboard.mock_mode ? 'on' : 'off'}</strong></div>
+                    <div><span>Demo-safe</span><strong>{multimodalDashboard.mock_mode ? 'on' : 'off'}</strong></div>
                   </div>
                 )}
                 {multimodalError && <p className="error-text">{multimodalError}</p>}
@@ -5373,7 +5732,7 @@ function App() {
                   </div>
                 )}
 
-                <p className="muted">Mock mode — local heuristic analysis only; no paid vision API is called.</p>
+                <p className="muted">Local, demo-safe analysis — no external vision API is called.</p>
               </div>
             )}
           </section>
@@ -5467,7 +5826,7 @@ function App() {
               <div className="mission-panel">
                 <div className="agent-template-card">
                   <strong>Agent-to-Agent Network · v23.0</strong>
-                  <span>Local task contracts, mock handoffs, result verification, and audit logs. No real external agent calls.</span>
+                  <span>Local task contracts, demo-safe handoffs, result verification, and audit logs. No real external agent calls.</span>
                 </div>
                 {agentNetworkDashboard && (
                   <div className="analytics-mini-grid">
@@ -5532,7 +5891,7 @@ function App() {
                   </>
                 )}
 
-                <p className="muted">Local/mock protocol only — no real external agent is contacted; every action is audited.</p>
+                <p className="muted">Local, demo-safe protocol — no real external agent is contacted; every action is audited.</p>
               </div>
             )}
           </section>
@@ -5731,7 +6090,7 @@ function App() {
               <div className="mission-panel">
                 <div className="agent-template-card">
                   <strong>Personal Device Operator · v26.0</strong>
-                  <span>Plan phone/device actions from voice/text + mock screen text. Mock/planning-first — no real device control.</span>
+                  <span>Plan phone/device actions from voice/text + provided screen text. Demo-safe planning — no real device control.</span>
                 </div>
                 {deviceDashboard && (
                   <div className="analytics-mini-grid">
@@ -5771,7 +6130,7 @@ function App() {
                 <form className="stacked-form" onSubmit={handlePlanDevice}>
                   <h3>Plan actions</h3>
                   <input type="text" placeholder="Voice/text command" value={deviceCommand} onChange={(event) => setDeviceCommand(event.target.value)} />
-                  <textarea placeholder="Mock screen text (read-screen mode)" value={deviceScreenText} onChange={(event) => setDeviceScreenText(event.target.value)} rows={2} />
+                  <textarea placeholder="Screen text (read-screen mode)" value={deviceScreenText} onChange={(event) => setDeviceScreenText(event.target.value)} rows={2} />
                   <button type="submit" disabled={deviceBusy || !deviceSessionId || (!deviceCommand.trim() && !deviceScreenText.trim())}>Plan</button>
                 </form>
 
@@ -5803,7 +6162,440 @@ function App() {
                   </>
                 )}
 
-                <p className="muted">Mock/planning-first — no real phone automation; send/pay/delete/share/password/call/post/submit require approval; dangerous actions blocked.</p>
+                <p className="muted">Demo-safe planning — no real phone automation; send/pay/delete/share/password/call/post/submit require approval; dangerous actions blocked.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowTrainingPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Training Lab
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showTrainingPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Private Training Lab · v27.0</strong>
+                  <span>Prepare approved, sanitized fine-tuning datasets. The app does not train the base model automatically.</span>
+                </div>
+                {trainingDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Datasets</span><strong>{trainingDashboard.total_datasets}</strong></div>
+                    <div><span>Examples</span><strong>{trainingDashboard.total_examples}</strong></div>
+                    <div><span>Approved</span><strong>{trainingDashboard.approved_examples}</strong></div>
+                    <div><span>Redacted</span><strong>{trainingDashboard.examples_with_redactions}</strong></div>
+                    <div><span>Exports</span><strong>{trainingDashboard.total_exports}</strong></div>
+                    <div><span>Runs</span><strong>{trainingDashboard.total_runs}</strong></div>
+                  </div>
+                )}
+                {trainingError && <p className="error-text">{trainingError}</p>}
+
+                <form className="stacked-form" onSubmit={handleCreateDataset}>
+                  <h3>New dataset</h3>
+                  <input type="text" placeholder="Dataset name" value={datasetName} onChange={(event) => setDatasetName(event.target.value)} />
+                  <button type="submit" disabled={trainingBusy || !datasetName.trim()}>Create</button>
+                </form>
+
+                {trainingDatasets.length > 0 && (
+                  <>
+                    <h3>Datasets</h3>
+                    <select value={trainingDatasetId} onChange={(event) => handleSelectTrainingDataset(event.target.value)}>
+                      <option value="">Select dataset…</option>
+                      {trainingDatasets.map((dataset) => (
+                        <option key={dataset.dataset_id} value={dataset.dataset_id}>{dataset.name}</option>
+                      ))}
+                    </select>
+                    <div className="inline-actions">
+                      <button type="button" onClick={handleExportDataset} disabled={trainingBusy || !trainingDatasetId}>Export approved (JSONL)</button>
+                      <button type="button" onClick={handleCreateTrainingRun} disabled={trainingBusy}>Dry run</button>
+                    </div>
+                  </>
+                )}
+
+                <form className="stacked-form" onSubmit={handleAddExample}>
+                  <h3>Add example (auto-redacted)</h3>
+                  <textarea placeholder="Prompt" value={examplePrompt} onChange={(event) => setExamplePrompt(event.target.value)} rows={2} />
+                  <textarea placeholder="Completion" value={exampleCompletion} onChange={(event) => setExampleCompletion(event.target.value)} rows={2} />
+                  <button type="submit" disabled={trainingBusy || !trainingDatasetId || !examplePrompt.trim()}>Add example</button>
+                </form>
+
+                {trainingExamples.length > 0 && (
+                  <>
+                    <h3>Examples</h3>
+                    {trainingExamples.slice(0, 8).map((example) => (
+                      <div className="agent-template-card" key={example.example_id}>
+                        <strong>{example.status}</strong>
+                        <span>{example.prompt.slice(0, 120)}</span>
+                        {(example.redaction?.secrets_detected || example.redaction?.pii_detected) && (
+                          <p className="muted">Redacted: {[...(example.redaction.secret_types || []), ...(example.redaction.pii_types || [])].join(', ')}</p>
+                        )}
+                        <div className="inline-actions">
+                          <button type="button" onClick={() => handleSetExampleStatus(example.example_id, 'approved')} disabled={trainingBusy}>Approve</button>
+                          <button type="button" onClick={() => handleSetExampleStatus(example.example_id, 'rejected')} disabled={trainingBusy}>Reject</button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {trainingExport && (
+                  <div className="agent-template-card">
+                    <strong>Export · {trainingExport.approved_example_count} approved</strong>
+                    <p className="muted">Excluded non-approved: {trainingExport.excluded_non_approved}</p>
+                    <p className="muted">{trainingExport.safety_note}</p>
+                  </div>
+                )}
+
+                <p className="muted">No auto-training — only approved + sanitized examples export; secrets and PII are redacted before inclusion.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowAvatarPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Avatar / Voice Twin
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showAvatarPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Personal AI Avatar / Voice Twin · v28.0</strong>
+                  <span>Persona, voice-response, and meeting-assistant settings. The avatar is always an AI — no impersonation, no voice cloning.</span>
+                </div>
+                {avatarDashboard && (
+                  <div className="provider-card">
+                    <div><span>Avatar</span><strong>{avatarDashboard.persona?.avatar_name}</strong></div>
+                    <div><span>Tone</span><strong>{avatarDashboard.persona?.tone}</strong></div>
+                    <div><span>Voice</span><strong>{avatarDashboard.voice_settings?.voice_mode}</strong></div>
+                    <div><span>Consent</span><strong>{String(avatarDashboard.latest_consent_granted)}</strong></div>
+                  </div>
+                )}
+                {avatarError && <p className="error-text">{avatarError}</p>}
+
+                {avatarDashboard?.persona?.avatar_image?.image_url && (
+                  <div className="agent-template-card">
+                    <strong>Avatar</strong>
+                    <img
+                      src={avatarDashboard.persona.avatar_image.image_url}
+                      alt={`${avatarDashboard.persona.avatar_name} avatar`}
+                      style={{ width: '120px', height: '120px', borderRadius: '12px', objectFit: 'cover', marginTop: '8px' }}
+                    />
+                    <p className="muted">
+                      {avatarDashboard.persona.avatar_image.mock_preview ? 'Mock preview' : avatarDashboard.persona.avatar_image.provider} ·
+                      {' '}{avatarDashboard.persona.avatar_image.style}
+                    </p>
+                    <p className="muted">{avatarDashboard.persona.avatar_image.note}</p>
+                  </div>
+                )}
+
+                <form className="stacked-form" onSubmit={handleGenerateAvatarImage}>
+                  <h3>Generate avatar (looks like you)</h3>
+                  <textarea
+                    placeholder="Describe how it should look (e.g. short black hair, glasses, friendly smile, hoodie)"
+                    value={avatarDescription}
+                    onChange={(event) => setAvatarDescription(event.target.value)}
+                    rows={2}
+                  />
+                  <select value={avatarStyle} onChange={(event) => setAvatarStyle(event.target.value)}>
+                    <option value="illustrated">illustrated</option>
+                    <option value="cartoon">cartoon</option>
+                    <option value="minimal">minimal</option>
+                    <option value="3d_stylized">3d_stylized</option>
+                    <option value="pixel">pixel</option>
+                  </select>
+                  <button type="submit" disabled={avatarBusy}>Generate avatar</button>
+                  <p className="muted">Stylized avatar from your description (mock preview unless real image mode is enabled). Not a photo-real clone; never claims to be you.</p>
+                </form>
+
+                <form className="stacked-form" onSubmit={handleSavePersona}>
+                  <h3>Persona</h3>
+                  <input type="text" placeholder="Avatar name" value={avatarName} onChange={(event) => setAvatarName(event.target.value)} />
+                  <select value={avatarTone} onChange={(event) => setAvatarTone(event.target.value)}>
+                    <option value="friendly">friendly</option>
+                    <option value="professional">professional</option>
+                    <option value="concise">concise</option>
+                    <option value="encouraging">encouraging</option>
+                    <option value="neutral">neutral</option>
+                  </select>
+                  <button type="submit" disabled={avatarBusy}>Save persona</button>
+                </form>
+
+                <h3>Voice response mode</h3>
+                <div className="inline-actions">
+                  {['text_only', 'spoken_summary_ready', 'disabled'].map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => handleSaveVoiceMode(mode)}
+                      disabled={avatarBusy}
+                      className={avatarVoiceMode === mode ? 'active' : ''}
+                    >
+                      {mode}
+                    </button>
+                  ))}
+                </div>
+
+                <form className="stacked-form" onSubmit={handleCreateMeetingSession}>
+                  <h3>Meeting assistant session</h3>
+                  <input type="text" placeholder="Meeting title" value={meetingTitle} onChange={(event) => setMeetingTitle(event.target.value)} />
+                  <button type="submit" disabled={avatarBusy || !meetingTitle.trim()}>Create session</button>
+                </form>
+
+                {avatarMeetings.length > 0 && (
+                  <>
+                    <h3>Recent meeting sessions</h3>
+                    {avatarMeetings.slice(0, 5).map((session) => (
+                      <div className="agent-template-card" key={session.meeting_session_id}>
+                        <strong>{session.title}</strong>
+                        <p className="muted">{session.status} · consent required</p>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                <div className="inline-actions">
+                  <button type="button" onClick={handleGrantConsent} disabled={avatarBusy}>Record consent</button>
+                  <button type="button" onClick={() => refreshAvatarPanel()} disabled={avatarBusy}>Refresh</button>
+                </div>
+
+                {avatarDashboard?.safety_rules && (
+                  <>
+                    <h3>Safety</h3>
+                    {avatarDashboard.safety_rules.map((rule, index) => (
+                      <p className="muted" key={index}>• {rule}</p>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowLifePanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Life OS
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showLifePanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Real-Time Life OS · v29.0</strong>
+                  <span>Plan your day from local schedule, tasks, reminders, and deadlines. No real calendar/email integration.</span>
+                </div>
+                {lifeDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Tasks</span><strong>{lifeDashboard.active_task_count}</strong></div>
+                    <div><span>Overdue</span><strong>{lifeDashboard.overdue_task_count}</strong></div>
+                    <div><span>Events</span><strong>{lifeDashboard.schedule_item_count}</strong></div>
+                    <div><span>Reminders</span><strong>{lifeDashboard.open_reminder_count}</strong></div>
+                    <div><span>Deadlines</span><strong>{lifeDashboard.upcoming_deadline_count}</strong></div>
+                    <div><span>Today</span><strong>{lifeDashboard.today}</strong></div>
+                  </div>
+                )}
+                {lifeError && <p className="error-text">{lifeError}</p>}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleGenerateLifeDailyPlan} disabled={lifeBusy}>Generate daily plan</button>
+                  <button type="button" onClick={() => refreshLifePanel(workspaceId)} disabled={lifeBusy}>Refresh</button>
+                </div>
+
+                {lifeDailyPlan && (
+                  <div className="agent-template-card">
+                    <strong>Daily plan · {lifeDailyPlan.date}</strong>
+                    <span>{lifeDailyPlan.summary}</span>
+                    <p className="muted">Focus: {lifeDailyPlan.focus_suggestion}</p>
+                  </div>
+                )}
+
+                <form className="stacked-form" onSubmit={handleCreateLifeTask}>
+                  <h3>New task</h3>
+                  <input type="text" placeholder="Task title" value={lifeTaskTitle} onChange={(event) => setLifeTaskTitle(event.target.value)} />
+                  <select value={lifeTaskPriority} onChange={(event) => setLifeTaskPriority(event.target.value)}>
+                    <option value="low">low</option>
+                    <option value="medium">medium</option>
+                    <option value="high">high</option>
+                  </select>
+                  <input type="text" placeholder="Due date YYYY-MM-DD" value={lifeTaskDue} onChange={(event) => setLifeTaskDue(event.target.value)} />
+                  <button type="submit" disabled={lifeBusy || !lifeTaskTitle.trim()}>Add task</button>
+                </form>
+
+                {lifeTasks.length > 0 && (
+                  <>
+                    <h3>Top tasks (ranked)</h3>
+                    {lifeTasks.slice(0, 6).map((task) => (
+                      <div className="agent-template-card" key={task.task_id}>
+                        <strong>{task.title}</strong>
+                        <p className="muted">
+                          {task.priority} · score {task.priority_score}
+                          {task.overdue ? ' · overdue' : task.days_until_due != null ? ` · in ${task.days_until_due}d` : ''}
+                        </p>
+                        <div className="inline-actions">
+                          <button type="button" onClick={() => handleCompleteLifeTask(task.task_id)} disabled={lifeBusy}>Mark done</button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                <form className="stacked-form" onSubmit={handleCreateLifeSchedule}>
+                  <h3>New schedule item</h3>
+                  <input type="text" placeholder="Event title" value={lifeScheduleTitle} onChange={(event) => setLifeScheduleTitle(event.target.value)} />
+                  <input type="text" placeholder="Date YYYY-MM-DD" value={lifeScheduleDate} onChange={(event) => setLifeScheduleDate(event.target.value)} />
+                  <button type="submit" disabled={lifeBusy || !lifeScheduleTitle.trim()}>Add event</button>
+                </form>
+
+                <form className="stacked-form" onSubmit={handleCreateLifeReminder}>
+                  <h3>New reminder</h3>
+                  <input type="text" placeholder="Reminder title" value={lifeReminderTitle} onChange={(event) => setLifeReminderTitle(event.target.value)} />
+                  <input type="text" placeholder="Remind on YYYY-MM-DD" value={lifeReminderOn} onChange={(event) => setLifeReminderOn(event.target.value)} />
+                  <button type="submit" disabled={lifeBusy || !lifeReminderTitle.trim()}>Add reminder</button>
+                </form>
+
+                <form className="stacked-form" onSubmit={handleCreateLifeDeadline}>
+                  <h3>New deadline</h3>
+                  <input type="text" placeholder="Deadline title" value={lifeDeadlineTitle} onChange={(event) => setLifeDeadlineTitle(event.target.value)} />
+                  <select value={lifeDeadlineKind} onChange={(event) => setLifeDeadlineKind(event.target.value)}>
+                    <option value="school">school</option>
+                    <option value="work">work</option>
+                    <option value="personal">personal</option>
+                    <option value="other">other</option>
+                  </select>
+                  <input type="text" placeholder="Due date YYYY-MM-DD" value={lifeDeadlineDue} onChange={(event) => setLifeDeadlineDue(event.target.value)} />
+                  <button type="submit" disabled={lifeBusy || !lifeDeadlineTitle.trim()}>Add deadline</button>
+                </form>
+
+                {lifeDeadlines.length > 0 && (
+                  <>
+                    <h3>Deadlines</h3>
+                    {lifeDeadlines.slice(0, 5).map((deadline) => (
+                      <div className="agent-template-card" key={deadline.deadline_id}>
+                        <strong>{deadline.title}</strong>
+                        <p className="muted">
+                          {deadline.kind} · {deadline.due_date || 'no date'}
+                          {deadline.days_until_due != null ? ` · in ${deadline.days_until_due}d` : ''}
+                        </p>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {lifeReminders.length > 0 && (
+                  <>
+                    <h3>Reminders</h3>
+                    {lifeReminders.slice(0, 5).map((reminder) => (
+                      <p className="muted" key={reminder.reminder_id}>• {reminder.title} ({reminder.status}{reminder.remind_on ? ` · ${reminder.remind_on}` : ''})</p>
+                    ))}
+                  </>
+                )}
+
+                <p className="muted">Local planning only — nothing is synced to a real calendar or sent anywhere.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowUniversalPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Universal Operator
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showUniversalPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Universal App Operator · v30.0</strong>
+                  <span>Plan cross-app/desktop/browser workflows with a permission model and audit trail. Mock/planning-first — no real app automation.</span>
+                </div>
+                {universalDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Sessions</span><strong>{universalDashboard.total_sessions}</strong></div>
+                    <div><span>Workflows</span><strong>{universalDashboard.total_workflows}</strong></div>
+                    <div><span>Actions</span><strong>{universalDashboard.total_actions}</strong></div>
+                    <div><span>Sensitive</span><strong>{universalDashboard.sensitive_actions}</strong></div>
+                    <div><span>Awaiting</span><strong>{universalDashboard.actions_awaiting_approval}</strong></div>
+                    <div><span>Handoffs</span><strong>{universalDashboard.total_handoffs}</strong></div>
+                  </div>
+                )}
+                {universalError && <p className="error-text">{universalError}</p>}
+                <div className="inline-actions">
+                  <select value={universalSurface} onChange={(event) => setUniversalSurface(event.target.value)}>
+                    <option value="cross_app">cross_app</option>
+                    <option value="desktop">desktop</option>
+                    <option value="browser">browser</option>
+                    <option value="mobile">mobile</option>
+                  </select>
+                  <button type="button" onClick={handleCreateUniversalSession} disabled={universalBusy}>New session</button>
+                  <button type="button" onClick={handleCreateUniversalHandoff} disabled={universalBusy}>Device handoff</button>
+                  <button type="button" onClick={() => refreshUniversalPanel()} disabled={universalBusy}>Refresh</button>
+                </div>
+
+                <form className="stacked-form" onSubmit={handleCreateUniversalWorkflow}>
+                  <h3>New cross-app workflow</h3>
+                  <input type="text" placeholder="Goal" value={universalGoal} onChange={(event) => setUniversalGoal(event.target.value)} />
+                  <textarea placeholder="Steps (one per line, e.g. Read inbox / Draft reply / Send email)" value={universalSteps} onChange={(event) => setUniversalSteps(event.target.value)} rows={3} />
+                  <button type="submit" disabled={universalBusy || !universalGoal.trim()}>Create workflow</button>
+                </form>
+
+                {universalWorkflows.length > 0 && (
+                  <>
+                    <h3>Workflows</h3>
+                    {universalWorkflows.slice(0, 6).map((workflow) => (
+                      <div className="agent-template-card" key={workflow.workflow_id}>
+                        <strong>{workflow.goal}</strong>
+                        <p className="muted">{workflow.status} · {(workflow.steps || []).length} step(s)</p>
+                        <div className="inline-actions">
+                          <button type="button" onClick={() => handlePlanUniversalWorkflow(workflow.workflow_id)} disabled={universalBusy}>Plan</button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {universalPlannedActions.length > 0 && (
+                  <>
+                    <h3>Planned actions</h3>
+                    {universalPlannedActions.map((action) => (
+                      <div className="agent-template-card" key={action.action_id}>
+                        <strong>{action.permission_level}{action.sensitive ? ' · sensitive' : ''}</strong>
+                        <span>{action.description}</span>
+                        <p className="muted">Status: {action.status}</p>
+                        {action.requires_approval && (
+                          <div className="inline-actions">
+                            <button type="button" onClick={() => handleDecideUniversalAction(action.action_id, 'approve')} disabled={universalBusy}>Approve</button>
+                            <button type="button" onClick={() => handleDecideUniversalAction(action.action_id, 'reject')} disabled={universalBusy}>Reject</button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {universalAudit.length > 0 && (
+                  <>
+                    <h3>Audit trail</h3>
+                    {universalAudit.slice(0, 6).map((entry) => (
+                      <p className="muted" key={entry.audit_id}>{entry.event_type}: {entry.detail}</p>
+                    ))}
+                  </>
+                )}
+
+                <p className="muted">Mock/planning-first — no real desktop/browser/app automation; sensitive actions (send/delete/pay/share) require approval; nothing is executed.</p>
               </div>
             )}
           </section>
@@ -5904,7 +6696,7 @@ function App() {
                 {agentJobsAvailable && (
                   <div className="inline-actions">
                     <button type="button" disabled={agentJobBusyId === 'create'} onClick={handleCreateTestAgentJob}>
-                      Create test job
+                      Run diagnostic job
                     </button>
                     <button type="button" disabled={agentJobBusyId === 'start-next'} onClick={handleStartNextAgentJob}>
                       Start next

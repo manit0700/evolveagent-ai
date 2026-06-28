@@ -1902,3 +1902,124 @@ export function planDeviceOperatorSession(sessionId, payload) {
 export function confirmDeviceOperatorAction(sessionId, actionId, approve) {
   return postJson(`/api/device-operator/sessions/${sessionId}/confirm-action`, { action_id: actionId, approve })
 }
+
+export function getTrainingLabDashboard() {
+  return getJson('/api/training-lab/dashboard')
+}
+export function getTrainingDatasets() {
+  return getJson('/api/training-lab/datasets')
+}
+export function getTrainingDataset(datasetId) {
+  return getJson(`/api/training-lab/datasets/${datasetId}`)
+}
+export function createTrainingDataset(payload) {
+  return postJson('/api/training-lab/datasets', payload)
+}
+export function addTrainingExample(datasetId, payload) {
+  return postJson(`/api/training-lab/datasets/${datasetId}/examples`, payload)
+}
+export function updateTrainingExample(exampleId, payload) {
+  return patchJson(`/api/training-lab/examples/${exampleId}`, payload)
+}
+export function exportTrainingDataset(datasetId) {
+  return postJson(`/api/training-lab/datasets/${datasetId}/export`, {})
+}
+export function createTrainingRun(payload) {
+  return postJson('/api/training-lab/runs', payload)
+}
+export function createTrainingComparison(payload) {
+  return postJson('/api/training-lab/comparisons', payload)
+}
+
+export function getAvatarDashboard() {
+  return getJson('/api/avatar/dashboard')
+}
+export function getAvatarPersona() {
+  return getJson('/api/avatar/persona')
+}
+export function updateAvatarPersona(payload) {
+  return patchJson('/api/avatar/persona', payload)
+}
+export function getAvatarVoiceSettings() {
+  return getJson('/api/avatar/voice-settings')
+}
+export function updateAvatarVoiceSettings(payload) {
+  return patchJson('/api/avatar/voice-settings', payload)
+}
+export function getAvatarMeetingSessions() {
+  return getJson('/api/avatar/meeting-sessions')
+}
+export function createAvatarMeetingSession(payload) {
+  return postJson('/api/avatar/meeting-sessions', payload)
+}
+export function createAvatarConsent(payload) {
+  return postJson('/api/avatar/consent', payload)
+}
+export function generateAvatarImage(payload) {
+  return postJson('/api/avatar/persona/avatar-image', payload)
+}
+
+export function getLifeOsDashboard(workspaceId) {
+  return getJson(`/api/life-os/dashboard${query({ workspace_id: workspaceId })}`)
+}
+export function getLifeSchedule(workspaceId) {
+  return getJson(`/api/life-os/schedule${query({ workspace_id: workspaceId })}`)
+}
+export function getLifeTasks(workspaceId) {
+  return getJson(`/api/life-os/tasks${query({ workspace_id: workspaceId })}`)
+}
+export function getLifeReminders(workspaceId) {
+  return getJson(`/api/life-os/reminders${query({ workspace_id: workspaceId })}`)
+}
+export function getLifeDeadlines(workspaceId) {
+  return getJson(`/api/life-os/deadlines${query({ workspace_id: workspaceId })}`)
+}
+export function createLifeScheduleItem(payload) {
+  return postJson('/api/life-os/schedule', payload)
+}
+export function createLifeTask(payload) {
+  return postJson('/api/life-os/tasks', payload)
+}
+export function updateLifeTask(taskId, payload) {
+  return patchJson(`/api/life-os/tasks/${taskId}`, payload)
+}
+export function createLifeReminder(payload) {
+  return postJson('/api/life-os/reminders', payload)
+}
+export function createLifeDeadline(payload) {
+  return postJson('/api/life-os/deadlines', payload)
+}
+export function createLifeDailyPlan(workspaceId) {
+  return postJson('/api/life-os/daily-plan', { workspace_id: workspaceId })
+}
+
+export function getUniversalOperatorDashboard() {
+  return getJson('/api/universal-operator/dashboard')
+}
+export function getUniversalOperatorSessions() {
+  return getJson('/api/universal-operator/sessions')
+}
+export function getUniversalOperatorWorkflows() {
+  return getJson('/api/universal-operator/workflows')
+}
+export function getUniversalOperatorAudit() {
+  return getJson('/api/universal-operator/audit')
+}
+export function getUniversalOperatorHandoffs() {
+  return getJson('/api/universal-operator/handoffs')
+}
+export function createUniversalOperatorSession(payload) {
+  return postJson('/api/universal-operator/sessions', payload)
+}
+export function createUniversalOperatorWorkflow(payload) {
+  return postJson('/api/universal-operator/workflows', payload)
+}
+export function planUniversalOperatorWorkflow(workflowId) {
+  return postJson(`/api/universal-operator/workflows/${workflowId}/plan`, {})
+}
+export function decideUniversalOperatorAction(actionId, decision) {
+  return postJson(`/api/universal-operator/actions/${actionId}/decision`, { decision })
+}
+export function createUniversalOperatorHandoff(payload) {
+  return postJson('/api/universal-operator/handoffs', payload)
+}
