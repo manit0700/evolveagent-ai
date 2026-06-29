@@ -241,6 +241,37 @@ import {
   reviewExecutiveBoardSession,
   voteExecutiveBoardSession,
   reportExecutiveBoardSession,
+  getInnovationDashboard,
+  getInnovationResearch,
+  getInnovationCompetitors,
+  getInnovationTrends,
+  getInnovationIdeas,
+  createInnovationResearch,
+  createInnovationCompetitor,
+  createInnovationTrend,
+  createInnovationIdea,
+  createInnovationExperiment,
+  createInnovationPrototype,
+  createInnovationReport,
+  getSimWorldDashboard,
+  getSimWorldScenarios,
+  getSimWorldPersonas,
+  createSimWorldWorld,
+  createSimWorldPersona,
+  createSimWorldScenario,
+  runSimWorldScenario,
+  compareSimWorldScenarios,
+  createSimWorldReport,
+  getOrgOsDashboard,
+  getOrgOsOrganizations,
+  getOrgOsMembers,
+  getOrgOsRoles,
+  getOrgOsActivity,
+  createOrgOsOrganization,
+  createOrgOsMember,
+  updateOrgOsMember,
+  createOrgOsRole,
+  createOrgOsWorkspaceLink,
   getGoal,
   getGoals,
   getHistory,
@@ -842,6 +873,33 @@ function App() {
   const [boardDecision, setBoardDecision] = useState('')
   const [boardVoteRole, setBoardVoteRole] = useState('CEO')
   const [boardVoteValue, setBoardVoteValue] = useState('approve')
+  const [showInnovationPanel, setShowInnovationPanel] = useState(false)
+  const [innovationDashboard, setInnovationDashboard] = useState(null)
+  const [innovationResearch, setInnovationResearch] = useState([])
+  const [innovationIdeas, setInnovationIdeas] = useState([])
+  const [innovationBusy, setInnovationBusy] = useState(false)
+  const [innovationError, setInnovationError] = useState(null)
+  const [researchTitle, setResearchTitle] = useState('')
+  const [ideaTitle, setIdeaTitle] = useState('')
+  const [ideaImpact, setIdeaImpact] = useState(3)
+  const [showSimWorldPanel, setShowSimWorldPanel] = useState(false)
+  const [simWorldDashboard, setSimWorldDashboard] = useState(null)
+  const [simWorldScenarios, setSimWorldScenarios] = useState([])
+  const [simWorldBusy, setSimWorldBusy] = useState(false)
+  const [simWorldError, setSimWorldError] = useState(null)
+  const [simWorldName, setSimWorldName] = useState('')
+  const [simScenarioTitle, setSimScenarioTitle] = useState('')
+  const [simScenarioType, setSimScenarioType] = useState('business')
+  const [simWorldOutcome, setSimWorldOutcome] = useState(null)
+  const [showOrgOsPanel, setShowOrgOsPanel] = useState(false)
+  const [orgOsDashboard, setOrgOsDashboard] = useState(null)
+  const [orgOsOrganizations, setOrgOsOrganizations] = useState([])
+  const [orgOsMembers, setOrgOsMembers] = useState([])
+  const [orgOsBusy, setOrgOsBusy] = useState(false)
+  const [orgOsError, setOrgOsError] = useState(null)
+  const [orgName, setOrgName] = useState('')
+  const [orgMemberName, setOrgMemberName] = useState('')
+  const [orgMemberRole, setOrgMemberRole] = useState('contributor')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -966,6 +1024,9 @@ function App() {
     refreshBizOpsPanel()
     refreshComplianceIntelPanel()
     refreshBoardPanel()
+    refreshInnovationPanel()
+    refreshSimWorldPanel()
+    refreshOrgOsPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2381,6 +2442,152 @@ function App() {
     if (!boardSessionId) return
     const report = await runBoardAction(() => reportExecutiveBoardSession(boardSessionId))
     if (report) setBoardArtifact({ kind: 'report', data: report })
+  }
+
+  async function refreshInnovationPanel() {
+    const [dashboard, research, ideas] = await Promise.all([
+      getInnovationDashboard(),
+      getInnovationResearch(),
+      getInnovationIdeas(),
+    ])
+    setInnovationDashboard(dashboard)
+    setInnovationResearch(research?.research || [])
+    setInnovationIdeas(ideas?.ideas || [])
+  }
+
+  async function runInnovationAction(action) {
+    setInnovationBusy(true)
+    setInnovationError(null)
+    try {
+      await action()
+      await refreshInnovationPanel()
+    } catch (error) {
+      setInnovationError(error.message || 'Innovation lab action failed')
+    } finally {
+      setInnovationBusy(false)
+    }
+  }
+
+  async function handleCreateResearch(event) {
+    event.preventDefault()
+    if (!researchTitle.trim()) return
+    await runInnovationAction(async () => {
+      await createInnovationResearch({ title: researchTitle.trim() })
+      setResearchTitle('')
+    })
+  }
+
+  async function handleCreateIdea(event) {
+    event.preventDefault()
+    if (!ideaTitle.trim()) return
+    await runInnovationAction(async () => {
+      await createInnovationIdea({ title: ideaTitle.trim(), impact: Number(ideaImpact) })
+      setIdeaTitle('')
+      setIdeaImpact(3)
+    })
+  }
+
+  async function handleCreateInnovationReport() {
+    await runInnovationAction(() => createInnovationReport({ title: 'Innovation report' }))
+  }
+
+  async function refreshSimWorldPanel() {
+    const [dashboard, scenarios] = await Promise.all([
+      getSimWorldDashboard(),
+      getSimWorldScenarios(),
+    ])
+    setSimWorldDashboard(dashboard)
+    setSimWorldScenarios(scenarios?.scenarios || [])
+  }
+
+  async function runSimWorldAction(action) {
+    setSimWorldBusy(true)
+    setSimWorldError(null)
+    try {
+      const value = await action()
+      await refreshSimWorldPanel()
+      return value
+    } catch (error) {
+      setSimWorldError(error.message || 'Simulation world action failed')
+      return null
+    } finally {
+      setSimWorldBusy(false)
+    }
+  }
+
+  async function handleCreateSimWorld(event) {
+    event.preventDefault()
+    if (!simWorldName.trim()) return
+    await runSimWorldAction(async () => {
+      await createSimWorldWorld({ name: simWorldName.trim() })
+      setSimWorldName('')
+    })
+  }
+
+  async function handleCreateSimScenario(event) {
+    event.preventDefault()
+    if (!simScenarioTitle.trim()) return
+    await runSimWorldAction(async () => {
+      await createSimWorldScenario({ title: simScenarioTitle.trim(), scenario_type: simScenarioType })
+      setSimScenarioTitle('')
+      setSimScenarioType('business')
+    })
+  }
+
+  async function handleRunSimScenario(scenarioId) {
+    const outcome = await runSimWorldAction(() => runSimWorldScenario(scenarioId))
+    if (outcome) setSimWorldOutcome(outcome)
+  }
+
+  async function handleSimWorldReport() {
+    await runSimWorldAction(() => createSimWorldReport({ title: 'Simulation report' }))
+  }
+
+  async function refreshOrgOsPanel() {
+    const [dashboard, organizations, members] = await Promise.all([
+      getOrgOsDashboard(),
+      getOrgOsOrganizations(),
+      getOrgOsMembers(),
+    ])
+    setOrgOsDashboard(dashboard)
+    setOrgOsOrganizations(organizations?.organizations || [])
+    setOrgOsMembers(members?.members || [])
+  }
+
+  async function runOrgOsAction(action) {
+    setOrgOsBusy(true)
+    setOrgOsError(null)
+    try {
+      await action()
+      await refreshOrgOsPanel()
+    } catch (error) {
+      setOrgOsError(error.message || 'Organization OS action failed')
+    } finally {
+      setOrgOsBusy(false)
+    }
+  }
+
+  async function handleCreateOrg(event) {
+    event.preventDefault()
+    if (!orgName.trim()) return
+    await runOrgOsAction(async () => {
+      await createOrgOsOrganization({ name: orgName.trim() })
+      setOrgName('')
+    })
+  }
+
+  async function handleCreateOrgMember(event) {
+    event.preventDefault()
+    if (!orgMemberName.trim()) return
+    await runOrgOsAction(async () => {
+      await createOrgOsMember({ display_name: orgMemberName.trim(), role: orgMemberRole })
+      setOrgMemberName('')
+      setOrgMemberRole('contributor')
+    })
+  }
+
+  async function handleSetMemberRole(memberId, role) {
+    await runOrgOsAction(() => updateOrgOsMember(memberId, { role }))
   }
 
   async function refreshAppBuilderTemplates() {
@@ -7458,6 +7665,226 @@ function App() {
                 )}
 
                 <p className="muted">Advisory only — the board reviews and recommends from multiple perspectives; it does not execute any action.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowInnovationPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Innovation Lab
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showInnovationPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Autonomous Research + Innovation Lab · v36.0</strong>
+                  <span>Track research, competitors, trends, scored ideas, experiments, and prototype plans. Local/manual research only.</span>
+                </div>
+                {innovationDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Research</span><strong>{innovationDashboard.research_count}</strong></div>
+                    <div><span>Competitors</span><strong>{innovationDashboard.competitor_count}</strong></div>
+                    <div><span>Trends</span><strong>{innovationDashboard.trend_count}</strong></div>
+                    <div><span>Ideas</span><strong>{innovationDashboard.idea_count}</strong></div>
+                    <div><span>Experiments</span><strong>{innovationDashboard.experiment_count}</strong></div>
+                    <div><span>Prototypes</span><strong>{innovationDashboard.prototype_count}</strong></div>
+                  </div>
+                )}
+                {innovationError && <p className="error-text">{innovationError}</p>}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleCreateInnovationReport} disabled={innovationBusy}>Generate report</button>
+                  <button type="button" onClick={() => refreshInnovationPanel()} disabled={innovationBusy}>Refresh</button>
+                </div>
+
+                <form className="stacked-form" onSubmit={handleCreateResearch}>
+                  <h3>Add research item</h3>
+                  <input type="text" placeholder="Research title" value={researchTitle} onChange={(event) => setResearchTitle(event.target.value)} />
+                  <button type="submit" disabled={innovationBusy || !researchTitle.trim()}>Add research</button>
+                </form>
+
+                <form className="stacked-form" onSubmit={handleCreateIdea}>
+                  <h3>Score an idea</h3>
+                  <input type="text" placeholder="Idea title" value={ideaTitle} onChange={(event) => setIdeaTitle(event.target.value)} />
+                  <select value={ideaImpact} onChange={(event) => setIdeaImpact(event.target.value)}>
+                    {[1, 2, 3, 4, 5].map((n) => (<option key={n} value={n}>impact {n}</option>))}
+                  </select>
+                  <button type="submit" disabled={innovationBusy || !ideaTitle.trim()}>Add idea</button>
+                </form>
+
+                {innovationIdeas.length > 0 && (
+                  <>
+                    <h3>Top ideas</h3>
+                    {innovationIdeas.slice(0, 6).map((idea) => (
+                      <div className="agent-template-card" key={idea.idea_id}>
+                        <strong>{idea.title}</strong>
+                        <p className="muted">score {idea.composite_score} · impact {idea.impact} · risk {idea.risk}</p>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {innovationResearch.length > 0 && (
+                  <>
+                    <h3>Research</h3>
+                    {innovationResearch.slice(0, 5).map((item) => (
+                      <p className="muted" key={item.research_id}>• {item.title} ({item.credibility})</p>
+                    ))}
+                  </>
+                )}
+
+                <p className="muted">Local/manual research only — no web browsing or external scraping.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowSimWorldPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Simulation World
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showSimWorldPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>AI Simulation World · v37.0</strong>
+                  <span>Model decisions, personas, and scenarios safely. Deterministic mock simulation — no real-world actions.</span>
+                </div>
+                {simWorldDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Worlds</span><strong>{simWorldDashboard.world_count}</strong></div>
+                    <div><span>Personas</span><strong>{simWorldDashboard.persona_count}</strong></div>
+                    <div><span>Scenarios</span><strong>{simWorldDashboard.scenario_count}</strong></div>
+                    <div><span>Outcomes</span><strong>{simWorldDashboard.outcome_count}</strong></div>
+                    <div><span>Avg score</span><strong>{simWorldDashboard.average_score}</strong></div>
+                  </div>
+                )}
+                {simWorldError && <p className="error-text">{simWorldError}</p>}
+                <div className="inline-actions">
+                  <button type="button" onClick={handleSimWorldReport} disabled={simWorldBusy}>Generate report</button>
+                  <button type="button" onClick={() => refreshSimWorldPanel()} disabled={simWorldBusy}>Refresh</button>
+                </div>
+
+                <form className="stacked-form" onSubmit={handleCreateSimWorld}>
+                  <h3>New world</h3>
+                  <input type="text" placeholder="World name" value={simWorldName} onChange={(event) => setSimWorldName(event.target.value)} />
+                  <button type="submit" disabled={simWorldBusy || !simWorldName.trim()}>Create world</button>
+                </form>
+
+                <form className="stacked-form" onSubmit={handleCreateSimScenario}>
+                  <h3>New scenario</h3>
+                  <input type="text" placeholder="Scenario title" value={simScenarioTitle} onChange={(event) => setSimScenarioTitle(event.target.value)} />
+                  <select value={simScenarioType} onChange={(event) => setSimScenarioType(event.target.value)}>
+                    {['business', 'product', 'project', 'bug', 'risk', 'launch'].map((t) => (<option key={t} value={t}>{t}</option>))}
+                  </select>
+                  <button type="submit" disabled={simWorldBusy || !simScenarioTitle.trim()}>Create scenario</button>
+                </form>
+
+                {simWorldScenarios.length > 0 && (
+                  <>
+                    <h3>Scenarios</h3>
+                    {simWorldScenarios.slice(0, 6).map((scenario) => (
+                      <div className="agent-template-card" key={scenario.scenario_id}>
+                        <strong>{scenario.title}</strong>
+                        <p className="muted">{scenario.scenario_type} · {scenario.status}{scenario.last_score != null ? ` · score ${scenario.last_score}` : ''}</p>
+                        <div className="inline-actions">
+                          <button type="button" onClick={() => handleRunSimScenario(scenario.scenario_id)} disabled={simWorldBusy}>Run</button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {simWorldOutcome && (
+                  <div className="agent-template-card">
+                    <strong>Outcome · {simWorldOutcome.likely_result} ({simWorldOutcome.success_score})</strong>
+                    <p className="muted">Risks: {(simWorldOutcome.risks || []).join(', ')}</p>
+                    <p className="muted">{simWorldOutcome.note}</p>
+                  </div>
+                )}
+
+                <p className="muted">Safe local sandbox — deterministic mock simulation; no real-world actions are taken.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowOrgOsPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Organization OS
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showOrgOsPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Multi-User Organization OS · v38.0</strong>
+                  <span>Local organizations, member profiles, roles, permissions, workspace links, and activity. No production auth.</span>
+                </div>
+                {orgOsDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Orgs</span><strong>{orgOsDashboard.organization_count}</strong></div>
+                    <div><span>Members</span><strong>{orgOsDashboard.member_count}</strong></div>
+                    <div><span>Active</span><strong>{orgOsDashboard.active_member_count}</strong></div>
+                    <div><span>Links</span><strong>{orgOsDashboard.workspace_link_count}</strong></div>
+                  </div>
+                )}
+                {orgOsError && <p className="error-text">{orgOsError}</p>}
+                <div className="inline-actions">
+                  <button type="button" onClick={() => refreshOrgOsPanel()} disabled={orgOsBusy}>Refresh</button>
+                </div>
+
+                <form className="stacked-form" onSubmit={handleCreateOrg}>
+                  <h3>New organization</h3>
+                  <input type="text" placeholder="Organization name" value={orgName} onChange={(event) => setOrgName(event.target.value)} />
+                  <button type="submit" disabled={orgOsBusy || !orgName.trim()}>Create org</button>
+                </form>
+
+                <form className="stacked-form" onSubmit={handleCreateOrgMember}>
+                  <h3>Add member (local profile)</h3>
+                  <input type="text" placeholder="Display name" value={orgMemberName} onChange={(event) => setOrgMemberName(event.target.value)} />
+                  <select value={orgMemberRole} onChange={(event) => setOrgMemberRole(event.target.value)}>
+                    {['owner', 'admin', 'manager', 'contributor', 'viewer'].map((r) => (<option key={r} value={r}>{r}</option>))}
+                  </select>
+                  <button type="submit" disabled={orgOsBusy || !orgMemberName.trim()}>Add member</button>
+                </form>
+
+                {orgOsOrganizations.length > 0 && (
+                  <>
+                    <h3>Organizations</h3>
+                    {orgOsOrganizations.slice(0, 5).map((org) => (
+                      <p className="muted" key={org.organization_id}>• {org.name}</p>
+                    ))}
+                  </>
+                )}
+
+                {orgOsMembers.length > 0 && (
+                  <>
+                    <h3>Members</h3>
+                    {orgOsMembers.slice(0, 6).map((member) => (
+                      <div className="agent-template-card" key={member.member_id}>
+                        <strong>{member.display_name}</strong>
+                        <p className="muted">{member.role} · {(member.permissions || []).join(', ')}</p>
+                        <select value={member.role} onChange={(event) => handleSetMemberRole(member.member_id, event.target.value)} disabled={orgOsBusy}>
+                          {['owner', 'admin', 'manager', 'contributor', 'viewer'].map((r) => (<option key={r} value={r}>{r}</option>))}
+                        </select>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                <p className="muted">Local organization records only — no production authentication or real user login.</p>
               </div>
             )}
           </section>

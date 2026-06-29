@@ -2177,3 +2177,111 @@ export function voteExecutiveBoardSession(sessionId, payload) {
 export function reportExecutiveBoardSession(sessionId) {
   return postJson(`/api/executive-board/sessions/${sessionId}/report`, {})
 }
+
+export function getInnovationDashboard() {
+  return getJson('/api/innovation-lab/dashboard')
+}
+export function getInnovationResearch() {
+  return getJson('/api/innovation-lab/research')
+}
+export function getInnovationCompetitors() {
+  return getJson('/api/innovation-lab/competitors')
+}
+export function getInnovationTrends() {
+  return getJson('/api/innovation-lab/trends')
+}
+export function getInnovationIdeas() {
+  return getJson('/api/innovation-lab/ideas')
+}
+export function getInnovationExperiments() {
+  return getJson('/api/innovation-lab/experiments')
+}
+export function getInnovationPrototypes() {
+  return getJson('/api/innovation-lab/prototypes')
+}
+export function createInnovationResearch(payload) {
+  return postJson('/api/innovation-lab/research', payload)
+}
+export function createInnovationCompetitor(payload) {
+  return postJson('/api/innovation-lab/competitors', payload)
+}
+export function createInnovationTrend(payload) {
+  return postJson('/api/innovation-lab/trends', payload)
+}
+export function createInnovationIdea(payload) {
+  return postJson('/api/innovation-lab/ideas', payload)
+}
+export function createInnovationExperiment(payload) {
+  return postJson('/api/innovation-lab/experiments', payload)
+}
+export function createInnovationPrototype(payload) {
+  return postJson('/api/innovation-lab/prototypes', payload)
+}
+export function createInnovationReport(payload) {
+  return postJson('/api/innovation-lab/reports', payload || {})
+}
+
+export function getSimWorldDashboard() {
+  return getJson('/api/simulation-world/dashboard')
+}
+export function getSimWorldWorlds() {
+  return getJson('/api/simulation-world/worlds')
+}
+export function getSimWorldPersonas() {
+  return getJson('/api/simulation-world/personas')
+}
+export function getSimWorldScenarios() {
+  return getJson('/api/simulation-world/scenarios')
+}
+export function getSimWorldReports() {
+  return getJson('/api/simulation-world/reports')
+}
+export function createSimWorldWorld(payload) {
+  return postJson('/api/simulation-world/worlds', payload)
+}
+export function createSimWorldPersona(payload) {
+  return postJson('/api/simulation-world/personas', payload)
+}
+export function createSimWorldScenario(payload) {
+  return postJson('/api/simulation-world/scenarios', payload)
+}
+export function runSimWorldScenario(scenarioId) {
+  return postJson(`/api/simulation-world/scenarios/${scenarioId}/run`, {})
+}
+export function compareSimWorldScenarios(scenarioIds) {
+  return postJson('/api/simulation-world/compare', { scenario_ids: scenarioIds })
+}
+export function createSimWorldReport(payload) {
+  return postJson('/api/simulation-world/reports', payload || {})
+}
+
+export function getOrgOsDashboard() {
+  return getJson('/api/organization-os/dashboard')
+}
+export function getOrgOsOrganizations() {
+  return getJson('/api/organization-os/organizations')
+}
+export function getOrgOsMembers() {
+  return getJson('/api/organization-os/members')
+}
+export function getOrgOsRoles() {
+  return getJson('/api/organization-os/roles')
+}
+export function getOrgOsActivity() {
+  return getJson('/api/organization-os/activity')
+}
+export function createOrgOsOrganization(payload) {
+  return postJson('/api/organization-os/organizations', payload)
+}
+export function createOrgOsMember(payload) {
+  return postJson('/api/organization-os/members', payload)
+}
+export function updateOrgOsMember(memberId, payload) {
+  return patchJson(`/api/organization-os/members/${memberId}`, payload)
+}
+export function createOrgOsRole(payload) {
+  return postJson('/api/organization-os/roles', payload)
+}
+export function createOrgOsWorkspaceLink(payload) {
+  return postJson('/api/organization-os/workspace-links', payload)
+}

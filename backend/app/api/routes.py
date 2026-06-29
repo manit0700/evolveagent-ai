@@ -90,6 +90,23 @@ from app.models.request_models import (
     ComplianceAuditPackageRequest,
     ExecutiveBoardSessionCreateRequest,
     ExecutiveBoardVoteRequest,
+    InnovationResearchRequest,
+    InnovationCompetitorRequest,
+    InnovationTrendRequest,
+    InnovationIdeaRequest,
+    InnovationExperimentRequest,
+    InnovationPrototypeRequest,
+    InnovationReportRequest,
+    SimulationWorldCreateRequest,
+    SimulationPersonaCreateRequest,
+    SimWorldScenarioCreateRequest,
+    SimulationCompareRequest,
+    SimulationReportRequest,
+    OrganizationCreateRequest,
+    OrganizationMemberCreateRequest,
+    OrganizationMemberUpdateRequest,
+    OrganizationRoleCreateRequest,
+    OrganizationWorkspaceLinkRequest,
     TeamMemberCreateRequest,
     TeamMemberUpdateRequest,
     TeamAssignmentCreateRequest,
@@ -218,6 +235,9 @@ from app.services.saas_builder_service import SaaSBuilderService
 from app.services.business_operator_advanced_service import BusinessOperatorAdvancedService
 from app.services.compliance_intelligence_service import ComplianceIntelligenceService
 from app.services.executive_board_service import ExecutiveBoardService
+from app.services.innovation_lab_service import InnovationLabService
+from app.services.simulation_world_service import SimulationWorldService
+from app.services.organization_os_service import OrganizationOSService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -300,6 +320,9 @@ saas_builder_service = SaaSBuilderService(storage, governance_service)
 business_operator_advanced_service = BusinessOperatorAdvancedService(storage, governance_service)
 compliance_intelligence_service = ComplianceIntelligenceService(storage, governance_service, SecretScanner())
 executive_board_service = ExecutiveBoardService(storage, governance_service)
+innovation_lab_service = InnovationLabService(storage, governance_service)
+simulation_world_service = SimulationWorldService(storage, governance_service)
+organization_os_service = OrganizationOSService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -2964,6 +2987,224 @@ def report_executive_board_session(session_id: str) -> dict:
         return executive_board_service.create_report(session_id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail="Session not found") from error
+
+
+# ----------------------------------------------------------------------
+# v36.0 Autonomous Research + Innovation Lab (local/manual research only)
+# ----------------------------------------------------------------------
+@router.get("/innovation-lab/dashboard")
+def get_innovation_lab_dashboard() -> dict:
+    return innovation_lab_service.dashboard()
+
+
+@router.get("/innovation-lab/research")
+def list_innovation_research() -> dict:
+    items = innovation_lab_service.list_research()
+    return {"research": items, "count": len(items)}
+
+
+@router.post("/innovation-lab/research")
+def create_innovation_research(request: InnovationResearchRequest) -> dict:
+    return innovation_lab_service.create_research(request.model_dump())
+
+
+@router.get("/innovation-lab/competitors")
+def list_innovation_competitors() -> dict:
+    items = innovation_lab_service.list_competitors()
+    return {"competitors": items, "count": len(items)}
+
+
+@router.post("/innovation-lab/competitors")
+def create_innovation_competitor(request: InnovationCompetitorRequest) -> dict:
+    return innovation_lab_service.create_competitor(request.model_dump())
+
+
+@router.get("/innovation-lab/trends")
+def list_innovation_trends() -> dict:
+    items = innovation_lab_service.list_trends()
+    return {"trends": items, "count": len(items)}
+
+
+@router.post("/innovation-lab/trends")
+def create_innovation_trend(request: InnovationTrendRequest) -> dict:
+    return innovation_lab_service.create_trend(request.model_dump())
+
+
+@router.get("/innovation-lab/ideas")
+def list_innovation_ideas() -> dict:
+    items = innovation_lab_service.list_ideas()
+    return {"ideas": items, "count": len(items)}
+
+
+@router.post("/innovation-lab/ideas")
+def create_innovation_idea(request: InnovationIdeaRequest) -> dict:
+    return innovation_lab_service.create_idea(request.model_dump())
+
+
+@router.get("/innovation-lab/experiments")
+def list_innovation_experiments() -> dict:
+    items = innovation_lab_service.list_experiments()
+    return {"experiments": items, "count": len(items)}
+
+
+@router.post("/innovation-lab/experiments")
+def create_innovation_experiment(request: InnovationExperimentRequest) -> dict:
+    return innovation_lab_service.create_experiment(request.model_dump())
+
+
+@router.get("/innovation-lab/prototypes")
+def list_innovation_prototypes() -> dict:
+    items = innovation_lab_service.list_prototypes()
+    return {"prototypes": items, "count": len(items)}
+
+
+@router.post("/innovation-lab/prototypes")
+def create_innovation_prototype(request: InnovationPrototypeRequest) -> dict:
+    return innovation_lab_service.create_prototype(request.model_dump())
+
+
+@router.get("/innovation-lab/reports")
+def list_innovation_reports() -> dict:
+    items = innovation_lab_service.list_reports()
+    return {"reports": items, "count": len(items)}
+
+
+@router.post("/innovation-lab/reports")
+def create_innovation_report(request: InnovationReportRequest | None = None) -> dict:
+    return innovation_lab_service.create_report(request.model_dump() if request else {})
+
+
+# ----------------------------------------------------------------------
+# v37.0 AI Simulation World (deterministic mock sandbox — no real actions)
+# ----------------------------------------------------------------------
+@router.get("/simulation-world/dashboard")
+def get_simulation_world_dashboard() -> dict:
+    return simulation_world_service.dashboard()
+
+
+@router.get("/simulation-world/worlds")
+def list_simulation_worlds() -> dict:
+    worlds = simulation_world_service.list_worlds()
+    return {"worlds": worlds, "count": len(worlds)}
+
+
+@router.post("/simulation-world/worlds")
+def create_simulation_world(request: SimulationWorldCreateRequest) -> dict:
+    return simulation_world_service.create_world(request.model_dump())
+
+
+@router.get("/simulation-world/personas")
+def list_simulation_personas() -> dict:
+    personas = simulation_world_service.list_personas()
+    return {"personas": personas, "count": len(personas)}
+
+
+@router.post("/simulation-world/personas")
+def create_simulation_persona(request: SimulationPersonaCreateRequest) -> dict:
+    return simulation_world_service.create_persona(request.model_dump())
+
+
+@router.get("/simulation-world/scenarios")
+def list_simulation_scenarios() -> dict:
+    scenarios = simulation_world_service.list_scenarios()
+    return {"scenarios": scenarios, "count": len(scenarios)}
+
+
+@router.post("/simulation-world/scenarios")
+def create_simulation_scenario(request: SimWorldScenarioCreateRequest) -> dict:
+    return simulation_world_service.create_scenario(request.model_dump())
+
+
+@router.post("/simulation-world/scenarios/{scenario_id}/run")
+def run_simulation_scenario(scenario_id: str) -> dict:
+    try:
+        return simulation_world_service.run_scenario(scenario_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Scenario not found") from error
+
+
+@router.post("/simulation-world/compare")
+def compare_simulation_scenarios(request: SimulationCompareRequest) -> dict:
+    return simulation_world_service.compare(request.scenario_ids)
+
+
+@router.get("/simulation-world/reports")
+def list_simulation_world_reports() -> dict:
+    reports = simulation_world_service.list_reports()
+    return {"reports": reports, "count": len(reports)}
+
+
+@router.post("/simulation-world/reports")
+def create_simulation_world_report(request: SimulationReportRequest | None = None) -> dict:
+    return simulation_world_service.create_report(request.model_dump() if request else {})
+
+
+# ----------------------------------------------------------------------
+# v38.0 Multi-User Organization OS (local records only — no production auth)
+# ----------------------------------------------------------------------
+@router.get("/organization-os/dashboard")
+def get_organization_os_dashboard() -> dict:
+    return organization_os_service.dashboard()
+
+
+@router.get("/organization-os/activity")
+def get_organization_os_activity() -> dict:
+    activity = organization_os_service.activity_log()
+    return {"activity": activity, "count": len(activity)}
+
+
+@router.get("/organization-os/organizations")
+def list_organizations() -> dict:
+    orgs = organization_os_service.list_organizations()
+    return {"organizations": orgs, "count": len(orgs)}
+
+
+@router.post("/organization-os/organizations")
+def create_organization(request: OrganizationCreateRequest) -> dict:
+    return organization_os_service.create_organization(request.model_dump())
+
+
+@router.get("/organization-os/members")
+def list_organization_members() -> dict:
+    members = organization_os_service.list_members()
+    return {"members": members, "count": len(members)}
+
+
+@router.post("/organization-os/members")
+def create_organization_member(request: OrganizationMemberCreateRequest) -> dict:
+    return organization_os_service.create_member(request.model_dump())
+
+
+@router.patch("/organization-os/members/{member_id}")
+def update_organization_member(member_id: str, request: OrganizationMemberUpdateRequest) -> dict:
+    try:
+        return organization_os_service.update_member(member_id, request.model_dump(exclude_unset=True))
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Member not found") from error
+
+
+@router.get("/organization-os/roles")
+def list_organization_roles() -> dict:
+    roles = organization_os_service.list_roles()
+    return {"roles": roles, "count": len(roles)}
+
+
+@router.post("/organization-os/roles")
+def create_organization_role(request: OrganizationRoleCreateRequest) -> dict:
+    return organization_os_service.create_role(request.model_dump())
+
+
+@router.post("/organization-os/workspace-links")
+def create_organization_workspace_link(request: OrganizationWorkspaceLinkRequest) -> dict:
+    return organization_os_service.create_workspace_link(request.model_dump())
+
+
+@router.get("/organization-os/organizations/{organization_id}")
+def get_organization(organization_id: str) -> dict:
+    org = organization_os_service.get_organization(organization_id)
+    if org is None:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    return org
 
 
 @router.get("/governance")
