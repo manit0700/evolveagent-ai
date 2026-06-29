@@ -155,6 +155,12 @@ backend/app/data/simulation_personas.json
 backend/app/data/simulation_events.json
 backend/app/data/simulation_outcomes.json
 backend/app/data/simulation_reports.json
+backend/app/data/organizations.json
+backend/app/data/organization_members.json
+backend/app/data/organization_roles.json
+backend/app/data/organization_permissions.json
+backend/app/data/organization_workspaces.json
+backend/app/data/organization_activity.json
 backend/app/data/team_members.json
 backend/app/data/team_assignments.json
 backend/app/data/team_standups.json

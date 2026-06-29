@@ -1161,3 +1161,34 @@ class SimulationCompareRequest(BaseModel):
 
 class SimulationReportRequest(BaseModel):
     title: str = Field(default="", max_length=200)
+
+
+# ----------------------------------------------------------------------
+# v38.0 Multi-User Organization OS (local records only — no auth)
+# ----------------------------------------------------------------------
+class OrganizationCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=160)
+    description: str = Field(default="", max_length=2000)
+
+
+class OrganizationMemberCreateRequest(BaseModel):
+    organization_id: str | None = Field(default=None, max_length=120)
+    display_name: str = Field(..., min_length=1, max_length=160)
+    role: str = Field(default="contributor", pattern="^(owner|admin|manager|contributor|viewer)$")
+
+
+class OrganizationMemberUpdateRequest(BaseModel):
+    display_name: str | None = Field(default=None, max_length=160)
+    role: str | None = Field(default=None, pattern="^(owner|admin|manager|contributor|viewer)$")
+    active: bool | None = None
+
+
+class OrganizationRoleCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=80)
+    permissions: list[str] = Field(default_factory=list)
+
+
+class OrganizationWorkspaceLinkRequest(BaseModel):
+    organization_id: str | None = Field(default=None, max_length=120)
+    workspace_id: str | None = Field(default=None, max_length=120)
+    workspace_name: str = Field(default="", max_length=160)

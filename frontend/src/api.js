@@ -2254,3 +2254,34 @@ export function compareSimWorldScenarios(scenarioIds) {
 export function createSimWorldReport(payload) {
   return postJson('/api/simulation-world/reports', payload || {})
 }
+
+export function getOrgOsDashboard() {
+  return getJson('/api/organization-os/dashboard')
+}
+export function getOrgOsOrganizations() {
+  return getJson('/api/organization-os/organizations')
+}
+export function getOrgOsMembers() {
+  return getJson('/api/organization-os/members')
+}
+export function getOrgOsRoles() {
+  return getJson('/api/organization-os/roles')
+}
+export function getOrgOsActivity() {
+  return getJson('/api/organization-os/activity')
+}
+export function createOrgOsOrganization(payload) {
+  return postJson('/api/organization-os/organizations', payload)
+}
+export function createOrgOsMember(payload) {
+  return postJson('/api/organization-os/members', payload)
+}
+export function updateOrgOsMember(memberId, payload) {
+  return patchJson(`/api/organization-os/members/${memberId}`, payload)
+}
+export function createOrgOsRole(payload) {
+  return postJson('/api/organization-os/roles', payload)
+}
+export function createOrgOsWorkspaceLink(payload) {
+  return postJson('/api/organization-os/workspace-links', payload)
+}

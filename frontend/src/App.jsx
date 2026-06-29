@@ -262,6 +262,16 @@ import {
   runSimWorldScenario,
   compareSimWorldScenarios,
   createSimWorldReport,
+  getOrgOsDashboard,
+  getOrgOsOrganizations,
+  getOrgOsMembers,
+  getOrgOsRoles,
+  getOrgOsActivity,
+  createOrgOsOrganization,
+  createOrgOsMember,
+  updateOrgOsMember,
+  createOrgOsRole,
+  createOrgOsWorkspaceLink,
   getGoal,
   getGoals,
   getHistory,
@@ -881,6 +891,15 @@ function App() {
   const [simScenarioTitle, setSimScenarioTitle] = useState('')
   const [simScenarioType, setSimScenarioType] = useState('business')
   const [simWorldOutcome, setSimWorldOutcome] = useState(null)
+  const [showOrgOsPanel, setShowOrgOsPanel] = useState(false)
+  const [orgOsDashboard, setOrgOsDashboard] = useState(null)
+  const [orgOsOrganizations, setOrgOsOrganizations] = useState([])
+  const [orgOsMembers, setOrgOsMembers] = useState([])
+  const [orgOsBusy, setOrgOsBusy] = useState(false)
+  const [orgOsError, setOrgOsError] = useState(null)
+  const [orgName, setOrgName] = useState('')
+  const [orgMemberName, setOrgMemberName] = useState('')
+  const [orgMemberRole, setOrgMemberRole] = useState('contributor')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -1007,6 +1026,7 @@ function App() {
     refreshBoardPanel()
     refreshInnovationPanel()
     refreshSimWorldPanel()
+    refreshOrgOsPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2521,6 +2541,53 @@ function App() {
 
   async function handleSimWorldReport() {
     await runSimWorldAction(() => createSimWorldReport({ title: 'Simulation report' }))
+  }
+
+  async function refreshOrgOsPanel() {
+    const [dashboard, organizations, members] = await Promise.all([
+      getOrgOsDashboard(),
+      getOrgOsOrganizations(),
+      getOrgOsMembers(),
+    ])
+    setOrgOsDashboard(dashboard)
+    setOrgOsOrganizations(organizations?.organizations || [])
+    setOrgOsMembers(members?.members || [])
+  }
+
+  async function runOrgOsAction(action) {
+    setOrgOsBusy(true)
+    setOrgOsError(null)
+    try {
+      await action()
+      await refreshOrgOsPanel()
+    } catch (error) {
+      setOrgOsError(error.message || 'Organization OS action failed')
+    } finally {
+      setOrgOsBusy(false)
+    }
+  }
+
+  async function handleCreateOrg(event) {
+    event.preventDefault()
+    if (!orgName.trim()) return
+    await runOrgOsAction(async () => {
+      await createOrgOsOrganization({ name: orgName.trim() })
+      setOrgName('')
+    })
+  }
+
+  async function handleCreateOrgMember(event) {
+    event.preventDefault()
+    if (!orgMemberName.trim()) return
+    await runOrgOsAction(async () => {
+      await createOrgOsMember({ display_name: orgMemberName.trim(), role: orgMemberRole })
+      setOrgMemberName('')
+      setOrgMemberRole('contributor')
+    })
+  }
+
+  async function handleSetMemberRole(memberId, role) {
+    await runOrgOsAction(() => updateOrgOsMember(memberId, { role }))
   }
 
   async function refreshAppBuilderTemplates() {
@@ -7745,6 +7812,79 @@ function App() {
                 )}
 
                 <p className="muted">Safe local sandbox — deterministic mock simulation; no real-world actions are taken.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowOrgOsPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                Organization OS
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showOrgOsPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>Multi-User Organization OS · v38.0</strong>
+                  <span>Local organizations, member profiles, roles, permissions, workspace links, and activity. No production auth.</span>
+                </div>
+                {orgOsDashboard && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Orgs</span><strong>{orgOsDashboard.organization_count}</strong></div>
+                    <div><span>Members</span><strong>{orgOsDashboard.member_count}</strong></div>
+                    <div><span>Active</span><strong>{orgOsDashboard.active_member_count}</strong></div>
+                    <div><span>Links</span><strong>{orgOsDashboard.workspace_link_count}</strong></div>
+                  </div>
+                )}
+                {orgOsError && <p className="error-text">{orgOsError}</p>}
+                <div className="inline-actions">
+                  <button type="button" onClick={() => refreshOrgOsPanel()} disabled={orgOsBusy}>Refresh</button>
+                </div>
+
+                <form className="stacked-form" onSubmit={handleCreateOrg}>
+                  <h3>New organization</h3>
+                  <input type="text" placeholder="Organization name" value={orgName} onChange={(event) => setOrgName(event.target.value)} />
+                  <button type="submit" disabled={orgOsBusy || !orgName.trim()}>Create org</button>
+                </form>
+
+                <form className="stacked-form" onSubmit={handleCreateOrgMember}>
+                  <h3>Add member (local profile)</h3>
+                  <input type="text" placeholder="Display name" value={orgMemberName} onChange={(event) => setOrgMemberName(event.target.value)} />
+                  <select value={orgMemberRole} onChange={(event) => setOrgMemberRole(event.target.value)}>
+                    {['owner', 'admin', 'manager', 'contributor', 'viewer'].map((r) => (<option key={r} value={r}>{r}</option>))}
+                  </select>
+                  <button type="submit" disabled={orgOsBusy || !orgMemberName.trim()}>Add member</button>
+                </form>
+
+                {orgOsOrganizations.length > 0 && (
+                  <>
+                    <h3>Organizations</h3>
+                    {orgOsOrganizations.slice(0, 5).map((org) => (
+                      <p className="muted" key={org.organization_id}>• {org.name}</p>
+                    ))}
+                  </>
+                )}
+
+                {orgOsMembers.length > 0 && (
+                  <>
+                    <h3>Members</h3>
+                    {orgOsMembers.slice(0, 6).map((member) => (
+                      <div className="agent-template-card" key={member.member_id}>
+                        <strong>{member.display_name}</strong>
+                        <p className="muted">{member.role} · {(member.permissions || []).join(', ')}</p>
+                        <select value={member.role} onChange={(event) => handleSetMemberRole(member.member_id, event.target.value)} disabled={orgOsBusy}>
+                          {['owner', 'admin', 'manager', 'contributor', 'viewer'].map((r) => (<option key={r} value={r}>{r}</option>))}
+                        </select>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                <p className="muted">Local organization records only — no production authentication or real user login.</p>
               </div>
             )}
           </section>
