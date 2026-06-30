@@ -112,6 +112,9 @@ from app.models.request_models import (
     CompanionSettingsUpdateRequest,
     CompanionReadinessCheckRequest,
     CompanionSessionCreateRequest,
+    MCPConnectorCreateRequest,
+    MCPConnectorUpdateRequest,
+    MCPPlanActionRequest,
     TeamMemberCreateRequest,
     TeamMemberUpdateRequest,
     TeamAssignmentCreateRequest,
@@ -245,6 +248,7 @@ from app.services.simulation_world_service import SimulationWorldService
 from app.services.organization_os_service import OrganizationOSService
 from app.services.hardware_companion_service import HardwareCompanionService
 from app.services.operating_layer_service import OperatingLayerService
+from app.services.mcp_connector_service import MCPConnectorService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -332,6 +336,7 @@ simulation_world_service = SimulationWorldService(storage, governance_service)
 organization_os_service = OrganizationOSService(storage, governance_service)
 hardware_companion_service = HardwareCompanionService(storage, governance_service)
 operating_layer_service = OperatingLayerService(storage, governance_service)
+mcp_connector_service = MCPConnectorService(storage, governance_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1583,6 +1588,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         "linear_task_runs": len(linear_runs),
         **autopilot_summary,
         **agent_department_service.analytics_summary(),
+        **mcp_connector_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -3326,6 +3332,89 @@ def create_operating_layer_report() -> dict:
 def get_operating_layer_audit() -> dict:
     audit = operating_layer_service.audit_log()
     return {"audit": audit, "count": len(audit)}
+
+
+# ----------------------------------------------------------------------
+# v41.0 MCP Connector Hub (planning-first; no real MCP execution, no secrets exposed)
+# ----------------------------------------------------------------------
+@router.get("/mcp/summary")
+def get_mcp_summary() -> dict:
+    return mcp_connector_service.summarize_mcp_hub()
+
+
+@router.get("/mcp/templates")
+def get_mcp_templates() -> dict:
+    templates = mcp_connector_service.get_default_mcp_templates()
+    return {"templates": templates, "count": len(templates)}
+
+
+@router.get("/mcp/connectors")
+def list_mcp_connectors() -> dict:
+    connectors = mcp_connector_service.list_connectors()
+    return {"connectors": connectors, "count": len(connectors)}
+
+
+@router.post("/mcp/connectors")
+def create_mcp_connector(request: MCPConnectorCreateRequest) -> dict:
+    return mcp_connector_service.create_connector(request.model_dump(exclude_unset=True))
+
+
+@router.get("/mcp/events")
+def list_mcp_events(connector_id: str | None = Query(default=None)) -> dict:
+    events = mcp_connector_service.list_connector_events(connector_id)
+    return {"events": events, "count": len(events)}
+
+
+@router.get("/mcp/connectors/{connector_id}")
+def get_mcp_connector(connector_id: str) -> dict:
+    connector = mcp_connector_service.get_connector(connector_id)
+    if connector is None:
+        raise HTTPException(status_code=404, detail="Connector not found")
+    return connector
+
+
+@router.patch("/mcp/connectors/{connector_id}")
+def update_mcp_connector(connector_id: str, request: MCPConnectorUpdateRequest) -> dict:
+    try:
+        return mcp_connector_service.update_connector(connector_id, request.model_dump(exclude_unset=True))
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Connector not found") from error
+
+
+@router.post("/mcp/connectors/{connector_id}/enable")
+def enable_mcp_connector(connector_id: str) -> dict:
+    try:
+        return mcp_connector_service.enable_connector(connector_id)
+    except ValueError as error:
+        detail = str(error)
+        status = 404 if "not found" in detail.lower() else 409
+        raise HTTPException(status_code=status, detail=detail) from error
+
+
+@router.post("/mcp/connectors/{connector_id}/disable")
+def disable_mcp_connector(connector_id: str) -> dict:
+    try:
+        return mcp_connector_service.disable_connector(connector_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Connector not found") from error
+
+
+@router.post("/mcp/connectors/{connector_id}/check")
+def check_mcp_connector(connector_id: str) -> dict:
+    try:
+        return mcp_connector_service.check_connector_status(connector_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Connector not found") from error
+
+
+@router.post("/mcp/connectors/{connector_id}/plan-action")
+def plan_mcp_connector_action(connector_id: str, request: MCPPlanActionRequest) -> dict:
+    try:
+        return mcp_connector_service.plan_connector_action(
+            connector_id, request.action_name, request.payload, request.workspace_id
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Connector not found") from error
 
 
 @router.get("/governance")

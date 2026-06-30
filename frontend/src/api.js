@@ -2335,3 +2335,31 @@ export function createOperatingLayerRecommendations() {
 export function createOperatingLayerReport() {
   return postJson('/api/operating-layer/report', {})
 }
+
+export function getMcpSummary() {
+  return getJson('/api/mcp/summary')
+}
+export function getMcpTemplates() {
+  return getJson('/api/mcp/templates')
+}
+export function getMcpConnectors() {
+  return getJson('/api/mcp/connectors')
+}
+export function getMcpEvents(connectorId) {
+  return getJson(connectorId ? `/api/mcp/events?connector_id=${connectorId}` : '/api/mcp/events')
+}
+export function createMcpConnector(payload) {
+  return postJson('/api/mcp/connectors', payload)
+}
+export function enableMcpConnector(connectorId) {
+  return postJson(`/api/mcp/connectors/${connectorId}/enable`, {})
+}
+export function disableMcpConnector(connectorId) {
+  return postJson(`/api/mcp/connectors/${connectorId}/disable`, {})
+}
+export function checkMcpConnector(connectorId) {
+  return postJson(`/api/mcp/connectors/${connectorId}/check`, {})
+}
+export function planMcpConnectorAction(connectorId, actionName, payload) {
+  return postJson(`/api/mcp/connectors/${connectorId}/plan-action`, { action_name: actionName, payload: payload || {} })
+}

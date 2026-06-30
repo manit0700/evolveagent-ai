@@ -148,3 +148,11 @@ Judge and per-agent scores feed analytics, which drives the Adaptive Learning En
 - Prompt injection is checked by the firewall on every request.
 - Governance logs are stored for every decision.
 - The base LLM is not self-trained; only the orchestration layer self-optimizes.
+
+## v41 — MCP Connector Hub
+
+The MCP Connector Hub (`backend/app/services/mcp_connector_service.py`, routes under `/api/mcp`) follows the standard pattern: thin route → service → `StorageService` JSON (`mcp_connectors.json`, `mcp_connector_events.json`) → `GovernanceService` logging → Developer-Mode UI panel.
+
+It maintains a local registry of MCP-style connectors with 9 default templates (Filesystem, Git, GitHub, Linear, Context7, Playwright, Slack, Notion, Desktop Commander). Connectors carry a risk level, a mode (read_only / approval_required / disabled), allowed/blocked action lists, and the *names* of required environment keys. Status checks are dry/mock and expose only booleans for env-key readiness — never values. Action planning enforces approval and risk rules and never executes real external/MCP calls in this version. Every stateful action is governance-logged and recorded as a connector event.
+
+**Boundaries:** no real MCP execution by default, no secrets exposed to frontend/logs/API, no unrestricted shell, no full desktop control; high-risk connectors stay approval-required or disabled by default.

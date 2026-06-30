@@ -285,6 +285,15 @@ import {
   createOperatingLayerSnapshot,
   createOperatingLayerRecommendations,
   createOperatingLayerReport,
+  getMcpSummary,
+  getMcpConnectors,
+  getMcpTemplates,
+  getMcpEvents,
+  createMcpConnector,
+  enableMcpConnector,
+  disableMcpConnector,
+  checkMcpConnector,
+  planMcpConnectorAction,
   getGoal,
   getGoals,
   getHistory,
@@ -926,6 +935,17 @@ function App() {
   const [operatingLayerArtifact, setOperatingLayerArtifact] = useState(null)
   const [operatingLayerBusy, setOperatingLayerBusy] = useState(false)
   const [operatingLayerError, setOperatingLayerError] = useState(null)
+  const [showMcpPanel, setShowMcpPanel] = useState(false)
+  const [mcpSummary, setMcpSummary] = useState(null)
+  const [mcpConnectors, setMcpConnectors] = useState([])
+  const [mcpTemplates, setMcpTemplates] = useState([])
+  const [mcpBusy, setMcpBusy] = useState(false)
+  const [mcpError, setMcpError] = useState(null)
+  const [mcpTemplateSlug, setMcpTemplateSlug] = useState('github')
+  const [mcpSelectedId, setMcpSelectedId] = useState('')
+  const [mcpActionName, setMcpActionName] = useState('')
+  const [mcpCheckResult, setMcpCheckResult] = useState(null)
+  const [mcpPlanResult, setMcpPlanResult] = useState(null)
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -1055,6 +1075,7 @@ function App() {
     refreshOrgOsPanel()
     refreshCompanionPanel()
     refreshOperatingLayerPanel()
+    refreshMcpPanel()
   }, [workspaceId, developerMode])
 
   useEffect(() => {
@@ -2700,6 +2721,56 @@ function App() {
   async function handleOperatingLayerReport() {
     const report = await runOperatingLayerAction(() => createOperatingLayerReport())
     if (report) setOperatingLayerArtifact({ kind: 'report', data: report })
+  }
+
+  async function refreshMcpPanel() {
+    const [summary, connectors, templates] = await Promise.all([
+      getMcpSummary(),
+      getMcpConnectors(),
+      getMcpTemplates(),
+    ])
+    setMcpSummary(summary)
+    setMcpConnectors(connectors?.connectors || [])
+    setMcpTemplates(templates?.templates || [])
+  }
+
+  async function runMcpAction(action) {
+    setMcpBusy(true)
+    setMcpError(null)
+    try {
+      const value = await action()
+      await refreshMcpPanel()
+      return value
+    } catch (error) {
+      setMcpError(error.message || 'MCP action failed')
+      return null
+    } finally {
+      setMcpBusy(false)
+    }
+  }
+
+  async function handleAddMcpConnector() {
+    await runMcpAction(() => createMcpConnector({ slug: mcpTemplateSlug }))
+  }
+
+  async function handleEnableMcpConnector(connectorId) {
+    await runMcpAction(() => enableMcpConnector(connectorId))
+  }
+
+  async function handleDisableMcpConnector(connectorId) {
+    await runMcpAction(() => disableMcpConnector(connectorId))
+  }
+
+  async function handleCheckMcpConnector(connectorId) {
+    const result = await runMcpAction(() => checkMcpConnector(connectorId))
+    if (result) setMcpCheckResult(result)
+  }
+
+  async function handlePlanMcpAction(event) {
+    event.preventDefault()
+    if (!mcpSelectedId || !mcpActionName.trim()) return
+    const result = await runMcpAction(() => planMcpConnectorAction(mcpSelectedId, mcpActionName.trim()))
+    if (result) setMcpPlanResult(result)
   }
 
   async function refreshAppBuilderTemplates() {
@@ -8139,6 +8210,116 @@ function App() {
                 {operatingLayerDashboard?.disclaimer && (
                   <p className="muted"><strong>Disclaimer:</strong> {operatingLayerDashboard.disclaimer}</p>
                 )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {developerMode && (
+          <section className="sidebar-section">
+            <button className="analytics-toggle" type="button" onClick={() => setShowMcpPanel((current) => !current)}>
+              <span>
+                <Cpu size={15} />
+                MCP Hub
+              </span>
+              <ChevronDown size={15} />
+            </button>
+            {showMcpPanel && (
+              <div className="mission-panel">
+                <div className="agent-template-card">
+                  <strong>MCP Connector Hub · v41.0</strong>
+                  <span>Register, configure, and safely plan tool connections (GitHub, Linear, Filesystem, Playwright, Slack, Notion, …). Planning-first — no real MCP execution; no secrets exposed.</span>
+                </div>
+                {mcpSummary && (
+                  <div className="analytics-mini-grid">
+                    <div><span>Connectors</span><strong>{mcpSummary.total_connectors}</strong></div>
+                    <div><span>Enabled</span><strong>{mcpSummary.enabled_connectors}</strong></div>
+                    <div><span>High risk</span><strong>{mcpSummary.high_risk_connectors}</strong></div>
+                    <div><span>Approval</span><strong>{mcpSummary.approval_required_connectors}</strong></div>
+                  </div>
+                )}
+                {mcpError && <p className="error-text">{mcpError}</p>}
+
+                <div className="inline-actions">
+                  <select value={mcpTemplateSlug} onChange={(event) => setMcpTemplateSlug(event.target.value)}>
+                    {mcpTemplates.map((template) => (
+                      <option key={template.slug} value={template.slug}>{template.name} ({template.risk_level})</option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={handleAddMcpConnector} disabled={mcpBusy}>Add connector</button>
+                  <button type="button" onClick={() => refreshMcpPanel()} disabled={mcpBusy}>Refresh</button>
+                </div>
+
+                {mcpConnectors.length > 0 && (
+                  <>
+                    <h3>Connectors</h3>
+                    {mcpConnectors.map((connector) => (
+                      <div className="agent-template-card" key={connector.connector_id}>
+                        <strong>{connector.name}</strong>
+                        <p className="muted">{connector.description}</p>
+                        <p className="muted">
+                          status: {connector.status} · <span className={`risk-badge risk-${connector.risk_level}`}>{connector.risk_level} risk</span> · mode: {connector.mode} · {connector.enabled ? 'enabled' : 'disabled'}
+                        </p>
+                        {connector.risk_level === 'high' && (
+                          <p className="muted">⚠️ High-risk connector — requires explicit approval; keep disabled unless needed.</p>
+                        )}
+                        <div className="inline-actions">
+                          <button type="button" onClick={() => handleCheckMcpConnector(connector.connector_id)} disabled={mcpBusy}>Check status</button>
+                          {connector.enabled
+                            ? <button type="button" onClick={() => handleDisableMcpConnector(connector.connector_id)} disabled={mcpBusy}>Disable</button>
+                            : <button type="button" onClick={() => handleEnableMcpConnector(connector.connector_id)} disabled={mcpBusy || connector.mode === 'disabled'}>Enable</button>}
+                          <button type="button" onClick={() => setMcpSelectedId(connector.connector_id)} disabled={mcpBusy}>Select</button>
+                        </div>
+                        {/* Developer Mode extras — env-key readiness (booleans only) + capabilities/actions */}
+                        {connector.env_keys_required?.length > 0 && (
+                          <p className="muted">env keys set: {Object.entries(connector.env_keys_status || {}).map(([k, v]) => `${k}=${v ? 'yes' : 'no'}`).join(', ')}</p>
+                        )}
+                        {connector.capabilities?.length > 0 && (
+                          <p className="muted">capabilities: {connector.capabilities.join(', ')}</p>
+                        )}
+                        {connector.blocked_actions?.length > 0 && (
+                          <p className="muted">blocked: {connector.blocked_actions.join(', ')}</p>
+                        )}
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {mcpCheckResult && (
+                  <div className="agent-template-card">
+                    <strong>Dry status check · {mcpCheckResult.status}</strong>
+                    <p className="muted">{mcpCheckResult.note}</p>
+                    <p className="muted">required keys set: {JSON.stringify(mcpCheckResult.env_keys_status)}</p>
+                  </div>
+                )}
+
+                <form className="stacked-form" onSubmit={handlePlanMcpAction}>
+                  <h3>Plan an action (selected connector)</h3>
+                  <input type="text" placeholder="action_name (e.g. list_issues)" value={mcpActionName} onChange={(event) => setMcpActionName(event.target.value)} />
+                  <button type="submit" disabled={mcpBusy || !mcpSelectedId || !mcpActionName.trim()}>Plan action</button>
+                </form>
+
+                {mcpPlanResult && (
+                  <div className="agent-template-card">
+                    <strong>{mcpPlanResult.planned ? 'Action planned' : 'Action blocked'}</strong>
+                    {mcpPlanResult.planned ? (
+                      <>
+                        <p className="muted">requires approval: {String(mcpPlanResult.requires_approval)} · risk: {mcpPlanResult.risk_level}</p>
+                        {(mcpPlanResult.plan || []).map((step, index) => (<p className="muted" key={index}>→ {step}</p>))}
+                      </>
+                    ) : (
+                      <p className="muted">blocked: {mcpPlanResult.blocked_reason}</p>
+                    )}
+                  </div>
+                )}
+
+                {mcpSummary?.safety_summary && (
+                  <>
+                    <h3>Safety</h3>
+                    <p className="muted">secrets exposed: {String(mcpSummary.safety_summary.secrets_exposed)} · shell: {String(mcpSummary.safety_summary.unrestricted_shell_allowed)} · desktop control: {String(mcpSummary.safety_summary.desktop_control_enabled)} · external send needs approval: {String(mcpSummary.safety_summary.external_send_requires_approval)}</p>
+                  </>
+                )}
+                <p className="muted">Planning-first — connectors prepare and govern tool connections through local records, dry checks, approval boundaries, and audit logs. No real MCP execution; tokens are never shown.</p>
               </div>
             )}
           </section>
