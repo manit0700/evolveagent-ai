@@ -1,4 +1,4 @@
-# EvolveAgent AI — Final Checklist (current completed: v41.0 MCP Connector Hub)
+# EvolveAgent AI — Final Checklist (current completed: v42.0 MCP Execution Adapter)
 
 EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with governed automation, plugins, analytics, evaluation, and portfolio management.
 
@@ -10,8 +10,9 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - [x] **v39 — Hardware Companion:** devices/settings/readiness/sessions; **no mic recording, no wake-word, no hardware access**.
 - [x] **v40 — Operating Layer:** capability map / snapshots / recommendations / report / audit; **disclaimer visible (not AGI)**; safety boundaries surfaced.
 - [x] **v41 — MCP Connector Hub:** connector registry / 9 default templates / risk levels / read-only vs approval-required modes / env-key readiness (booleans only) / dry status checks / action planning / governance + connector-event logs; **no real MCP execution, no secrets exposed, no unrestricted shell, no full desktop control**; high-risk connectors approval-required or disabled by default.
+- [x] **v42 — MCP Execution Adapter:** request → approve → run → record loop / reuses v41 planning for validation / read-only low-risk auto-approved / writes require approval / **mock executor only (`EXECUTION_MODE = "mock"`, no real MCP/network/shell/device, no secrets)** / run-time re-validation / governance-logged / analytics.
 - [x] Backend tests green and frontend build green after each version.
-- [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41) and verified on `main` before marking Linear Done.
+- [ ] PRs merged in order (v36 → v37 → v38 → v39 → v40 → v41 → v42) and verified on `main` before marking Linear Done.
 
 > **Not AGI.** Governed orchestration layer only. Roadmap after v40 is future-only.
 

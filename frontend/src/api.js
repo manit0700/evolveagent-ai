@@ -2363,3 +2363,22 @@ export function checkMcpConnector(connectorId) {
 export function planMcpConnectorAction(connectorId, actionName, payload) {
   return postJson(`/api/mcp/connectors/${connectorId}/plan-action`, { action_name: actionName, payload: payload || {} })
 }
+
+export function getMcpExecutionSummary() {
+  return getJson('/api/mcp/executions/summary')
+}
+export function getMcpExecutions(connectorId) {
+  return getJson(connectorId ? `/api/mcp/executions?connector_id=${connectorId}` : '/api/mcp/executions')
+}
+export function requestMcpExecution(connectorId, actionName, payload) {
+  return postJson(`/api/mcp/connectors/${connectorId}/execute`, { action_name: actionName, payload: payload || {} })
+}
+export function approveMcpExecution(requestId) {
+  return postJson(`/api/mcp/executions/${requestId}/approve`, {})
+}
+export function rejectMcpExecution(requestId) {
+  return postJson(`/api/mcp/executions/${requestId}/reject`, {})
+}
+export function runMcpExecution(requestId) {
+  return postJson(`/api/mcp/executions/${requestId}/run`, {})
+}

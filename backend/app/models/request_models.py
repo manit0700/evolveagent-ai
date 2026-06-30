@@ -1266,3 +1266,12 @@ class MCPPlanActionRequest(BaseModel):
     action_name: str = Field(..., min_length=1, max_length=80)
     payload: dict = Field(default_factory=dict)
     workspace_id: str | None = Field(default=None, max_length=120)
+
+
+# ----------------------------------------------------------------------
+# v42.0 MCP Execution Adapter (approval-gated, mock-by-default)
+# ----------------------------------------------------------------------
+class MCPExecuteRequest(BaseModel):
+    action_name: str = Field(..., min_length=1, max_length=80)
+    payload: dict = Field(default_factory=dict)
+    workspace_id: str | None = Field(default=None, max_length=120)

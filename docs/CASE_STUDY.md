@@ -154,3 +154,9 @@ EvolveAgent AI reached v15.0 as a coherent, local-first multi-agent platform: a 
 ## v41 — MCP Connector Hub
 
 The EvolveAgent MCP Connector Hub prepares and governs tool connections through local connector records, dry checks, approval boundaries, and audit logs. It introduces a local connector registry (GitHub, Linear, Filesystem, Git, Context7, Playwright, Slack, Notion, Desktop Commander) with per-connector risk levels and modes (read-only vs approval-required vs disabled), env-key readiness checks that report only whether keys are set (true/false), governance logging of every stateful action, and an action-planning flow that enforces approval and risk rules. There is no real MCP execution by default, no secrets exposed, no unrestricted shell, and no full desktop control; high-risk connectors stay approval-required or disabled by default. This keeps EvolveAgent ready to adopt MCP tooling while staying local-first, permission-aware, and governed.
+
+---
+
+## v42 — MCP Execution Adapter
+
+Where v41 prepared and governed tool connections, v42 adds the execution loop that keeps them safe in practice. A request → approve → run → record flow reuses the v41 planning rules to validate each request, auto-approves only read-only low-risk actions, and holds everything else for explicit human approval. Approved requests run through a mock executor: execution is always simulated, so there is no real MCP server, network call, shell command, or device action, and no secrets are used. Run-time re-validation blocks any request whose connector has since been disabled, and every step is governance-logged. This demonstrates a realistic, auditable path toward live tool execution while staying local-first, approval-gated, and mock-by-default.

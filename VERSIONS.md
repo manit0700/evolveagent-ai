@@ -18,8 +18,8 @@ EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system
 - **~456** API routes
 - **44** service test modules
 - **444** passing backend tests
-- single-file React UI (~**9,900** lines)
-- **41** implementation versions
+- single-file React UI (~**10,000** lines)
+- **42** implementation versions
 
 ## Architecture Pattern
 
@@ -328,6 +328,12 @@ From v15 onward every version follows the governed architecture above: a service
 - **Main API route groups:** `/api/mcp`.
 - **Safety boundary:** The EvolveAgent MCP Connector Hub prepares and governs tool connections through local connector records, dry checks, approval boundaries, and audit logs. **No real MCP execution by default, no secrets exposed, no unrestricted shell, no full desktop control.** High-risk connectors (Filesystem, Playwright, Desktop Commander) stay approval-required or disabled by default.
 
+### v42 — MCP Execution Adapter
+- **Purpose:** Add a governed execution loop on top of the v41 connector planning layer.
+- **How it operates:** A **request → approve → run → record** flow. `request_execution` reuses the v41 `plan_connector_action` rules to validate (blocked-list, allow-list, risk/approval): blocked actions create a non-runnable `blocked` request; read-only low-risk actions are auto-`approved`; everything else stays `pending_approval`. Approving moves a request to `approved`; running it invokes a **mock executor** that returns a simulated result and records it. Running re-validates the connector (a since-disabled connector is blocked at run time). Stored under `mcp_execution_requests.json` / `mcp_execution_results.json`; every step is governance-logged and reflected in analytics.
+- **Main API route groups:** `/api/mcp/executions`, `/api/mcp/connectors/{id}/execute`.
+- **Safety boundary:** Execution is always simulated (`EXECUTION_MODE = "mock"`) — **no real MCP server, network call, shell command, or device action, and no secrets used or returned**. Write actions always require explicit approval; blocked/disabled connectors never execute.
+
 ---
 
 ## Summary Table
@@ -375,3 +381,4 @@ From v15 onward every version follows the governed architecture above: a service
 | v39 | AI Hardware / Always-On Companion | `/api/hardware-companion` | Device readiness + session planning | No mic/wake-word/hardware access |
 | v40 | EvolveAgent Operating Layer | `/api/operating-layer` | Capability map/snapshots/recs/report | Not AGI — governed orchestration |
 | v41 | MCP Connector Hub | `/api/mcp` | Connector registry/templates/dry checks/action planning | No real MCP exec; no secrets; no shell; no desktop control |
+| v42 | MCP Execution Adapter | `/api/mcp/executions` | Approval-gated request→approve→run→record loop | Mock executor only; no real exec/network/shell; no secrets |

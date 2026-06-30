@@ -294,6 +294,12 @@ import {
   disableMcpConnector,
   checkMcpConnector,
   planMcpConnectorAction,
+  getMcpExecutionSummary,
+  getMcpExecutions,
+  requestMcpExecution,
+  approveMcpExecution,
+  rejectMcpExecution,
+  runMcpExecution,
   getGoal,
   getGoals,
   getHistory,
@@ -946,6 +952,9 @@ function App() {
   const [mcpActionName, setMcpActionName] = useState('')
   const [mcpCheckResult, setMcpCheckResult] = useState(null)
   const [mcpPlanResult, setMcpPlanResult] = useState(null)
+  const [mcpExecSummary, setMcpExecSummary] = useState(null)
+  const [mcpExecutions, setMcpExecutions] = useState([])
+  const [mcpExecActionName, setMcpExecActionName] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
   const [appBuilderTemplates, setAppBuilderTemplates] = useState([])
   const [appBuilderPrompt, setAppBuilderPrompt] = useState('Build an AI resume analyzer app with upload, dashboard, and chat')
@@ -2732,6 +2741,12 @@ function App() {
     setMcpSummary(summary)
     setMcpConnectors(connectors?.connectors || [])
     setMcpTemplates(templates?.templates || [])
+    const [execSummary, executions] = await Promise.all([
+      getMcpExecutionSummary(),
+      getMcpExecutions(),
+    ])
+    setMcpExecSummary(execSummary)
+    setMcpExecutions(executions?.requests || [])
   }
 
   async function runMcpAction(action) {
@@ -2771,6 +2786,27 @@ function App() {
     if (!mcpSelectedId || !mcpActionName.trim()) return
     const result = await runMcpAction(() => planMcpConnectorAction(mcpSelectedId, mcpActionName.trim()))
     if (result) setMcpPlanResult(result)
+  }
+
+  async function handleRequestMcpExecution(event) {
+    event.preventDefault()
+    if (!mcpSelectedId || !mcpExecActionName.trim()) return
+    await runMcpAction(async () => {
+      await requestMcpExecution(mcpSelectedId, mcpExecActionName.trim())
+      setMcpExecActionName('')
+    })
+  }
+
+  async function handleApproveMcpExecution(requestId) {
+    await runMcpAction(() => approveMcpExecution(requestId))
+  }
+
+  async function handleRejectMcpExecution(requestId) {
+    await runMcpAction(() => rejectMcpExecution(requestId))
+  }
+
+  async function handleRunMcpExecution(requestId) {
+    await runMcpAction(() => runMcpExecution(requestId))
   }
 
   async function refreshAppBuilderTemplates() {
@@ -8313,13 +8349,45 @@ function App() {
                   </div>
                 )}
 
+                {/* v42 — MCP Execution Adapter (approval-gated, mock-by-default) */}
+                <h3>Executions (v42 · mock-by-default)</h3>
+                {mcpExecSummary && (
+                  <p className="muted">
+                    mode: {mcpExecSummary.execution_mode} · requests: {mcpExecSummary.total_requests} · pending: {mcpExecSummary.pending_approval} · executed: {mcpExecSummary.executed} · blocked: {mcpExecSummary.blocked}
+                  </p>
+                )}
+                <form className="stacked-form" onSubmit={handleRequestMcpExecution}>
+                  <input type="text" placeholder="action to execute (selected connector)" value={mcpExecActionName} onChange={(event) => setMcpExecActionName(event.target.value)} />
+                  <button type="submit" disabled={mcpBusy || !mcpSelectedId || !mcpExecActionName.trim()}>Request execution</button>
+                </form>
+                {mcpExecutions.slice(0, 6).map((request) => (
+                  <div className="agent-template-card" key={request.request_id}>
+                    <strong>{request.action_name}</strong>
+                    <p className="muted">status: {request.status} · risk: {request.risk_level}{request.blocked_reason ? ` · ${request.blocked_reason}` : ''}</p>
+                    <div className="inline-actions">
+                      {request.status === 'pending_approval' && (
+                        <>
+                          <button type="button" onClick={() => handleApproveMcpExecution(request.request_id)} disabled={mcpBusy}>Approve</button>
+                          <button type="button" onClick={() => handleRejectMcpExecution(request.request_id)} disabled={mcpBusy}>Reject</button>
+                        </>
+                      )}
+                      {request.status === 'approved' && (
+                        <button type="button" onClick={() => handleRunMcpExecution(request.request_id)} disabled={mcpBusy}>Run (mock)</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {mcpExecSummary?.safety_summary && (
+                  <p className="muted">execution: real={String(mcpExecSummary.safety_summary.real_execution_enabled)} · shell={String(mcpExecSummary.safety_summary.shell_used)} · network={String(mcpExecSummary.safety_summary.network_calls_made)} · writes need approval={String(mcpExecSummary.safety_summary.write_actions_require_approval)}</p>
+                )}
+
                 {mcpSummary?.safety_summary && (
                   <>
                     <h3>Safety</h3>
                     <p className="muted">secrets exposed: {String(mcpSummary.safety_summary.secrets_exposed)} · shell: {String(mcpSummary.safety_summary.unrestricted_shell_allowed)} · desktop control: {String(mcpSummary.safety_summary.desktop_control_enabled)} · external send needs approval: {String(mcpSummary.safety_summary.external_send_requires_approval)}</p>
                   </>
                 )}
-                <p className="muted">Planning-first — connectors prepare and govern tool connections through local records, dry checks, approval boundaries, and audit logs. No real MCP execution; tokens are never shown.</p>
+                <p className="muted">Planning-first — connectors prepare and govern tool connections through local records, dry checks, approval boundaries, and audit logs. Execution is mock-by-default (no real MCP/network/shell/device call); tokens are never shown.</p>
               </div>
             )}
           </section>
