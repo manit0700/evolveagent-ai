@@ -928,6 +928,22 @@ class MasterOrchestratorAgent:
             "finance": ["stock", "price", "trading", "portfolio", "investment"],
             "pharmacy": ["icd", "prior authorization", "medication", "pharmacy", "diagnosis"],
             "research": ["research", "paper", "study", "sources", "evidence"],
+            "mcp_connector_management": [
+                "mcp",
+                "connector",
+                "connect github",
+                "connect linear",
+                "connect slack",
+                "connect notion",
+                "which mcps",
+                "enable mcp",
+                "playwright",
+                "context7",
+                "filesystem mcp",
+                "desktop commander",
+                "connect tool",
+                "tool connection",
+            ],
         }
         best_type = "general"
         best_matches = 0
@@ -948,6 +964,8 @@ class MasterOrchestratorAgent:
             return best_type, min(96, 86 + best_matches * 4)
         if best_type == "system_explanation":
             return best_type, min(98, 84 + best_matches * 4)
+        if best_type == "mcp_connector_management":
+            return best_type, min(96, 82 + best_matches * 4)
         return best_type, min(95, 72 + best_matches * 8)
 
     @staticmethod

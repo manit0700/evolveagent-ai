@@ -1,6 +1,6 @@
 # EvolveAgent AI — Local-First Multi-Agent AI Operating System
 
-**Current completed version:** v40.0 — EvolveAgent Operating Layer &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
+**Current completed version:** v41.0 — MCP Connector Hub &nbsp;•&nbsp; **Platform base:** EvolveAgent OS
 
 EvolveAgent AI is a local-first, workspace-aware multi-agent AI operating system built with FastAPI, React, real LLM integrations, JSON-based storage, and governed automation.
 
@@ -13,12 +13,13 @@ EvolveAgent OS is a local-first, workspace-aware multi-agent AI platform with go
 - **v38 — Multi-User Organization OS:** local organizations, member profiles, roles, permission profiles, workspace links, and activity — **local records only, no production auth**.
 - **v39 — AI Hardware / Always-On Companion:** device-readiness and session-planning layer — **no mic recording, no wake-word listener, no hardware access**; always requires explicit user activation.
 - **v40 — EvolveAgent Operating Layer:** a governed orchestration dashboard summarizing the capability map across v15–v39, with readiness snapshots, cross-system recommendations, safety boundaries, and a final report.
+- **v41 — MCP Connector Hub:** a local connector registry for MCP-style tools (GitHub, Linear, Filesystem, Git, Context7, Playwright, Slack, Notion, Desktop Commander). The EvolveAgent MCP Connector Hub prepares and governs tool connections through local connector records, dry checks, approval boundaries, and audit logs — **no real MCP execution by default, no secrets exposed, no unrestricted shell, no full desktop control**. High-risk connectors (Filesystem, Playwright, Desktop Commander) stay approval-required or disabled by default; status checks report only whether required env keys are set (true/false), never their values.
 
 > **This is not AGI.** The "AGI-style operating layer" is a governed orchestration layer across existing agents, workflows, tools, memory, simulations, and dashboards. It does not self-train a base model and does not execute risky actions without human approval.
 >
 > **Roadmap after v40 (future-only / not built):** real provider expansions, streaming, vector/RAG retrieval, and deployment remain future work outside the current local-first, mock/planning-first scope.
 
-> **Documentation:** [Architecture](docs/ARCHITECTURE.md) · [Demo Video Script](docs/DEMO_VIDEO_SCRIPT.md) · [Case Study](docs/CASE_STUDY.md) · [Interview Guide](docs/INTERVIEW_EXPLANATION.md) · [Resume Bullets](docs/RESUME_BULLETS.md) · [Screenshots Guide](screenshots/README.md) · [Demo Guide](DEMO.md) · [Final Checklist](FINAL_CHECKLIST.md)
+> **Documentation:** [Version History](VERSIONS.md) · [Architecture](docs/ARCHITECTURE.md) · [Demo Video Script](docs/DEMO_VIDEO_SCRIPT.md) · [Case Study](docs/CASE_STUDY.md) · [Interview Guide](docs/INTERVIEW_EXPLANATION.md) · [Resume Bullets](docs/RESUME_BULLETS.md) · [Screenshots Guide](screenshots/README.md) · [Demo Guide](DEMO.md) · [Final Checklist](FINAL_CHECKLIST.md)
 
 **One-line description:** A workspace-aware, voice-capable multi-agent AI operating workspace with governed research sessions, citation tracking, source credibility scoring, real API readiness diagnostics for text, image, and transcription providers, real OpenAI image/transcription fallback support, a focused Jarvis-style command center, governed tool execution history, plugin validation, real memory intelligence, local vector-style memory retrieval, Master Agent routing, Mission Control, Custom Agent Builder, Project Brain search, approval workflows, agent job scheduling, real multi-LLM consensus, adaptive learning, governance, file/recording analysis, mock image previews, and safe automation planning.
 

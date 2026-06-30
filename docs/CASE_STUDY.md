@@ -148,3 +148,9 @@ EvolveAgent AI reached v15.0 as a coherent, local-first multi-agent platform: a 
 ---
 
 *EvolveAgent AI is a decision-support and productivity system. It does not provide legal, medical, financial, or professional advice, and human review is required before acting on its outputs.*
+
+---
+
+## v41 — MCP Connector Hub
+
+The EvolveAgent MCP Connector Hub prepares and governs tool connections through local connector records, dry checks, approval boundaries, and audit logs. It introduces a local connector registry (GitHub, Linear, Filesystem, Git, Context7, Playwright, Slack, Notion, Desktop Commander) with per-connector risk levels and modes (read-only vs approval-required vs disabled), env-key readiness checks that report only whether keys are set (true/false), governance logging of every stateful action, and an action-planning flow that enforces approval and risk rules. There is no real MCP execution by default, no secrets exposed, no unrestricted shell, and no full desktop control; high-risk connectors stay approval-required or disabled by default. This keeps EvolveAgent ready to adopt MCP tooling while staying local-first, permission-aware, and governed.

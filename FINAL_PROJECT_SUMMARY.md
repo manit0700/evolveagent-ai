@@ -1,4 +1,11 @@
-# EvolveAgent AI — Project Summary (current completed: v40.0 EvolveAgent Operating Layer)
+# EvolveAgent AI — Project Summary (current completed: v41.0 MCP Connector Hub)
+
+## v41 — MCP Connector Hub
+
+The EvolveAgent MCP Connector Hub prepares and governs tool connections through local connector records, dry checks, approval boundaries, and audit logs. It adds a local **connector registry** with default templates for GitHub, Linear, Filesystem, Git, Context7, Playwright, Slack, Notion, and Desktop Commander; per-connector **risk levels** (low/medium/high) and **modes** (read_only / approval_required / disabled); **env-key readiness checks** that report only whether required keys are set (true/false), never their values; **governance logging** of every stateful action; and an **action-planning** flow that enforces approval/risk rules. There is **no real MCP execution by default, no secrets exposed, no unrestricted shell, and no full desktop control** — high-risk connectors stay approval-required or disabled by default.
+
+
+> **Version history:** For the implementation-track source of truth from v1–v40, see [`VERSIONS.md`](VERSIONS.md). It documents what actually shipped in code (grounded in service docstrings, README checkpoint narrative, and live API route groups); the official/vision roadmap (Linear epic) numbering may differ from these implementation checkpoints.
 
 ## v36–v40 Summary
 

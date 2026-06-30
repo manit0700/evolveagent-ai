@@ -1225,3 +1225,44 @@ class CompanionSessionCreateRequest(BaseModel):
     device_id: str | None = Field(default=None, max_length=120)
     title: str = Field(default="", max_length=200)
     notes: str = Field(default="", max_length=4000)
+
+
+# ----------------------------------------------------------------------
+# v41.0 MCP Connector Hub (planning-first; no real MCP execution)
+# ----------------------------------------------------------------------
+class MCPConnectorCreateRequest(BaseModel):
+    name: str | None = Field(default=None, max_length=120)
+    slug: str | None = Field(default=None, max_length=60)
+    description: str = Field(default="", max_length=600)
+    category: str = Field(default="custom", pattern="^(development|productivity|knowledge|browser|desktop|custom)$")
+    mode: str = Field(default="approval_required", pattern="^(read_only|approval_required|disabled)$")
+    risk_level: str = Field(default="medium", pattern="^(low|medium|high)$")
+    server_type: str = Field(default="local_mock", pattern="^(stdio|http|local_mock|external)$")
+    enabled: bool = Field(default=False)
+    args: list[str] = Field(default_factory=list)
+    env_keys_required: list[str] = Field(default_factory=list)
+    capabilities: list[str] = Field(default_factory=list)
+    allowed_actions: list[str] = Field(default_factory=list)
+    blocked_actions: list[str] = Field(default_factory=list)
+    workspace_scope: str = Field(default="global", pattern="^(global|workspace)$")
+
+
+class MCPConnectorUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, max_length=120)
+    description: str | None = Field(default=None, max_length=600)
+    category: str | None = Field(default=None, pattern="^(development|productivity|knowledge|browser|desktop|custom)$")
+    mode: str | None = Field(default=None, pattern="^(read_only|approval_required|disabled)$")
+    risk_level: str | None = Field(default=None, pattern="^(low|medium|high)$")
+    server_type: str | None = Field(default=None, pattern="^(stdio|http|local_mock|external)$")
+    args: list[str] | None = None
+    env_keys_required: list[str] | None = None
+    capabilities: list[str] | None = None
+    allowed_actions: list[str] | None = None
+    blocked_actions: list[str] | None = None
+    workspace_scope: str | None = Field(default=None, pattern="^(global|workspace)$")
+
+
+class MCPPlanActionRequest(BaseModel):
+    action_name: str = Field(..., min_length=1, max_length=80)
+    payload: dict = Field(default_factory=dict)
+    workspace_id: str | None = Field(default=None, max_length=120)
