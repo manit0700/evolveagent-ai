@@ -156,3 +156,9 @@ The MCP Connector Hub (`backend/app/services/mcp_connector_service.py`, routes u
 It maintains a local registry of MCP-style connectors with 9 default templates (Filesystem, Git, GitHub, Linear, Context7, Playwright, Slack, Notion, Desktop Commander). Connectors carry a risk level, a mode (read_only / approval_required / disabled), allowed/blocked action lists, and the *names* of required environment keys. Status checks are dry/mock and expose only booleans for env-key readiness — never values. Action planning enforces approval and risk rules and never executes real external/MCP calls in this version. Every stateful action is governance-logged and recorded as a connector event.
 
 **Boundaries:** no real MCP execution by default, no secrets exposed to frontend/logs/API, no unrestricted shell, no full desktop control; high-risk connectors stay approval-required or disabled by default.
+
+## v42 — MCP Execution Adapter
+
+The MCP Execution Adapter (`backend/app/services/mcp_execution_service.py`, routes under `/api/mcp/executions` and `/api/mcp/connectors/{id}/execute`) layers a governed execution loop on top of the v41 planning service. It reuses `MCPConnectorService.plan_connector_action` for all risk/block/allow validation, then drives a request → approve → run → record state machine persisted in `mcp_execution_requests.json` and `mcp_execution_results.json`.
+
+Read-only low-risk actions are auto-approved; every other action waits for explicit human approval; blocked or disabled connectors never produce a runnable request. Running an approved request re-validates the connector and then invokes a mock executor — `EXECUTION_MODE = "mock"` guarantees no real MCP server, network call, shell command, or device action, and no secrets are read or returned. Every step is governance-logged and surfaced in analytics.

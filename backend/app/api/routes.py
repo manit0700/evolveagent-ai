@@ -115,6 +115,7 @@ from app.models.request_models import (
     MCPConnectorCreateRequest,
     MCPConnectorUpdateRequest,
     MCPPlanActionRequest,
+    MCPExecuteRequest,
     TeamMemberCreateRequest,
     TeamMemberUpdateRequest,
     TeamAssignmentCreateRequest,
@@ -249,6 +250,7 @@ from app.services.organization_os_service import OrganizationOSService
 from app.services.hardware_companion_service import HardwareCompanionService
 from app.services.operating_layer_service import OperatingLayerService
 from app.services.mcp_connector_service import MCPConnectorService
+from app.services.mcp_execution_service import MCPExecutionService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -337,6 +339,7 @@ organization_os_service = OrganizationOSService(storage, governance_service)
 hardware_companion_service = HardwareCompanionService(storage, governance_service)
 operating_layer_service = OperatingLayerService(storage, governance_service)
 mcp_connector_service = MCPConnectorService(storage, governance_service)
+mcp_execution_service = MCPExecutionService(storage, governance_service, mcp_connector_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1589,6 +1592,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **autopilot_summary,
         **agent_department_service.analytics_summary(),
         **mcp_connector_service.analytics_summary(),
+        **mcp_execution_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -3415,6 +3419,68 @@ def plan_mcp_connector_action(connector_id: str, request: MCPPlanActionRequest) 
         )
     except ValueError as error:
         raise HTTPException(status_code=404, detail="Connector not found") from error
+
+
+# ----------------------------------------------------------------------
+# v42.0 MCP Execution Adapter (approval-gated, mock-by-default; no real execution)
+# ----------------------------------------------------------------------
+@router.get("/mcp/executions/summary")
+def get_mcp_execution_summary() -> dict:
+    return mcp_execution_service.summarize()
+
+
+@router.get("/mcp/executions")
+def list_mcp_executions(connector_id: str | None = Query(default=None)) -> dict:
+    requests = mcp_execution_service.list_requests(connector_id)
+    return {"requests": requests, "count": len(requests)}
+
+
+@router.post("/mcp/connectors/{connector_id}/execute")
+def request_mcp_execution(connector_id: str, request: MCPExecuteRequest) -> dict:
+    try:
+        return mcp_execution_service.request_execution(
+            connector_id, request.action_name, request.payload, request.workspace_id
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Connector not found") from error
+
+
+@router.get("/mcp/executions/{request_id}")
+def get_mcp_execution(request_id: str) -> dict:
+    record = mcp_execution_service.get_request(request_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Execution request not found")
+    return record
+
+
+@router.post("/mcp/executions/{request_id}/approve")
+def approve_mcp_execution(request_id: str) -> dict:
+    try:
+        return mcp_execution_service.approve_execution(request_id)
+    except ValueError as error:
+        detail = str(error)
+        status = 404 if "not found" in detail.lower() else 409
+        raise HTTPException(status_code=status, detail=detail) from error
+
+
+@router.post("/mcp/executions/{request_id}/reject")
+def reject_mcp_execution(request_id: str) -> dict:
+    try:
+        return mcp_execution_service.reject_execution(request_id)
+    except ValueError as error:
+        detail = str(error)
+        status = 404 if "not found" in detail.lower() else 409
+        raise HTTPException(status_code=status, detail=detail) from error
+
+
+@router.post("/mcp/executions/{request_id}/run")
+def run_mcp_execution(request_id: str) -> dict:
+    try:
+        return mcp_execution_service.run_execution(request_id)
+    except ValueError as error:
+        detail = str(error)
+        status = 404 if "not found" in detail.lower() else 409
+        raise HTTPException(status_code=status, detail=detail) from error
 
 
 @router.get("/governance")

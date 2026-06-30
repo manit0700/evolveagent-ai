@@ -1,4 +1,8 @@
-# EvolveAgent AI — Project Summary (current completed: v41.0 MCP Connector Hub)
+# EvolveAgent AI — Project Summary (current completed: v42.0 MCP Execution Adapter)
+
+## v42 — MCP Execution Adapter
+
+A governed **request → approve → run → record** loop layered on top of the v41 connector planning. It reuses the connector planning rules to validate every execution request (blocked-list, allow-list, risk/approval), **auto-approves read-only low-risk actions**, holds all other actions for **explicit human approval**, and runs approved requests through a **mock executor**. Execution is always simulated (`EXECUTION_MODE = "mock"`) — there is **no real MCP server, network call, shell command, or device action, and no secrets are used or returned**. Run-time re-validation blocks any request whose connector has since been disabled. Every step is governance-logged, surfaced in `/api/mcp/executions/*`, and reflected in analytics.
 
 ## v41 — MCP Connector Hub
 

@@ -172,6 +172,8 @@ backend/app/data/operating_layer_recommendations.json
 backend/app/data/operating_layer_audit.json
 backend/app/data/mcp_connectors.json
 backend/app/data/mcp_connector_events.json
+backend/app/data/mcp_execution_requests.json
+backend/app/data/mcp_execution_results.json
 backend/app/data/team_members.json
 backend/app/data/team_assignments.json
 backend/app/data/team_standups.json

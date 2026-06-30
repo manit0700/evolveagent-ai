@@ -175,6 +175,8 @@ class StorageService:
             "operating_layer_audit.json",
             "mcp_connectors.json",
             "mcp_connector_events.json",
+            "mcp_execution_requests.json",
+            "mcp_execution_results.json",
             "team_members.json",
             "team_assignments.json",
             "team_standups.json",
