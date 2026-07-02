@@ -969,6 +969,7 @@ function App() {
   const [mcpPolicyName, setMcpPolicyName] = useState('')
   const [mcpPolicySlug, setMcpPolicySlug] = useState('*')
   const [mcpPolicyAction, setMcpPolicyAction] = useState('*')
+  const [mcpTab, setMcpTab] = useState('connectors')
   const [mcpExecutions, setMcpExecutions] = useState([])
   const [mcpExecActionName, setMcpExecActionName] = useState('')
   const [showAppBuilder, setShowAppBuilder] = useState(false)
@@ -8339,6 +8340,26 @@ function App() {
                   <button type="button" onClick={() => refreshMcpPanel()} disabled={mcpBusy}>Refresh</button>
                 </div>
 
+                <div className="mcp-tabbar">
+                  {[
+                    { id: 'connectors', label: `Connectors${mcpConnectors.length ? ` (${mcpConnectors.length})` : ''}` },
+                    { id: 'policies', label: `Policies${mcpPolicies.length ? ` (${mcpPolicies.length})` : ''}` },
+                    { id: 'approvals', label: `Approvals${mcpInboxSummary?.pending_count ? ` (${mcpInboxSummary.pending_count})` : ''}` },
+                    { id: 'executions', label: 'Executions' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      className={`mcp-tab${mcpTab === tab.id ? ' active' : ''}`}
+                      onClick={() => setMcpTab(tab.id)}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {mcpTab === 'connectors' && (
+                <>
                 {mcpConnectors.length > 0 && (
                   <>
                     <h3>Connectors</h3>
@@ -8401,7 +8422,11 @@ function App() {
                     )}
                   </div>
                 )}
+                </>
+                )}
 
+                {mcpTab === 'policies' && (
+                <>
                 {/* v45 — MCP Policy Engine (tighten-only deny rules) */}
                 <h3>Policies (v45 · deny-only)</h3>
                 <p className="muted">Tighten-only rules evaluated before planning. They can only add blocks, never grant access.</p>
@@ -8420,7 +8445,11 @@ function App() {
                     </div>
                   </div>
                 ))}
+                </>
+                )}
 
+                {mcpTab === 'approvals' && (
+                <>
                 {/* v44 — MCP Approvals Inbox (prioritized queue of pending approvals) */}
                 <h3>Approvals Inbox (v44)</h3>
                 {mcpInboxSummary && (
@@ -8442,7 +8471,11 @@ function App() {
                     </div>
                   </div>
                 ))}
+                </>
+                )}
 
+                {mcpTab === 'executions' && (
+                <>
                 {/* v42 — MCP Execution Adapter (approval-gated) · v43 — Read-Only Adapter (opt-in) */}
                 <h3>Executions (v42/v43 · mock-by-default)</h3>
                 {mcpExecSummary && (
@@ -8482,6 +8515,8 @@ function App() {
                 ))}
                 {mcpExecSummary?.safety_summary && (
                   <p className="muted">execution: real={String(mcpExecSummary.safety_summary.real_execution_enabled)} · shell={String(mcpExecSummary.safety_summary.shell_used)} · network={String(mcpExecSummary.safety_summary.network_calls_made)} · writes need approval={String(mcpExecSummary.safety_summary.write_actions_require_approval)}</p>
+                )}
+                </>
                 )}
 
                 {mcpSummary?.safety_summary && (

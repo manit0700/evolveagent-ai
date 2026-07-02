@@ -1581,6 +1581,71 @@ h2 {
   gap: 10px;
 }
 
+/* v45.1 — MCP Hub internal tab bar */
+.mcp-tabbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.mcp-tab {
+  flex: 1 1 auto;
+  min-width: 84px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.65));
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.mcp-tab:hover {
+  color: var(--text-primary, #fff);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.mcp-tab.active {
+  color: var(--text-primary, #fff);
+  background: rgba(99, 102, 241, 0.18);
+  border-color: rgba(99, 102, 241, 0.45);
+}
+
+/* Risk badges used across MCP Hub panels (v41/v44/v45) */
+.risk-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  text-transform: capitalize;
+}
+
+.risk-badge.risk-low {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.risk-badge.risk-medium {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.risk-badge.risk-high {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
 .goal-card,
 .agent-template-card {
   display: grid;
