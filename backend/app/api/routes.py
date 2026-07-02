@@ -119,6 +119,7 @@ from app.models.request_models import (
     MCPPolicyCreateRequest,
     MCPPolicyUpdateRequest,
     MCPPolicyEvaluateRequest,
+    MCPReplayRequest,
     TeamMemberCreateRequest,
     TeamMemberUpdateRequest,
     TeamAssignmentCreateRequest,
@@ -256,6 +257,7 @@ from app.services.mcp_connector_service import MCPConnectorService
 from app.services.mcp_policy_service import MCPPolicyService
 from app.services.mcp_execution_service import MCPExecutionService
 from app.services.mcp_approvals_inbox_service import MCPApprovalsInboxService
+from app.services.mcp_audit_service import MCPAuditService
 from app.services.team_manager_service import TeamManagerService
 from app.services.portfolio_service import PortfolioService
 from app.services.project_manager_service import ProjectManagerService
@@ -347,6 +349,7 @@ mcp_policy_service = MCPPolicyService(storage, governance_service)
 mcp_connector_service = MCPConnectorService(storage, governance_service, policy_service=mcp_policy_service)
 mcp_execution_service = MCPExecutionService(storage, governance_service, mcp_connector_service)
 mcp_approvals_inbox_service = MCPApprovalsInboxService(mcp_execution_service, mcp_connector_service)
+mcp_audit_service = MCPAuditService(storage, governance_service, mcp_connector_service, mcp_execution_service)
 team_manager_service = TeamManagerService(storage, governance_service)
 platform_installer_service = PlatformInstallerService()
 plugin_sdk_service = PluginSDKService()
@@ -1602,6 +1605,7 @@ def get_analytics(workspace_id: str | None = Query(default=None)) -> dict:
         **mcp_execution_service.analytics_summary(),
         **mcp_approvals_inbox_service.analytics_summary(),
         **mcp_policy_service.analytics_summary(),
+        **mcp_audit_service.analytics_summary(),
         "recent_runs": list(reversed(runs[-10:])),
     }
 
@@ -3476,6 +3480,44 @@ def reject_mcp_inbox_item(item_id: str) -> dict:
         detail = str(error)
         status = 404 if "not found" in detail.lower() else 409
         raise HTTPException(status_code=status, detail=detail) from error
+
+
+# ----------------------------------------------------------------------
+# v46.0 MCP Audit & Replay — read-only unified timeline + dry replay.
+# ----------------------------------------------------------------------
+@router.get("/mcp/audit/summary")
+def get_mcp_audit_summary() -> dict:
+    return mcp_audit_service.summary()
+
+
+@router.get("/mcp/audit")
+def get_mcp_audit(
+    connector_id: str | None = Query(default=None),
+    event_type: str | None = Query(default=None),
+    since: str | None = Query(default=None),
+) -> dict:
+    events = mcp_audit_service.timeline(connector_id=connector_id, event_type=event_type, since=since)
+    return {"events": events, "count": len(events)}
+
+
+@router.get("/mcp/audit/export")
+def export_mcp_audit(format: str = Query(default="markdown")) -> dict:
+    fmt = format if format in ("markdown", "json") else "markdown"
+    return mcp_audit_service.export(fmt)
+
+
+@router.get("/mcp/audit/replays")
+def list_mcp_replays() -> dict:
+    replays = mcp_audit_service.list_replays()
+    return {"replays": replays, "count": len(replays)}
+
+
+@router.post("/mcp/audit/replay")
+def replay_mcp_request(request: MCPReplayRequest) -> dict:
+    try:
+        return mcp_audit_service.replay(request.request_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
 
 
 # ----------------------------------------------------------------------

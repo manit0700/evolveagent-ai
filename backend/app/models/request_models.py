@@ -1303,3 +1303,10 @@ class MCPPolicyUpdateRequest(BaseModel):
 class MCPPolicyEvaluateRequest(BaseModel):
     connector_id: str = Field(..., min_length=1, max_length=120)
     action_name: str = Field(..., min_length=1, max_length=80)
+
+
+# ----------------------------------------------------------------------
+# v46.0 MCP Audit & Replay
+# ----------------------------------------------------------------------
+class MCPReplayRequest(BaseModel):
+    request_id: str = Field(..., min_length=1, max_length=120)
