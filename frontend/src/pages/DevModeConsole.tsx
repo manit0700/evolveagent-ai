@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { fetchSystemHealth, SystemHealth } from '../data/api';
+import { fetchStorageStatus, fetchSystemHealth, StorageStatus, SystemHealth } from '../data/api';
 import { GlassCard } from '../components/shared/GlassCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
 import { RiskBadge } from '../components/shared/RiskBadge';
@@ -45,7 +45,11 @@ export const DevModeConsole: React.FC = () => {
   };
 
   const [health, setHealth] = useState<SystemHealth | null>(null);
-  useEffect(() => { fetchSystemHealth().then(setHealth); }, []);
+  const [storageStatus, setStorageStatus] = useState<StorageStatus | null>(null);
+  useEffect(() => {
+    fetchSystemHealth().then(setHealth);
+    fetchStorageStatus().then(setStorageStatus);
+  }, []);
 
   const filteredLogs = governanceLogs.filter(l =>
     l.agentName.toLowerCase().includes(logFilter.toLowerCase()) || 
@@ -72,6 +76,108 @@ export const DevModeConsole: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* Storage foundation readiness. Safe fallback until /api/system/storage-status ships. */}
+      <GlassCard className="space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-300 border border-blue-500/20">
+              <Database className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-bold text-white">Storage Foundation</h3>
+                <StatusBadge
+                  status={storageStatus ? 'success' : 'waiting'}
+                  size="sm"
+                  showIcon={false}
+                />
+              </div>
+              <p className="text-xs text-gray-400 font-mono mt-1">
+                v100 readiness: JSON remains default while Postgres, pgvector, and Redis come online behind flags.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={async () => {
+              const latest = await fetchStorageStatus();
+              setStorageStatus(latest);
+              showToast(latest ? 'Storage status refreshed' : 'Storage status endpoint is not available yet', latest ? 'success' : 'info');
+            }}
+            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 flex items-center gap-1.5 transition-colors self-start"
+          >
+            <Activity className="w-3.5 h-3.5" />
+            <span>Refresh Storage</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          {[
+            {
+              label: 'Active Backend',
+              value: storageStatus?.activeBackend || 'json',
+              sub: storageStatus ? 'reported by backend' : 'safe fallback',
+              color: 'text-emerald-300',
+            },
+            {
+              label: 'Configured',
+              value: storageStatus?.configuredBackend || 'json',
+              sub: 'STORAGE_BACKEND',
+              color: 'text-purple-300',
+            },
+            {
+              label: 'Postgres',
+              value: storageStatus?.postgresReady ? 'ready' : 'optional',
+              sub: storageStatus ? 'connection state' : 'pending endpoint',
+              color: storageStatus?.postgresReady ? 'text-emerald-300' : 'text-amber-300',
+            },
+            {
+              label: 'Redis',
+              value: storageStatus?.redisReady ? 'ready' : 'optional',
+              sub: 'read-through cache',
+              color: storageStatus?.redisReady ? 'text-emerald-300' : 'text-gray-400',
+            },
+            {
+              label: 'Migration',
+              value: storageStatus?.migrationState || 'not started',
+              sub: `${storageStatus?.jsonCollections ?? 0} JSON / ${storageStatus?.postgresCollections ?? 0} PG`,
+              color: 'text-blue-300',
+            },
+          ].map(item => (
+            <div key={item.label} className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-1">
+              <div className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">{item.label}</div>
+              <div className={`text-lg font-bold font-mono tracking-tight ${item.color}`}>{item.value}</div>
+              <div className="text-[10px] text-gray-500 font-mono truncate">{item.sub}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-2xl bg-white/[0.025] border border-white/[0.06] p-3">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-2">Migration guardrails</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px] font-mono text-gray-300">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Default stays JSON until explicitly flipped</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
+              <span>Governance and approvals remain active</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <span>Migration must be dry-run verifiable</span>
+            </div>
+          </div>
+          {storageStatus?.notes?.length ? (
+            <ul className="mt-3 space-y-1 text-[11px] font-mono text-gray-400">
+              {storageStatus.notes.slice(0, 4).map((note, idx) => (
+                <li key={idx}>• {note}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      </GlassCard>
 
       {/* 2. Header & Control Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-[#141418] border border-white/10">

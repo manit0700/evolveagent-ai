@@ -365,6 +365,17 @@ export interface SystemHealth {
   learnedItems: number;
 }
 
+export interface StorageStatus {
+  configuredBackend: string;
+  activeBackend: string;
+  postgresReady: boolean;
+  redisReady: boolean;
+  jsonCollections: number;
+  postgresCollections: number;
+  migrationState: string;
+  notes: string[];
+}
+
 export interface LiveWorkflowRun {
   id: string;
   name: string;
@@ -405,6 +416,21 @@ export async function fetchSystemHealth(): Promise<SystemHealth | null> {
     approvals: gov?.approvals ?? 0,
     workflowRuns: today?.metrics?.workflow_runs ?? 0,
     learnedItems: today?.metrics?.learned_items ?? 0,
+  };
+}
+
+export async function fetchStorageStatus(): Promise<StorageStatus | null> {
+  const data = await getJson<any>('/api/system/storage-status');
+  if (!data) return null;
+  return {
+    configuredBackend: data.configured_backend || data.storage_backend || data.backend || 'json',
+    activeBackend: data.active_backend || data.current_backend || data.backend || 'json',
+    postgresReady: Boolean(data.postgres_ready || data.postgres_connected),
+    redisReady: Boolean(data.redis_ready || data.redis_connected),
+    jsonCollections: Number(data.json_collections ?? data.json_collection_count ?? data.collections?.json ?? 0),
+    postgresCollections: Number(data.postgres_collections ?? data.pg_collection_count ?? data.collections?.postgres ?? 0),
+    migrationState: data.migration_state || data.migration_status || 'not started',
+    notes: Array.isArray(data.notes) ? data.notes : [],
   };
 }
 
