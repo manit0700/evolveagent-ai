@@ -37,19 +37,19 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
   const currentInfo = pageTitles[activePage] || { title: 'EvolveAgent AI', subtitle: 'Local-first multi-agent operating system' };
 
   return (
-    <header className="sticky top-0 z-40 h-16 shrink-0 bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-white/[0.08] px-4 sm:px-6 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-40 h-16 shrink-0 bg-white/80 backdrop-blur-xl border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between gap-4">
       {/* Left side: Mobile menu + Page Title */}
       <div className="flex items-center gap-3 min-w-0">
         <button
           onClick={() => setMobileOpen(true)}
-          className="p-2 rounded-xl bg-white/[0.04] border border-white/10 text-gray-300 hover:text-white lg:hidden"
+          className="p-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 lg:hidden"
         >
           <Menu className="w-5 h-5" />
         </button>
 
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm sm:text-base font-bold text-white tracking-tight truncate">{currentInfo.title}</h2>
+            <h2 className="text-sm sm:text-base font-semibold text-slate-900 tracking-tight truncate">{currentInfo.title}</h2>
             {pendingApprovalsCount > 0 && activePage !== 'approvals' && (
               <button
                 onClick={() => setActivePage('approvals')}
@@ -60,7 +60,7 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
               </button>
             )}
           </div>
-          <p className="text-[11px] text-gray-400 truncate hidden sm:block">{currentInfo.subtitle}</p>
+          <p className="text-[11px] text-slate-500 truncate hidden sm:block">{currentInfo.subtitle}</p>
         </div>
       </div>
 
@@ -69,23 +69,23 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
         {/* Command K input button */}
         <button
           onClick={() => setIsCommandModalOpen(true)}
-          className="flex items-center justify-between gap-3 px-3 py-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 text-gray-400 hover:text-gray-200 text-xs transition-all w-36 sm:w-56"
+          className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-slate-50 hover:bg-white border border-slate-200 text-slate-500 hover:text-slate-800 text-xs transition-all w-40 sm:w-60"
         >
           <div className="flex items-center gap-2 truncate">
-            <Search className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+            <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <span className="truncate">Search or ⌘ K</span>
           </div>
-          <kbd className="hidden sm:inline-block font-mono text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-gray-400 border border-white/10">
+          <kbd className="hidden sm:inline-block font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">
             ⌘K
           </kbd>
         </button>
 
         {/* Quick Mode Switchers (Desktop) */}
-        <div className="hidden xl:flex items-center p-1 rounded-xl bg-white/[0.03] border border-white/10">
+        <div className="hidden xl:flex items-center p-1 rounded-xl bg-slate-50 border border-slate-200">
           <button
             onClick={() => { setActivePage('chat'); showToast('Switched to Simple Chat Mode', 'info'); }}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-              activePage === 'chat' ? 'bg-cyan-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
+              activePage === 'chat' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
@@ -94,7 +94,7 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
           <button
             onClick={() => { setActivePage('dev-console'); showToast('Switched to Developer Console', 'info'); }}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-              activePage === 'dev-console' ? 'bg-cyan-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
+              activePage === 'dev-console' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             <Terminal className="w-3.5 h-3.5" />
@@ -103,7 +103,7 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
           <button
             onClick={() => { setActivePage('mission-control'); showToast('Switched to Mission Control', 'info'); }}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-              activePage === 'mission-control' ? 'bg-cyan-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
+              activePage === 'mission-control' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             <Compass className="w-3.5 h-3.5" />
@@ -117,11 +117,11 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
           title={liveConnected ? 'Connected to the local backend — click to refresh' : 'Backend offline (showing sample data) — click to retry'}
           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-mono transition-colors shrink-0 ${
             liveConnected
-              ? 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 text-emerald-300'
-              : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-gray-400'
+              ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700'
+              : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-500'
           }`}
         >
-          <span className={`w-2 h-2 rounded-full ${liveConnected ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500'}`} />
+          <span className={`w-2 h-2 rounded-full ${liveConnected ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
           <span className="hidden md:inline">{liveConnected ? 'Live Data' : 'Sample Data'}</span>
         </button>
 
@@ -133,13 +133,13 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
             : 'Real Actions ON: non-risky intents execute for real; risky ones are still approval-gated by the backend. Click to re-enable Mock-Safe.'}
           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-mono transition-colors shrink-0 ${
             safetySettings.mockSafe
-              ? 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 text-emerald-300'
-              : 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-300'
+              ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700'
+              : 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-700'
           }`}
         >
           {safetySettings.mockSafe
-            ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            : <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />}
+            ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            : <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />}
           <span className="hidden md:inline">{safetySettings.mockSafe ? 'Mock-Safe' : 'Real Actions'}</span>
         </button>
       </div>
