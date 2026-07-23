@@ -130,17 +130,17 @@ export const DevModeConsole: React.FC = () => {
       {/* 1. System Health Bar (6 counters) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: 'Backend', value: health ? (health.online ? 'Online' : 'Down') : '—', sub: health ? 'health :8000' : 'checking…', color: health?.online ? 'text-emerald-400' : 'text-gray-400' },
+          { label: 'Backend', value: health ? (health.online ? 'Online' : 'Down') : '—', sub: health ? 'health :8000' : 'checking…', color: health?.online ? 'text-emerald-400' : 'ea-muted' },
           { label: 'Gov Events', value: health ? `${health.totalEvents}` : `${governanceLogs.length}`, sub: 'Tamper-proof log', color: 'text-sky-400' },
           { label: 'Blocked', value: health ? `${health.blocked}` : '0', sub: 'Safety blocks', color: 'text-rose-400' },
           { label: 'Approvals', value: health ? `${health.approvals}` : '0', sub: 'Granted', color: 'text-emerald-400' },
-          { label: 'Active Agents', value: `${agents.filter(a => a.status !== 'idle').length}/${agents.length}`, sub: 'Orchestrating', color: 'text-cyan-400' },
+          { label: 'Active Agents', value: `${agents.filter(a => a.status !== 'idle').length}/${agents.length}`, sub: 'Orchestrating', color: 'text-[var(--ea-accent)]' },
           { label: 'Workflow Runs', value: health ? `${health.workflowRuns}` : '0', sub: 'Durable', color: 'text-amber-400' },
         ].map((item, idx) => (
-          <div key={idx} className="p-3 rounded-2xl bg-[#171717]/80 border border-white/[0.07] backdrop-blur-xl space-y-1">
-            <div className="text-[11px] font-mono text-gray-400 uppercase tracking-wider">{item.label}</div>
+          <div key={idx} className="p-3 rounded-2xl bg-[#171717]/80 border border-[var(--ea-line)] backdrop-blur-xl space-y-1">
+            <div className="text-[11px] font-mono ea-muted uppercase tracking-wider">{item.label}</div>
             <div className={`text-2xl font-bold font-mono tracking-tight ${item.color}`}>{item.value}</div>
-            <div className="text-[10px] text-gray-500 font-mono truncate">{item.sub}</div>
+            <div className="text-[10px] ea-faint font-mono truncate">{item.sub}</div>
           </div>
         ))}
       </div>
@@ -154,7 +154,7 @@ export const DevModeConsole: React.FC = () => {
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-bold text-white">Storage</h3>
+                <h3 className="text-sm font-bold ea-ink">Storage</h3>
                 <StatusBadge status={storageStatus ? 'connected' : 'waiting'} size="sm" showIcon={false} />
                 <span className={`text-[11px] font-mono px-2 py-0.5 rounded-full border ${
                   (storageStatus?.backend || 'json').toLowerCase() === 'postgres'
@@ -164,7 +164,7 @@ export const DevModeConsole: React.FC = () => {
                   {(storageStatus?.backend || 'json').toUpperCase()}
                 </span>
               </div>
-              <p className="text-xs text-gray-400 font-mono mt-1">
+              <p className="text-xs ea-muted font-mono mt-1">
                 v100 storage backend readiness. JSON fallback remains safe when Postgres or Redis are unavailable.
               </p>
             </div>
@@ -176,7 +176,7 @@ export const DevModeConsole: React.FC = () => {
               setStorageStatus(latest);
               showToast(latest ? 'Storage status refreshed' : 'Storage status endpoint unavailable', latest ? 'success' : 'info');
             }}
-            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 flex items-center gap-1.5 transition-colors self-start"
+            className="px-3 py-1.5 rounded-xl bg-[var(--ea-surface-3)] hover:bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-xs ea-soft flex items-center gap-1.5 transition-colors self-start"
           >
             <Activity className="w-3.5 h-3.5" />
             <span>Refresh Storage</span>
@@ -189,7 +189,7 @@ export const DevModeConsole: React.FC = () => {
               label: 'Collections',
               value: storageStatus ? storageStatus.collections.toLocaleString() : '—',
               sub: 'Storage collections',
-              color: 'text-cyan-300',
+              color: 'text-[var(--ea-accent)]',
             },
             {
               label: 'Documents',
@@ -207,18 +207,18 @@ export const DevModeConsole: React.FC = () => {
               label: 'Redis',
               value: storageStatus?.redisReady ? 'Ready' : 'Optional',
               sub: 'Read-through cache',
-              color: storageStatus?.redisReady ? 'text-emerald-300' : 'text-gray-400',
+              color: storageStatus?.redisReady ? 'text-emerald-300' : 'ea-muted',
             },
           ].map(item => (
-            <div key={item.label} className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-1">
-              <div className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">{item.label}</div>
+            <div key={item.label} className="p-3 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] space-y-1">
+              <div className="text-[10px] font-mono ea-faint uppercase tracking-wider">{item.label}</div>
               <div className={`text-xl font-bold font-mono tracking-tight ${item.color}`}>{item.value}</div>
-              <div className="text-[10px] text-gray-500 font-mono truncate">{item.sub}</div>
+              <div className="text-[10px] ea-faint font-mono truncate">{item.sub}</div>
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px] font-mono text-gray-300">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px] font-mono ea-soft">
           <div className="flex items-center gap-2 rounded-xl bg-white/[0.025] border border-white/[0.06] px-3 py-2">
             <span className={`w-2 h-2 rounded-full ${storageStatus ? 'bg-emerald-400' : 'bg-amber-400'}`} />
             <span>{storageStatus ? 'Live backend status loaded' : 'Using safe loading state'}</span>
@@ -234,17 +234,17 @@ export const DevModeConsole: React.FC = () => {
         </div>
 
         {/* Storage retention -- manual, archive-then-delete; dry_run defaults true */}
-        <div className="pt-4 mt-2 border-t border-white/10 space-y-3">
+        <div className="pt-4 mt-2 border-t border-[var(--ea-line)] space-y-3">
           <div className="flex items-center gap-2">
             <Archive className="w-3.5 h-3.5 text-amber-400" />
-            <h4 className="text-xs font-bold text-white">Storage Retention</h4>
-            <span className="text-[10px] font-mono text-gray-500">Manual only — nothing runs automatically</span>
+            <h4 className="text-xs font-bold ea-ink">Storage Retention</h4>
+            <span className="text-[10px] font-mono ea-faint">Manual only — nothing runs automatically</span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={pruneCollection}
               onChange={(e) => { setPruneCollection(e.target.value); setPrunePreview(null); }}
-              className="bg-black/50 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none"
+              className="bg-black/50 border border-[var(--ea-line)] rounded-xl px-3 py-1.5 text-xs ea-ink focus:outline-none"
             >
               {(prunable?.collections || []).map(c => (
                 <option key={c} value={c}>{c}</option>
@@ -255,13 +255,13 @@ export const DevModeConsole: React.FC = () => {
               min={prunable?.minOlderThanDays ?? 1}
               value={pruneOlderThanDays}
               onChange={(e) => { setPruneOlderThanDays(Number(e.target.value)); setPrunePreview(null); }}
-              className="w-24 bg-black/50 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none"
+              className="w-24 bg-black/50 border border-[var(--ea-line)] rounded-xl px-3 py-1.5 text-xs ea-ink focus:outline-none"
             />
-            <span className="text-[11px] text-gray-400">days or older</span>
+            <span className="text-[11px] ea-muted">days or older</span>
             <button
               onClick={handlePreviewPrune}
               disabled={pruneBusy || !pruneCollection}
-              className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 flex items-center gap-1.5 transition-colors disabled:opacity-50"
+              className="px-3 py-1.5 rounded-xl bg-[var(--ea-surface-3)] hover:bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-xs ea-soft flex items-center gap-1.5 transition-colors disabled:opacity-50"
             >
               <Search className="w-3.5 h-3.5" />
               <span>Preview</span>
@@ -269,14 +269,14 @@ export const DevModeConsole: React.FC = () => {
             <button
               onClick={handleRealPrune}
               disabled={pruneBusy || !prunePreview || (prunePreview.recordsToPrune ?? 0) === 0}
-              className="px-3 py-1.5 rounded-xl bg-rose-600/80 hover:bg-rose-500 text-white text-xs font-medium flex items-center gap-1.5 transition-colors disabled:opacity-40"
+              className="px-3 py-1.5 rounded-xl bg-rose-600/80 hover:bg-rose-500 ea-ink text-xs font-medium flex items-center gap-1.5 transition-colors disabled:opacity-40"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>Prune for real</span>
             </button>
           </div>
           {prunePreview && (
-            <div className="text-[11px] font-mono text-gray-300 bg-black/30 border border-white/[0.07] rounded-xl px-3 py-2">
+            <div className="text-[11px] font-mono ea-soft bg-[var(--ea-surface-3)] border border-[var(--ea-line)] rounded-xl px-3 py-2">
               {prunePreview.dryRun ? (
                 <span>Preview: {prunePreview.recordsToPrune ?? 0} of {prunePreview.totalRecords ?? 0} record(s) would be pruned ({prunePreview.recordsToKeep ?? 0} kept).</span>
               ) : (
@@ -294,24 +294,24 @@ export const DevModeConsole: React.FC = () => {
       <GlassCard className="space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-300 border border-purple-500/20">
+            <div className="p-2.5 rounded-xl bg-[var(--ea-accent-soft)] text-[var(--ea-accent)] border border-transparent">
               <Server className="w-5 h-5" />
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-bold text-white">Compute Fabric</h3>
+                <h3 className="text-sm font-bold ea-ink">Compute Fabric</h3>
                 <span className="text-[11px] font-mono px-2 py-0.5 rounded-full border bg-amber-500/15 text-amber-300 border-amber-500/30">
                   {gpuDashboard ? 'Real execution disabled by default' : 'Loading'}
                 </span>
               </div>
-              <p className="text-xs text-gray-400 font-mono mt-1">
+              <p className="text-xs ea-muted font-mono mt-1">
                 v240 GPU workers + v260 local model-serving readiness. Every real execution path stays approval-gated.
               </p>
             </div>
           </div>
           <button
             onClick={refreshComputeFabric}
-            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 flex items-center gap-1.5 transition-colors self-start"
+            className="px-3 py-1.5 rounded-xl bg-[var(--ea-surface-3)] hover:bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-xs ea-soft flex items-center gap-1.5 transition-colors self-start"
           >
             <Activity className="w-3.5 h-3.5" />
             <span>Refresh Compute Fabric</span>
@@ -319,37 +319,37 @@ export const DevModeConsole: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-1">
-            <div className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">GPU Workers</div>
-            <div className="text-xl font-bold font-mono tracking-tight text-cyan-300">{gpuDashboard ? gpuDashboard.totalGpuWorkers : '—'}</div>
-            <div className="text-[10px] text-gray-500 font-mono truncate">{gpuDashboard ? `${gpuDashboard.activeGpuWorkers} active` : 'checking…'}</div>
+          <div className="p-3 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] space-y-1">
+            <div className="text-[10px] font-mono ea-faint uppercase tracking-wider">GPU Workers</div>
+            <div className="text-xl font-bold font-mono tracking-tight text-[var(--ea-accent)]">{gpuDashboard ? gpuDashboard.totalGpuWorkers : '—'}</div>
+            <div className="text-[10px] ea-faint font-mono truncate">{gpuDashboard ? `${gpuDashboard.activeGpuWorkers} active` : 'checking…'}</div>
           </div>
-          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-1">
-            <div className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">GPU Providers</div>
+          <div className="p-3 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] space-y-1">
+            <div className="text-[10px] font-mono ea-faint uppercase tracking-wider">GPU Providers</div>
             <div className="text-xl font-bold font-mono tracking-tight text-emerald-300">{gpuDashboard ? gpuDashboard.providers.length : '—'}</div>
-            <div className="text-[10px] text-gray-500 font-mono truncate">local, kaggle, runpod, …</div>
+            <div className="text-[10px] ea-faint font-mono truncate">local, kaggle, runpod, …</div>
           </div>
-          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-1">
-            <div className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Model Backends</div>
-            <div className="text-xl font-bold font-mono tracking-tight text-cyan-300">{modelServing ? modelServing.count : '—'}</div>
-            <div className="text-[10px] text-gray-500 font-mono truncate">ollama, vllm, openai-compat</div>
+          <div className="p-3 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] space-y-1">
+            <div className="text-[10px] font-mono ea-faint uppercase tracking-wider">Model Backends</div>
+            <div className="text-xl font-bold font-mono tracking-tight text-[var(--ea-accent)]">{modelServing ? modelServing.count : '—'}</div>
+            <div className="text-[10px] ea-faint font-mono truncate">ollama, vllm, openai-compat</div>
           </div>
-          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-1">
-            <div className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Reachable</div>
-            <div className={`text-xl font-bold font-mono tracking-tight ${modelServing && modelServing.reachableCount > 0 ? 'text-emerald-300' : 'text-gray-400'}`}>
+          <div className="p-3 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] space-y-1">
+            <div className="text-[10px] font-mono ea-faint uppercase tracking-wider">Reachable</div>
+            <div className={`text-xl font-bold font-mono tracking-tight ${modelServing && modelServing.reachableCount > 0 ? 'text-emerald-300' : 'ea-muted'}`}>
               {modelServing ? modelServing.reachableCount : '—'}
             </div>
-            <div className="text-[10px] text-gray-500 font-mono truncate">local model servers</div>
+            <div className="text-[10px] ea-faint font-mono truncate">local model servers</div>
           </div>
         </div>
 
         {gpuDashboard && gpuDashboard.providers.length > 0 && (
           <div className="space-y-2">
-            <h4 className="text-xs font-bold text-white">GPU Providers</h4>
+            <h4 className="text-xs font-bold ea-ink">GPU Providers</h4>
             <div className="overflow-x-auto font-mono text-xs">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="border-b border-white/10 text-gray-400 text-[11px] uppercase">
+                  <tr className="border-b border-[var(--ea-line)] ea-muted text-[11px] uppercase">
                     <th className="py-2 px-3">Provider</th>
                     <th className="py-2 px-3">Enabled</th>
                     <th className="py-2 px-3">Configured</th>
@@ -360,11 +360,11 @@ export const DevModeConsole: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {gpuDashboard.providers.map(p => (
-                    <tr key={p.provider} className="hover:bg-white/[0.02]">
-                      <td className="py-2 px-3 font-semibold text-white">{p.name}</td>
+                    <tr key={p.provider} className="hover:bg-[var(--ea-surface-2)]">
+                      <td className="py-2 px-3 font-semibold ea-ink">{p.name}</td>
                       <td className="py-2 px-3"><StatusBadge status={p.enabled ? 'connected' : 'disconnected'} size="sm" showIcon={false} /></td>
                       <td className="py-2 px-3">{p.configured ? 'Yes' : 'No'}</td>
-                      <td className="py-2 px-3">{p.executionEnabled ? <span className="text-amber-300">Enabled</span> : <span className="text-gray-500">Disabled</span>}</td>
+                      <td className="py-2 px-3">{p.executionEnabled ? <span className="text-amber-300">Enabled</span> : <span className="ea-faint">Disabled</span>}</td>
                       <td className="py-2 px-3"><RiskBadge level={p.riskLevel} size="sm" /></td>
                       <td className="py-2 px-3">{p.activeWorkers}/{p.workerCount}</td>
                     </tr>
@@ -377,22 +377,22 @@ export const DevModeConsole: React.FC = () => {
 
         {modelServing && modelServing.backends.length > 0 && (
           <div className="space-y-2">
-            <h4 className="text-xs font-bold text-white">Local Model-Serving Backends</h4>
+            <h4 className="text-xs font-bold ea-ink">Local Model-Serving Backends</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               {modelServing.backends.map(b => (
-                <div key={b.backend} className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-1.5">
+                <div key={b.backend} className="p-3 rounded-xl bg-[var(--ea-surface-2)] border border-[var(--ea-line)] space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-white">{b.name}</span>
+                    <span className="text-xs font-medium ea-ink">{b.name}</span>
                     <span className={`w-2 h-2 rounded-full ${b.reachable ? 'bg-emerald-400' : b.configured ? 'bg-amber-400' : 'bg-gray-500'}`} />
                   </div>
-                  <div className="text-[10px] font-mono text-gray-500">
+                  <div className="text-[10px] font-mono ea-faint">
                     {b.reachable ? `${b.models.length} model(s) loaded` : b.configured ? 'Configured, not reachable' : 'Not configured'}
                   </div>
                   {b.note && <div className="text-[10px] font-mono text-gray-600 truncate">{b.note}</div>}
                 </div>
               ))}
             </div>
-            <p className="text-[10px] font-mono text-gray-500">
+            <p className="text-[10px] font-mono ea-faint">
               Read-only readiness. No model server is ever started by this app.
             </p>
           </div>
@@ -408,18 +408,18 @@ export const DevModeConsole: React.FC = () => {
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-bold text-white">Scheduler Tick</h3>
+                <h3 className="text-sm font-bold ea-ink">Scheduler Tick</h3>
                 <StatusBadge status={tickStatus?.enabled ? 'connected' : 'disconnected'} size="sm" />
                 <span className={`text-[11px] font-mono px-2 py-0.5 rounded-full border flex items-center gap-1 ${
                   tickStatus?.autoDispatchEnabled
                     ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                    : 'bg-white/5 text-gray-400 border-white/10'
+                    : 'bg-[var(--ea-surface-3)] ea-muted border-[var(--ea-line)]'
                 }`}>
                   <Zap className="w-3 h-3" />
                   Auto-dispatch {tickStatus?.autoDispatchEnabled ? 'ON' : 'off (default)'}
                 </span>
               </div>
-              <p className="text-xs text-gray-400 font-mono mt-1">
+              <p className="text-xs ea-muted font-mono mt-1">
                 v120 background tick + v280 concurrent job dispatch. Both off by default; nothing runs automatically
                 unless explicitly enabled via env flags.
               </p>
@@ -427,7 +427,7 @@ export const DevModeConsole: React.FC = () => {
           </div>
           <button
             onClick={refreshTickStatus}
-            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 flex items-center gap-1.5 transition-colors self-start"
+            className="px-3 py-1.5 rounded-xl bg-[var(--ea-surface-3)] hover:bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-xs ea-soft flex items-center gap-1.5 transition-colors self-start"
           >
             <Activity className="w-3.5 h-3.5" />
             <span>Refresh Tick Status</span>
@@ -435,31 +435,31 @@ export const DevModeConsole: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-1">
-            <div className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Interval</div>
-            <div className="text-xl font-bold font-mono tracking-tight text-cyan-300">{tickStatus ? `${tickStatus.intervalSeconds}s` : '—'}</div>
+          <div className="p-3 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] space-y-1">
+            <div className="text-[10px] font-mono ea-faint uppercase tracking-wider">Interval</div>
+            <div className="text-xl font-bold font-mono tracking-tight text-[var(--ea-accent)]">{tickStatus ? `${tickStatus.intervalSeconds}s` : '—'}</div>
           </div>
-          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-1">
-            <div className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Tasks Fired</div>
+          <div className="p-3 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] space-y-1">
+            <div className="text-[10px] font-mono ea-faint uppercase tracking-wider">Tasks Fired</div>
             <div className="text-xl font-bold font-mono tracking-tight text-emerald-300">{tickStatus ? tickStatus.lastFiredCount : '—'}</div>
           </div>
-          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-1">
-            <div className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Stale Jobs Failed</div>
+          <div className="p-3 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] space-y-1">
+            <div className="text-[10px] font-mono ea-faint uppercase tracking-wider">Stale Jobs Failed</div>
             <div className="text-xl font-bold font-mono tracking-tight text-rose-300">{tickStatus ? tickStatus.lastStaleJobsFailedCount : '—'}</div>
           </div>
-          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-1">
-            <div className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Kaggle Polled</div>
-            <div className="text-xl font-bold font-mono tracking-tight text-cyan-300">{tickStatus ? tickStatus.lastKaggleJobsPolledCount : '—'}</div>
+          <div className="p-3 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] space-y-1">
+            <div className="text-[10px] font-mono ea-faint uppercase tracking-wider">Kaggle Polled</div>
+            <div className="text-xl font-bold font-mono tracking-tight text-[var(--ea-accent)]">{tickStatus ? tickStatus.lastKaggleJobsPolledCount : '—'}</div>
           </div>
-          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-1">
-            <div className="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Auto-Dispatched</div>
-            <div className={`text-xl font-bold font-mono tracking-tight ${tickStatus?.autoDispatchEnabled ? 'text-amber-300' : 'text-gray-500'}`}>
+          <div className="p-3 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] space-y-1">
+            <div className="text-[10px] font-mono ea-faint uppercase tracking-wider">Auto-Dispatched</div>
+            <div className={`text-xl font-bold font-mono tracking-tight ${tickStatus?.autoDispatchEnabled ? 'text-amber-300' : 'ea-faint'}`}>
               {tickStatus ? tickStatus.lastAutoDispatchedCount : '—'}
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] font-mono text-gray-300">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] font-mono ea-soft">
           <div className="flex items-center gap-2 rounded-xl bg-white/[0.025] border border-white/[0.06] px-3 py-2">
             <span className={`w-2 h-2 rounded-full ${tickStatus?.lastTickAt ? 'bg-emerald-400' : 'bg-gray-500'}`} />
             <span>Last tick: {tickStatus?.lastTickAt || 'never (tick disabled or not yet run)'}</span>
@@ -472,19 +472,19 @@ export const DevModeConsole: React.FC = () => {
       </GlassCard>
 
       {/* 2. Header & Control Buttons */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-[#141418] border border-white/10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl ea-surface border border-[var(--ea-line)]">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+          <div className="p-2.5 rounded-xl bg-[var(--ea-accent-soft)] text-[var(--ea-accent)] border border-[var(--ea-line)]">
             <Terminal className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-bold text-white">Current Workflow Trace</h2>
-              <span className="text-xs font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold">
+              <h2 className="text-sm font-bold ea-ink">Current Workflow Trace</h2>
+              <span className="text-xs font-mono px-2 py-0.5 rounded bg-[var(--ea-accent-soft)] text-[var(--ea-accent)] border border-[var(--ea-line)] font-semibold">
                 Trace ID: TR-9942-AX
               </span>
             </div>
-            <p className="text-xs text-gray-400 font-mono">Real-time inspection of AST parsing, LLM routing, and MCP tool payloads</p>
+            <p className="text-xs ea-muted font-mono">Real-time inspection of AST parsing, LLM routing, and MCP tool payloads</p>
           </div>
         </div>
 
@@ -494,21 +494,21 @@ export const DevModeConsole: React.FC = () => {
               setIsPaused(!isPaused);
               showToast(isPaused ? 'Resumed trace stream' : 'Paused trace stream', 'info');
             }}
-            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 flex items-center gap-1.5 transition-colors"
+            className="px-3 py-1.5 rounded-xl bg-[var(--ea-surface-3)] hover:bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-xs ea-soft flex items-center gap-1.5 transition-colors"
           >
             {isPaused ? <Play className="w-3.5 h-3.5 text-emerald-400" /> : <Pause className="w-3.5 h-3.5 text-amber-400" />}
             <span>{isPaused ? 'Resume Trace' : 'Pause Execution'}</span>
           </button>
           <button
             onClick={runMockWorkflowStep}
-            className="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium flex items-center gap-1.5 transition-colors shadow-lg shadow-cyan-500/20"
+            className="px-3 py-1.5 rounded-xl bg-[var(--ea-accent)] hover:brightness-110 text-[var(--ea-accent-ink)] text-xs font-medium flex items-center gap-1.5 transition-colors shadow-lg "
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             <span>Step Into Next</span>
           </button>
           <button
             onClick={handleExport}
-            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 flex items-center gap-1.5 transition-colors"
+            className="px-3 py-1.5 rounded-xl bg-[var(--ea-surface-3)] hover:bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-xs ea-soft flex items-center gap-1.5 transition-colors"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Export Log</span>
@@ -518,7 +518,7 @@ export const DevModeConsole: React.FC = () => {
 
       {/* 3. Main Console Tabs (Trace vs JSON vs Tools) */}
       <div className="space-y-4">
-        <div className="flex items-center gap-2 border-b border-white/10 pb-2">
+        <div className="flex items-center gap-2 border-b border-[var(--ea-line)] pb-2">
           {[
             { id: 'trace' as const, label: 'Workflow Trace Steps', icon: Activity, count: traceSteps.length },
             { id: 'tools' as const, label: 'Tool Call Inspector', icon: Cpu, count: connectors.length },
@@ -531,14 +531,14 @@ export const DevModeConsole: React.FC = () => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all ${
                   activeTab === tab.id
-                    ? 'bg-cyan-600/20 text-white border border-cyan-500/40 shadow-md'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    ? 'bg-[var(--ea-accent-soft)] ea-ink border border-[var(--ea-line-strong)] shadow-md'
+                    : 'ea-muted hover:ea-ink hover:bg-[var(--ea-surface-3)]'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5 text-cyan-400" />
+                <Icon className="w-3.5 h-3.5 text-[var(--ea-accent)]" />
                 <span>{tab.label}</span>
                 {tab.count !== undefined && (
-                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-gray-300">
+                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[var(--ea-surface-3)] ea-soft">
                     {tab.count}
                   </span>
                 )}
@@ -561,20 +561,20 @@ export const DevModeConsole: React.FC = () => {
                     className={`cursor-pointer p-4 rounded-2xl border transition-all ${
                       isSelected
                         ? 'bg-cyan-900/20 border-cyan-500/50 shadow-[0_0_20px_-5px_rgba(34,211,238,0.2)]'
-                        : 'bg-[#171717]/60 border-white/5 hover:bg-[#1a1a20]/80 hover:border-white/15'
+                        : 'bg-[#171717]/60 border-[var(--ea-line)] hover:ea-surface-2/80 hover:border-[var(--ea-line-strong)]'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3">
                         <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-mono text-xs font-bold ${
-                          isSelected ? 'bg-cyan-600 text-white' : 'bg-white/10 text-gray-300'
+                          isSelected ? 'bg-[var(--ea-accent)] text-[var(--ea-accent-ink)]' : 'bg-[var(--ea-surface-3)] ea-soft'
                         }`}>
                           #{s.step}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-white">{s.action}</span>
-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-cyan-300 border border-white/10">
+                            <span className="text-xs font-semibold ea-ink">{s.action}</span>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--ea-surface-3)] text-[var(--ea-accent)] border border-[var(--ea-line)]">
                               {s.agent}
                             </span>
                           </div>
@@ -588,8 +588,8 @@ export const DevModeConsole: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-2 font-mono text-xs shrink-0">
-                        <span className="text-gray-400">{s.durationMs}ms</span>
-                        <span className="text-gray-500">{s.timestamp}</span>
+                        <span className="ea-muted">{s.durationMs}ms</span>
+                        <span className="ea-faint">{s.timestamp}</span>
                         <StatusBadge status={s.status} size="sm" showIcon={false} />
                       </div>
                     </div>
@@ -600,39 +600,39 @@ export const DevModeConsole: React.FC = () => {
 
             {/* Right 1 Col: Step Detail & Raw IO */}
             <GlassCard className="h-fit sticky top-20 space-y-4 font-mono">
-              <div className="flex items-center justify-between pb-3 border-b border-white/10 text-xs font-sans font-semibold text-white">
+              <div className="flex items-center justify-between pb-3 border-b border-[var(--ea-line)] text-xs font-sans font-semibold ea-ink">
                 <span>Step #{currentStepData?.step} Inspector</span>
-                <span className="text-cyan-400 font-mono">{currentStepData?.id}</span>
+                <span className="text-[var(--ea-accent)] font-mono">{currentStepData?.id}</span>
               </div>
 
               <div className="space-y-3 text-xs">
                 <div>
-                  <span className="text-gray-500 text-[10px] uppercase">Executing Agent</span>
-                  <div className="text-white font-semibold mt-0.5">{currentStepData?.agent}</div>
+                  <span className="ea-faint text-[10px] uppercase">Executing Agent</span>
+                  <div className="ea-ink font-semibold mt-0.5">{currentStepData?.agent}</div>
                 </div>
 
                 <div>
-                  <span className="text-gray-500 text-[10px] uppercase">Action Name</span>
-                  <div className="text-cyan-300 mt-0.5">{currentStepData?.action}</div>
+                  <span className="ea-faint text-[10px] uppercase">Action Name</span>
+                  <div className="text-[var(--ea-accent)] mt-0.5">{currentStepData?.action}</div>
                 </div>
 
                 {currentStepData?.toolUsed && (
                   <div>
-                    <span className="text-gray-500 text-[10px] uppercase">MCP Tool Connection</span>
+                    <span className="ea-faint text-[10px] uppercase">MCP Tool Connection</span>
                     <div className="text-emerald-400 font-semibold mt-0.5">{currentStepData?.toolUsed}</div>
                   </div>
                 )}
 
-                <div className="pt-2 border-t border-white/10">
-                  <span className="text-gray-500 text-[10px] uppercase">Input Payload Snippet</span>
-                  <pre className="mt-1 p-2.5 rounded-xl bg-black/60 border border-white/10 text-gray-300 text-[11px] overflow-x-auto whitespace-pre-wrap">
+                <div className="pt-2 border-t border-[var(--ea-line)]">
+                  <span className="ea-faint text-[10px] uppercase">Input Payload Snippet</span>
+                  <pre className="mt-1 p-2.5 rounded-xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] ea-soft text-[11px] overflow-x-auto whitespace-pre-wrap">
                     {currentStepData?.inputSnippet || 'No input arguments'}
                   </pre>
                 </div>
 
                 <div>
-                  <span className="text-gray-500 text-[10px] uppercase">Output Response Snippet</span>
-                  <pre className="mt-1 p-2.5 rounded-xl bg-black/60 border border-white/10 text-emerald-300 text-[11px] overflow-x-auto whitespace-pre-wrap">
+                  <span className="ea-faint text-[10px] uppercase">Output Response Snippet</span>
+                  <pre className="mt-1 p-2.5 rounded-xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-emerald-300 text-[11px] overflow-x-auto whitespace-pre-wrap">
                     {currentStepData?.outputSnippet || 'No output emitted'}
                   </pre>
                 </div>
@@ -644,16 +644,16 @@ export const DevModeConsole: React.FC = () => {
         {/* Tab 2: Tool Call Inspector Table */}
         {activeTab === 'tools' && (
           <GlassCard>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10">
-              <h3 className="text-sm font-semibold text-white">Connected Tools & Execution Logs</h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--ea-line)]">
+              <h3 className="text-sm font-semibold ea-ink">Connected Tools & Execution Logs</h3>
               <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 ea-muted" />
                 <input
                   type="text"
                   value={logFilter}
                   onChange={(e) => setLogFilter(e.target.value)}
                   placeholder="Filter tool calls..."
-                  className="w-full bg-black/50 border border-white/10 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none"
+                  className="w-full bg-black/50 border border-[var(--ea-line)] rounded-xl pl-9 pr-3 py-1.5 text-xs ea-ink placeholder-gray-500 focus:outline-none"
                 />
               </div>
             </div>
@@ -661,7 +661,7 @@ export const DevModeConsole: React.FC = () => {
             <div className="mt-4 overflow-x-auto font-mono text-xs">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="border-b border-white/10 text-gray-400 text-[11px] uppercase">
+                  <tr className="border-b border-[var(--ea-line)] ea-muted text-[11px] uppercase">
                     <th className="py-2 px-3">Timestamp</th>
                     <th className="py-2 px-3">Agent</th>
                     <th className="py-2 px-3">Tool / Command</th>
@@ -671,10 +671,10 @@ export const DevModeConsole: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {filteredLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-white/[0.02]">
-                      <td className="py-3 px-3 text-gray-400">{log.timestamp}</td>
-                      <td className="py-3 px-3 font-semibold text-white">{log.agentName}</td>
-                      <td className="py-3 px-3 text-cyan-300 font-semibold">{log.action}</td>
+                    <tr key={log.id} className="hover:bg-[var(--ea-surface-2)]">
+                      <td className="py-3 px-3 ea-muted">{log.timestamp}</td>
+                      <td className="py-3 px-3 font-semibold ea-ink">{log.agentName}</td>
+                      <td className="py-3 px-3 text-[var(--ea-accent)] font-semibold">{log.action}</td>
                       <td className="py-3 px-3"><RiskBadge level={log.risk} size="sm" /></td>
                       <td className="py-3 px-3"><StatusBadge status={log.status} size="sm" /></td>
                     </tr>
@@ -688,13 +688,13 @@ export const DevModeConsole: React.FC = () => {
         {/* Tab 3: Raw State JSON Inspector */}
         {activeTab === 'json' && (
           <GlassCard>
-            <div className="flex items-center justify-between pb-3 border-b border-white/10 font-mono text-xs">
-              <span className="text-white font-semibold flex items-center gap-2">
-                <Code2 className="w-4 h-4 text-cyan-400" /> Real-time Operating System State Dump
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--ea-line)] font-mono text-xs">
+              <span className="ea-ink font-semibold flex items-center gap-2">
+                <Code2 className="w-4 h-4 text-[var(--ea-accent)]" /> Real-time Operating System State Dump
               </span>
-              <span className="text-gray-400">Updated automatically</span>
+              <span className="ea-muted">Updated automatically</span>
             </div>
-            <pre className="mt-3 p-4 rounded-xl bg-black/80 border border-white/10 text-emerald-400 text-xs font-mono max-h-[500px] overflow-y-auto">
+            <pre className="mt-3 p-4 rounded-xl bg-black/80 border border-[var(--ea-line)] text-emerald-400 text-xs font-mono max-h-[500px] overflow-y-auto">
               {JSON.stringify({
                 systemVersion: "EvolveAgent AI vNext 2.4.0",
                 activeAgentsCount: agents.length,
@@ -710,24 +710,24 @@ export const DevModeConsole: React.FC = () => {
 
       {/* 4. Live Agent Execution Progress Bars */}
       <GlassCard>
-        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <Cpu className="w-4 h-4 text-cyan-400" />
+        <h3 className="text-sm font-semibold ea-ink mb-4 flex items-center gap-2">
+          <Cpu className="w-4 h-4 text-[var(--ea-accent)]" />
           <span>Active Agent Resource Consumption & Pipeline Health</span>
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {agents.slice(0, 4).map(agent => (
-            <div key={agent.id} className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-2">
+            <div key={agent.id} className="p-3 rounded-xl bg-[var(--ea-surface-2)] border border-[var(--ea-line)] space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-white flex items-center gap-1.5">
+                <span className="text-xs font-medium ea-ink flex items-center gap-1.5">
                   <span>{agent.avatar}</span>
                   <span className="truncate">{agent.name}</span>
                 </span>
-                <span className="text-[10px] font-mono text-cyan-400">{agent.qualityScore}% Q-Score</span>
+                <span className="text-[10px] font-mono text-[var(--ea-accent)]">{agent.qualityScore}% Q-Score</span>
               </div>
-              <div className="w-full h-1.5 rounded-full bg-black/60 overflow-hidden">
+              <div className="w-full h-1.5 rounded-full bg-[var(--ea-surface-3)] overflow-hidden">
                 <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${agent.qualityScore}%` }} />
               </div>
-              <div className="flex items-center justify-between text-[10px] font-mono text-gray-500">
+              <div className="flex items-center justify-between text-[10px] font-mono ea-faint">
                 <span>Tokens: {agent.tokensUsed}</span>
                 <span>{agent.tasksCompletedToday} tasks today</span>
               </div>

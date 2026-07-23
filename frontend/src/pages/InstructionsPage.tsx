@@ -62,14 +62,13 @@ export const InstructionsPage: React.FC = () => {
   return (
     <div className="space-y-8 animate-fadeIn pb-16">
       {/* Header Banner */}
-      <div className="rounded-3xl border border-cyan-500/40 bg-gradient-to-br from-[#1c1a29] via-[#14141c] to-[#121217] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-        <div className="absolute -top-24 -right-24 w-64 h-64 bg-cyan-600/20 rounded-full blur-3xl" />
+      <div className="ea-hero">
         <div className="relative">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-mono mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--ea-accent-soft)] border border-[var(--ea-line)] text-[var(--ea-accent)] text-xs font-mono mb-4">
             <BookOpen className="w-3.5 h-3.5" />
             Start Here
           </div>
-          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white mb-2">
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight ea-ink mb-2">
             Welcome to EvolveAgent AI
           </h1>
           <p className="text-sm text-slate-300 leading-relaxed max-w-2xl">
@@ -82,8 +81,8 @@ export const InstructionsPage: React.FC = () => {
 
       {/* Quick Start Steps */}
       <div>
-        <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-          <Zap className="w-4 h-4 text-cyan-400" /> Quick Start
+        <h2 className="text-sm font-bold ea-ink mb-4 flex items-center gap-2">
+          <Zap className="w-4 h-4 text-[var(--ea-accent)]" /> Quick Start
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
@@ -93,13 +92,13 @@ export const InstructionsPage: React.FC = () => {
           ].map((s) => (
             <GlassCard key={s.step} hover onClick={() => setActivePage(s.page)} className="group">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                <div className="w-7 h-7 rounded-lg bg-[var(--ea-accent)] flex items-center justify-center text-xs font-bold ea-ink shrink-0">
                   {s.step}
                 </div>
-                <h3 className="text-sm font-semibold text-white">{s.title}</h3>
+                <h3 className="text-sm font-semibold ea-ink">{s.title}</h3>
               </div>
-              <p className="text-xs text-gray-400 leading-relaxed mb-3">{s.desc}</p>
-              <span className="inline-flex items-center gap-1 text-[11px] font-mono text-cyan-400 group-hover:gap-2 transition-all">
+              <p className="text-xs ea-muted leading-relaxed mb-3">{s.desc}</p>
+              <span className="inline-flex items-center gap-1 text-[11px] font-mono text-[var(--ea-accent)] group-hover:gap-2 transition-all">
                 Go there <ArrowRight className="w-3 h-3" />
               </span>
             </GlassCard>
@@ -109,19 +108,19 @@ export const InstructionsPage: React.FC = () => {
 
       {/* Simple Mode vs Dev Mode */}
       <div>
-        <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-cyan-400" /> Two Ways to Work
+        <h2 className="text-sm font-bold ea-ink mb-4 flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-[var(--ea-accent)]" /> Two Ways to Work
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <GlassCard glow="purple">
             <div className="flex items-center gap-2 mb-2">
-              <MessageSquare className="w-4 h-4 text-cyan-400" />
-              <h3 className="text-sm font-semibold text-white">Simple Mode</h3>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+              <MessageSquare className="w-4 h-4 text-[var(--ea-accent)]" />
+              <h3 className="text-sm font-semibold ea-ink">Simple Mode</h3>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[var(--ea-accent-soft)] text-[var(--ea-accent)] border border-[var(--ea-line)]">
                 Everyday use
               </span>
             </div>
-            <p className="text-xs text-gray-400 leading-relaxed">
+            <p className="text-xs ea-muted leading-relaxed">
               A clean chat interface. You type a request, the AI figures out which specialist agents
               to use, and you get one clear answer back. No clutter, no internals — just the result.
             </p>
@@ -129,12 +128,12 @@ export const InstructionsPage: React.FC = () => {
           <GlassCard>
             <div className="flex items-center gap-2 mb-2">
               <Terminal className="w-4 h-4 text-emerald-400" />
-              <h3 className="text-sm font-semibold text-white">Dev Mode</h3>
+              <h3 className="text-sm font-semibold ea-ink">Dev Mode</h3>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                 Power users
               </span>
             </div>
-            <p className="text-xs text-gray-400 leading-relaxed">
+            <p className="text-xs ea-muted leading-relaxed">
               The same requests, but with the curtain pulled back: which agents ran, what each one
               decided, timing, and raw output. Useful for debugging or just understanding the "why."
             </p>
@@ -144,16 +143,16 @@ export const InstructionsPage: React.FC = () => {
 
       {/* Trust & Safety */}
       <div>
-        <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-          <Lock className="w-4 h-4 text-cyan-400" /> How Safety Works Here
+        <h2 className="text-sm font-bold ea-ink mb-4 flex items-center gap-2">
+          <Lock className="w-4 h-4 text-[var(--ea-accent)]" /> How Safety Works Here
         </h2>
         <GlassCard>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             <div className="flex gap-3">
-              <Eye className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+              <Eye className="w-4 h-4 text-[var(--ea-accent)] shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-xs font-semibold text-white mb-1">Everything is visible</h4>
-                <p className="text-[11px] text-gray-400 leading-relaxed">
+                <h4 className="text-xs font-semibold ea-ink mb-1">Everything is visible</h4>
+                <p className="text-[11px] ea-muted leading-relaxed">
                   Every action agents take is written to Governance. Nothing happens off the record.
                 </p>
               </div>
@@ -161,8 +160,8 @@ export const InstructionsPage: React.FC = () => {
             <div className="flex gap-3">
               <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-xs font-semibold text-white mb-1">Risky things wait for you</h4>
-                <p className="text-[11px] text-gray-400 leading-relaxed">
+                <h4 className="text-xs font-semibold ea-ink mb-1">Risky things wait for you</h4>
+                <p className="text-[11px] ea-muted leading-relaxed">
                   File edits, commands, and tool calls with real consequences sit in Approvals until
                   you say yes.
                 </p>
@@ -171,8 +170,8 @@ export const InstructionsPage: React.FC = () => {
             <div className="flex gap-3">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-xs font-semibold text-white mb-1">You can always say no</h4>
-                <p className="text-[11px] text-gray-400 leading-relaxed">
+                <h4 className="text-xs font-semibold ea-ink mb-1">You can always say no</h4>
+                <p className="text-[11px] ea-muted leading-relaxed">
                   Rejecting an approval blocks the action and logs why — nothing is forced through.
                 </p>
               </div>
@@ -183,8 +182,8 @@ export const InstructionsPage: React.FC = () => {
 
       {/* Sidebar Guide */}
       <div>
-        <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-          <Compass className="w-4 h-4 text-cyan-400" /> What's in the Sidebar
+        <h2 className="text-sm font-bold ea-ink mb-4 flex items-center gap-2">
+          <Compass className="w-4 h-4 text-[var(--ea-accent)]" /> What's in the Sidebar
         </h2>
         <GlassCard padding="none">
           <div className="divide-y divide-white/[0.06]">
@@ -194,16 +193,16 @@ export const InstructionsPage: React.FC = () => {
                 <button
                   key={item.id}
                   onClick={() => setActivePage(item.id)}
-                  className="w-full flex items-start gap-3 p-4 text-left hover:bg-white/[0.03] transition-colors group"
+                  className="w-full flex items-start gap-3 p-4 text-left hover:bg-[var(--ea-surface-2)] transition-colors group"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center shrink-0 group-hover:border-cyan-500/30">
-                    <Icon className="w-4 h-4 text-gray-400 group-hover:text-cyan-400" />
+                  <div className="w-8 h-8 rounded-lg bg-[var(--ea-surface-3)] border border-[var(--ea-line)] flex items-center justify-center shrink-0 group-hover:border-[var(--ea-line)]">
+                    <Icon className="w-4 h-4 ea-muted group-hover:text-[var(--ea-accent)]" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h4 className="text-xs font-semibold text-white mb-0.5">{item.label}</h4>
-                    <p className="text-[11px] text-gray-400 leading-relaxed">{item.desc}</p>
+                    <h4 className="text-xs font-semibold ea-ink mb-0.5">{item.label}</h4>
+                    <p className="text-[11px] ea-muted leading-relaxed">{item.desc}</p>
                   </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-cyan-400 shrink-0 mt-1 transition-colors" />
+                  <ArrowRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-[var(--ea-accent)] shrink-0 mt-1 transition-colors" />
                 </button>
               );
             })}
@@ -213,8 +212,8 @@ export const InstructionsPage: React.FC = () => {
 
       {/* FAQ */}
       <div>
-        <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-          <BookOpen className="w-4 h-4 text-cyan-400" /> Common Questions
+        <h2 className="text-sm font-bold ea-ink mb-4 flex items-center gap-2">
+          <BookOpen className="w-4 h-4 text-[var(--ea-accent)]" /> Common Questions
         </h2>
         <div className="space-y-2">
           {faqs.map((f, i) => (
@@ -223,12 +222,12 @@ export const InstructionsPage: React.FC = () => {
                 onClick={() => setOpenFaq(openFaq === i ? null : i)}
                 className="w-full flex items-center justify-between gap-3 p-4 text-left"
               >
-                <span className="text-xs font-semibold text-white">{f.q}</span>
-                <ChevronDown className={`w-4 h-4 text-gray-500 shrink-0 transition-transform ${openFaq === i ? 'rotate-180' : ''}`} />
+                <span className="text-xs font-semibold ea-ink">{f.q}</span>
+                <ChevronDown className={`w-4 h-4 ea-faint shrink-0 transition-transform ${openFaq === i ? 'rotate-180' : ''}`} />
               </button>
               {openFaq === i && (
                 <div className="px-4 pb-4 -mt-1">
-                  <p className="text-[11px] text-gray-400 leading-relaxed">{f.a}</p>
+                  <p className="text-[11px] ea-muted leading-relaxed">{f.a}</p>
                 </div>
               )}
             </GlassCard>

@@ -46,7 +46,7 @@ export const SettingsPage: React.FC = () => {
       {/* Left 2 Cols: Main Settings Sections */}
       <div className="lg:col-span-2 space-y-6">
         {/* Top filter tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-white/10">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-[var(--ea-line)]">
           {[
             { id: 'all' as const, label: 'All Settings', icon: Settings },
             { id: 'models' as const, label: 'AI Models & Routing', icon: Cpu },
@@ -61,11 +61,11 @@ export const SettingsPage: React.FC = () => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium shrink-0 transition-all ${
                   activeTab === tab.id
-                    ? 'bg-cyan-600 text-white font-semibold shadow-md'
-                    : 'bg-white/[0.03] hover:bg-white/[0.08] text-gray-400'
+                    ? 'bg-[var(--ea-accent)] text-[var(--ea-accent-ink)] font-semibold shadow-md'
+                    : 'bg-[var(--ea-surface-2)] hover:bg-[var(--ea-surface-3)] ea-muted'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5 text-cyan-400" />
+                <Icon className="w-3.5 h-3.5 text-[var(--ea-accent)]" />
                 <span>{tab.label}</span>
               </button>
             );
@@ -75,52 +75,52 @@ export const SettingsPage: React.FC = () => {
         {/* Live Provider Status (real backend, secret-safe booleans only) */}
         {(activeTab === 'all' || activeTab === 'models') && providers && (
           <GlassCard>
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
-              <span className="text-sm font-bold text-white flex items-center gap-2">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--ea-line)]">
+              <span className="text-sm font-bold ea-ink flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${providers.readyProviders > 0 ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500'}`} />
                 Provider Status (Live)
               </span>
-              <span className="text-[11px] font-mono text-gray-400">{providers.readyProviders}/{providers.totalProviders} ready</span>
+              <span className="text-[11px] font-mono ea-muted">{providers.readyProviders}/{providers.totalProviders} ready</span>
             </div>
             <div className="flex flex-wrap gap-2 pt-3">
               {Object.entries(providers.capabilityModes).map(([cap, mode]) => (
-                <span key={cap} className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${mode === 'real' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' : 'bg-white/[0.04] text-gray-400 border-white/10'}`}>
+                <span key={cap} className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${mode === 'real' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' : 'bg-[var(--ea-surface-2)] ea-muted border-[var(--ea-line)]'}`}>
                   {cap}: {mode}
                 </span>
               ))}
-              {providers.fallbackEnabled && <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">fallback on</span>}
+              {providers.fallbackEnabled && <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[var(--ea-accent-soft)] text-[var(--ea-accent)] border border-[var(--ea-line)]">fallback on</span>}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3">
               {providers.providers.map(p => (
-                <div key={p.provider} className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/5">
-                  <span className="text-xs font-medium text-gray-200 capitalize">{p.provider}</span>
-                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${p.ready ? 'bg-emerald-500/15 text-emerald-300' : 'bg-gray-500/15 text-gray-400'}`}>
+                <div key={p.provider} className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--ea-surface-2)] border border-[var(--ea-line)]">
+                  <span className="text-xs font-medium ea-soft capitalize">{p.provider}</span>
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${p.ready ? 'bg-emerald-500/15 text-emerald-300' : 'bg-gray-500/15 ea-muted'}`}>
                     {p.ready ? 'key set ✓' : 'no key'}
                   </span>
                 </div>
               ))}
             </div>
-            <p className="text-[11px] text-gray-500 pt-3">Readiness is boolean-only — no secret values are ever shown or stored.</p>
+            <p className="text-[11px] ea-faint pt-3">Readiness is boolean-only — no secret values are ever shown or stored.</p>
           </GlassCard>
         )}
 
         {/* 1. Workspace Profile Card */}
         {(activeTab === 'all') && (
           <GlassCard>
-            <div className="flex items-center justify-between pb-4 border-b border-white/10">
-              <span className="text-sm font-bold text-white flex items-center gap-2">
-                <Settings className="w-4 h-4 text-cyan-400" /> Workspace Profile & Storage
+            <div className="flex items-center justify-between pb-4 border-b border-[var(--ea-line)]">
+              <span className="text-sm font-bold ea-ink flex items-center gap-2">
+                <Settings className="w-4 h-4 text-[var(--ea-accent)]" /> Workspace Profile & Storage
               </span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleAction('Exported workspace configuration package')}
-                  className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 font-mono"
+                  className="px-3 py-1 rounded-lg bg-[var(--ea-surface-3)] hover:bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-xs ea-soft font-mono"
                 >
                   Export Config
                 </button>
                 <button
                   onClick={() => handleAction('Workspace settings saved')}
-                  className="px-3 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold"
+                  className="px-3 py-1 rounded-lg bg-[var(--ea-accent)] hover:brightness-110 text-[var(--ea-accent-ink)] text-xs font-semibold"
                 >
                   Save Changes
                 </button>
@@ -129,36 +129,36 @@ export const SettingsPage: React.FC = () => {
 
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
               <div>
-                <label className="text-gray-400 block mb-1">Workspace Name</label>
+                <label className="ea-muted block mb-1">Workspace Name</label>
                 <input
                   type="text"
                   defaultValue="EvolveAgent AI Core Workspace"
-                  className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2 text-white font-sans focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-black/50 border border-[var(--ea-line-strong)] rounded-xl px-3 py-2 ea-ink font-sans focus:outline-none focus:border-cyan-500"
                 />
               </div>
               <div>
-                <label className="text-gray-400 block mb-1">Organization Owner</label>
+                <label className="ea-muted block mb-1">Organization Owner</label>
                 <input
                   type="text"
                   defaultValue="EvolveAgent Systems Inc."
-                  className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2 text-white font-sans focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-black/50 border border-[var(--ea-line-strong)] rounded-xl px-3 py-2 ea-ink font-sans focus:outline-none focus:border-cyan-500"
                 />
               </div>
               <div>
-                <label className="text-gray-400 block mb-1">Default Operating Mode</label>
-                <select className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2 text-cyan-300 focus:outline-none">
+                <label className="ea-muted block mb-1">Default Operating Mode</label>
+                <select className="w-full bg-black/50 border border-[var(--ea-line-strong)] rounded-xl px-3 py-2 text-[var(--ea-accent)] focus:outline-none">
                   <option>Planning-First & Mock-Safe</option>
                   <option>High-Trust Autonomous</option>
                   <option>Read-Only Inspector</option>
                 </select>
               </div>
               <div>
-                <label className="text-gray-400 block mb-1">Storage & DB Adapter</label>
+                <label className="ea-muted block mb-1">Storage & DB Adapter</label>
                 <input
                   type="text"
                   disabled
                   value="Local JSON + Vector SQLite (Port 3000)"
-                  className="w-full bg-black/30 border border-white/5 rounded-xl px-3 py-2 text-gray-400 cursor-not-allowed"
+                  className="w-full bg-[var(--ea-surface-3)] border border-[var(--ea-line)] rounded-xl px-3 py-2 ea-muted cursor-not-allowed"
                 />
               </div>
             </div>
@@ -168,22 +168,22 @@ export const SettingsPage: React.FC = () => {
         {/* 2. AI Model Settings & Model Routing */}
         {(activeTab === 'all' || activeTab === 'models') && (
           <GlassCard glow="purple">
-            <div className="flex items-center justify-between pb-4 border-b border-white/10">
-              <span className="text-sm font-bold text-white flex items-center gap-2">
-                <Cpu className="w-4 h-4 text-cyan-400" /> AI Model Routing & Fallback Engines
+            <div className="flex items-center justify-between pb-4 border-b border-[var(--ea-line)]">
+              <span className="text-sm font-bold ea-ink flex items-center gap-2">
+                <Cpu className="w-4 h-4 text-[var(--ea-accent)]" /> AI Model Routing & Fallback Engines
               </span>
               <span className="text-xs font-mono text-emerald-400 font-semibold">● ACTIVE ROUTER</span>
             </div>
 
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono mb-6">
-              <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-2">
-                <div className="text-gray-400 text-[10px] uppercase">Primary Reasoning Engine</div>
-                <div className="text-sm font-bold text-white">Gemini 2.5 Pro / GPT-4o</div>
-                <div className="text-[11px] text-cyan-300">Used for Master Orchestration & Code Synthesis</div>
+              <div className="p-3.5 rounded-2xl bg-[var(--ea-surface-2)] border border-[var(--ea-line)] space-y-2">
+                <div className="ea-muted text-[10px] uppercase">Primary Reasoning Engine</div>
+                <div className="text-sm font-bold ea-ink">Gemini 2.5 Pro / GPT-4o</div>
+                <div className="text-[11px] text-[var(--ea-accent)]">Used for Master Orchestration & Code Synthesis</div>
               </div>
-              <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-2">
-                <div className="text-gray-400 text-[10px] uppercase">Secondary Backup Engine</div>
-                <div className="text-sm font-bold text-white">Gemini Flash / Claude 3.5 Sonnet</div>
+              <div className="p-3.5 rounded-2xl bg-[var(--ea-surface-2)] border border-[var(--ea-line)] space-y-2">
+                <div className="ea-muted text-[10px] uppercase">Secondary Backup Engine</div>
+                <div className="text-sm font-bold ea-ink">Gemini Flash / Claude 3.5 Sonnet</div>
                 <div className="text-[11px] text-blue-300">Used for Vector Indexing & Memory Summarization</div>
               </div>
             </div>
@@ -194,18 +194,18 @@ export const SettingsPage: React.FC = () => {
                 { title: 'Automated Fallback Engine', desc: 'Switch instantly to backup provider if rate limits or latency spikes occur.', state: fallbackModel, toggle: () => setFallbackModel(!fallbackModel) },
                 { title: 'Judge Agent Quality Verification', desc: 'Run automated evaluation prompt on every generated component before emitting.', state: qualityJudge, toggle: () => setQualityJudge(!qualityJudge) },
               ].map((item, idx) => (
-                <div key={idx} onClick={item.toggle} className="cursor-pointer p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 flex items-center justify-between gap-3 transition-colors">
+                <div key={idx} onClick={item.toggle} className="cursor-pointer p-3 rounded-xl bg-[var(--ea-surface-2)] hover:bg-[var(--ea-surface-3)] border border-[var(--ea-line)] flex items-center justify-between gap-3 transition-colors">
                   <div>
-                    <div className="text-xs font-semibold text-white">{item.title}</div>
-                    <div className="text-[10px] text-gray-400 mt-0.5">{item.desc}</div>
+                    <div className="text-xs font-semibold ea-ink">{item.title}</div>
+                    <div className="text-[10px] ea-muted mt-0.5">{item.desc}</div>
                   </div>
                   <div className="shrink-0">
                     {item.state ? (
-                      <div className="w-9 h-5 rounded-full bg-cyan-600 flex items-center justify-end px-1 shadow-inner">
+                      <div className="w-9 h-5 rounded-full bg-[var(--ea-accent)] flex items-center justify-end px-1 shadow-inner">
                         <div className="w-3.5 h-3.5 rounded-full bg-white shadow" />
                       </div>
                     ) : (
-                      <div className="w-9 h-5 rounded-full bg-white/10 flex items-center justify-start px-1 shadow-inner">
+                      <div className="w-9 h-5 rounded-full bg-[var(--ea-surface-3)] flex items-center justify-start px-1 shadow-inner">
                         <div className="w-3.5 h-3.5 rounded-full bg-gray-400 shadow" />
                       </div>
                     )}
@@ -219,8 +219,8 @@ export const SettingsPage: React.FC = () => {
         {/* 3. Safety Defaults & Governance */}
         {(activeTab === 'all' || activeTab === 'safety') && (
           <GlassCard glow="blue">
-            <div className="flex items-center justify-between pb-4 border-b border-white/10">
-              <span className="text-sm font-bold text-white flex items-center gap-2">
+            <div className="flex items-center justify-between pb-4 border-b border-[var(--ea-line)]">
+              <span className="text-sm font-bold ea-ink flex items-center gap-2">
                 <Shield className="w-4 h-4 text-blue-400" /> Safety Defaults & Global Sandbox Rules
               </span>
               <span className="text-xs font-mono text-emerald-400">Mock-Safe</span>
@@ -235,18 +235,18 @@ export const SettingsPage: React.FC = () => {
               ].map((item) => {
                 const isChecked = safetySettings[item.key];
                 return (
-                  <div key={item.key} onClick={() => toggleSafetySetting(item.key)} className="cursor-pointer p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 flex items-center justify-between gap-3 transition-colors">
+                  <div key={item.key} onClick={() => toggleSafetySetting(item.key)} className="cursor-pointer p-3 rounded-xl bg-[var(--ea-surface-2)] hover:bg-[var(--ea-surface-3)] border border-[var(--ea-line)] flex items-center justify-between gap-3 transition-colors">
                     <div>
-                      <div className="text-xs font-semibold text-white">{item.title}</div>
-                      <div className="text-[10px] text-gray-400 mt-0.5">{item.desc}</div>
+                      <div className="text-xs font-semibold ea-ink">{item.title}</div>
+                      <div className="text-[10px] ea-muted mt-0.5">{item.desc}</div>
                     </div>
                     <div className="shrink-0">
                       {isChecked ? (
-                        <div className="w-9 h-5 rounded-full bg-cyan-600 flex items-center justify-end px-1 shadow-inner">
+                        <div className="w-9 h-5 rounded-full bg-[var(--ea-accent)] flex items-center justify-end px-1 shadow-inner">
                           <div className="w-3.5 h-3.5 rounded-full bg-white shadow" />
                         </div>
                       ) : (
-                        <div className="w-9 h-5 rounded-full bg-white/10 flex items-center justify-start px-1 shadow-inner">
+                        <div className="w-9 h-5 rounded-full bg-[var(--ea-surface-3)] flex items-center justify-start px-1 shadow-inner">
                           <div className="w-3.5 h-3.5 rounded-full bg-gray-400 shadow" />
                         </div>
                       )}
@@ -261,12 +261,12 @@ export const SettingsPage: React.FC = () => {
         {/* 4. Project Brain & Memory Settings */}
         {(activeTab === 'all' || activeTab === 'memory') && (
           <GlassCard>
-            <div className="flex items-center justify-between pb-4 border-b border-white/10">
-              <span className="text-sm font-bold text-white flex items-center gap-2">
+            <div className="flex items-center justify-between pb-4 border-b border-[var(--ea-line)]">
+              <span className="text-sm font-bold ea-ink flex items-center gap-2">
                 <Brain className="w-4 h-4 text-sky-400" /> Project Brain & Vector Indexing
               </span>
               <div className="flex items-center gap-2 font-mono text-xs">
-                <button onClick={() => handleAction('Rebuilding vector index from /src files...')} className="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-cyan-300">
+                <button onClick={() => handleAction('Rebuilding vector index from /src files...')} className="px-2.5 py-1 rounded bg-[var(--ea-surface-3)] hover:bg-[var(--ea-surface-3)] text-[var(--ea-accent)]">
                   Rebuild Index
                 </button>
                 <button onClick={() => handleAction('Cleared cached transient memories')} className="px-2.5 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-300">
@@ -276,27 +276,27 @@ export const SettingsPage: React.FC = () => {
             </div>
 
             <div className="mt-4 space-y-3">
-              <div onClick={() => setAutoSaveDecisions(!autoSaveDecisions)} className="cursor-pointer p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 flex items-center justify-between gap-3 transition-colors">
+              <div onClick={() => setAutoSaveDecisions(!autoSaveDecisions)} className="cursor-pointer p-3 rounded-xl bg-[var(--ea-surface-2)] hover:bg-[var(--ea-surface-3)] border border-[var(--ea-line)] flex items-center justify-between gap-3 transition-colors">
                 <div>
-                  <div className="text-xs font-semibold text-white">Auto-Save Architectural Decisions (ADRs)</div>
-                  <div className="text-[10px] text-gray-400 mt-0.5">Automatically extract token hex rules and layout decisions from chat into Project Brain.</div>
+                  <div className="text-xs font-semibold ea-ink">Auto-Save Architectural Decisions (ADRs)</div>
+                  <div className="text-[10px] ea-muted mt-0.5">Automatically extract token hex rules and layout decisions from chat into Project Brain.</div>
                 </div>
                 <div className="shrink-0">
                   {autoSaveDecisions ? (
-                    <div className="w-9 h-5 rounded-full bg-cyan-600 flex items-center justify-end px-1 shadow-inner">
+                    <div className="w-9 h-5 rounded-full bg-[var(--ea-accent)] flex items-center justify-end px-1 shadow-inner">
                       <div className="w-3.5 h-3.5 rounded-full bg-white shadow" />
                     </div>
                   ) : (
-                    <div className="w-9 h-5 rounded-full bg-white/10 flex items-center justify-start px-1 shadow-inner">
+                    <div className="w-9 h-5 rounded-full bg-[var(--ea-surface-3)] flex items-center justify-start px-1 shadow-inner">
                       <div className="w-3.5 h-3.5 rounded-full bg-gray-400 shadow" />
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between text-xs font-mono">
-                <span className="text-gray-400">Vector Index Sync Frequency:</span>
-                <select className="bg-black/50 border border-white/10 rounded px-2 py-1 text-cyan-300">
+              <div className="p-3 rounded-xl bg-[var(--ea-surface-2)] border border-[var(--ea-line)] flex items-center justify-between text-xs font-mono">
+                <span className="ea-muted">Vector Index Sync Frequency:</span>
+                <select className="bg-black/50 border border-[var(--ea-line)] rounded px-2 py-1 text-[var(--ea-accent)]">
                   <option>Every 2 minutes (Real-Time)</option>
                   <option>Every 15 minutes</option>
                   <option>Manual Trigger Only</option>
@@ -309,16 +309,16 @@ export const SettingsPage: React.FC = () => {
         {/* 5. Appearance & Themes */}
         {(activeTab === 'all' || activeTab === 'appearance') && (
           <GlassCard>
-            <div className="flex items-center justify-between pb-4 border-b border-white/10">
-              <span className="text-sm font-bold text-white flex items-center gap-2">
-                <Palette className="w-4 h-4 text-cyan-400" /> Appearance & Theme Tokens
+            <div className="flex items-center justify-between pb-4 border-b border-[var(--ea-line)]">
+              <span className="text-sm font-bold ea-ink flex items-center gap-2">
+                <Palette className="w-4 h-4 text-[var(--ea-accent)]" /> Appearance & Theme Tokens
               </span>
-              <span className="text-xs font-mono text-gray-400">Dark Graphite Default</span>
+              <span className="text-xs font-mono ea-muted">Dark Graphite Default</span>
             </div>
 
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
-                { id: 'dark-graphite' as const, title: 'Dark Graphite (Default)', desc: '#0a0a0a background + #171717 charcoal glass cards.', color: 'border-cyan-500 bg-cyan-500/10' },
+                { id: 'dark-graphite' as const, title: 'Dark Graphite (Default)', desc: '#0a0a0a background + #171717 charcoal glass cards.', color: 'border-cyan-500 bg-[var(--ea-accent-soft)]' },
                 { id: 'charcoal-blue' as const, title: 'Charcoal Royal Blue', desc: '#0d0f17 background + electric blue glow accents.', color: 'border-blue-500/30 bg-blue-500/5' },
                 { id: 'cosmic-purple' as const, title: 'Cosmic Violet Slate', desc: '#120f1c background + deep violet gradients.', color: 'border-sky-500/30 bg-sky-500/5' },
               ].map(th => (
@@ -326,14 +326,14 @@ export const SettingsPage: React.FC = () => {
                   key={th.id}
                   onClick={() => { setSelectedTheme(th.id); handleAction(`Applied theme: ${th.title}`); }}
                   className={`cursor-pointer p-4 rounded-2xl border transition-all ${
-                    selectedTheme === th.id ? th.color + ' font-semibold shadow-lg' : 'border-white/5 hover:border-white/15 bg-white/[0.02]'
+                    selectedTheme === th.id ? th.color + ' font-semibold shadow-lg' : 'border-[var(--ea-line)] hover:border-[var(--ea-line-strong)] bg-[var(--ea-surface-2)]'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-white">{th.title}</span>
-                    {selectedTheme === th.id && <CheckCircle2 className="w-4 h-4 text-cyan-400" />}
+                    <span className="text-xs font-bold ea-ink">{th.title}</span>
+                    {selectedTheme === th.id && <CheckCircle2 className="w-4 h-4 text-[var(--ea-accent)]" />}
                   </div>
-                  <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">{th.desc}</p>
+                  <p className="text-[11px] ea-muted mt-1 leading-relaxed">{th.desc}</p>
                 </div>
               ))}
             </div>
@@ -344,43 +344,43 @@ export const SettingsPage: React.FC = () => {
       {/* Right 1 Col: Sticky System Summary Panel */}
       <div className="space-y-4">
         <GlassCard className="sticky top-20 space-y-4 font-mono text-xs">
-          <div className="flex items-center justify-between pb-3 border-b border-white/10 font-sans">
-            <span className="font-bold text-white flex items-center gap-2">
-              <Terminal className="w-4 h-4 text-cyan-400" /> System Summary
+          <div className="flex items-center justify-between pb-3 border-b border-[var(--ea-line)] font-sans">
+            <span className="font-bold ea-ink flex items-center gap-2">
+              <Terminal className="w-4 h-4 text-[var(--ea-accent)]" /> System Summary
             </span>
             <span className="text-emerald-400 font-mono">● LIVE</span>
           </div>
 
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">OS Version:</span>
-              <strong className="text-white">vNext 2.4.0</strong>
+              <span className="ea-muted">OS Version:</span>
+              <strong className="ea-ink">vNext 2.4.0</strong>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">Frontend Stack:</span>
-              <strong className="text-cyan-300">React 19 + Vite + Tailwind v4</strong>
+              <span className="ea-muted">Frontend Stack:</span>
+              <strong className="text-[var(--ea-accent)]">React 19 + Vite + Tailwind v4</strong>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">Backend Engine:</span>
+              <span className="ea-muted">Backend Engine:</span>
               <strong className="text-blue-300">Express / FastAPI Proxy</strong>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">Storage Adapter:</span>
-              <strong className="text-gray-200">Local JSON + Vector DB</strong>
+              <span className="ea-muted">Storage Adapter:</span>
+              <strong className="ea-soft">Local JSON + Vector DB</strong>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">Governance Status:</span>
+              <span className="ea-muted">Governance Status:</span>
               <strong className="text-emerald-400">Active (Mock-Safe)</strong>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">System Health Score:</span>
+              <span className="ea-muted">System Health Score:</span>
               <strong className="text-emerald-400">98% A+ Compliance</strong>
             </div>
           </div>
 
           {/* Setup Checklist visual card */}
-          <div className="pt-3 border-t border-white/10 space-y-2 font-sans">
-            <span className="text-[11px] font-mono text-gray-400 uppercase block">Recommended Setup Checklist</span>
+          <div className="pt-3 border-t border-[var(--ea-line)] space-y-2 font-sans">
+            <span className="text-[11px] font-mono ea-muted uppercase block">Recommended Setup Checklist</span>
             {[
               { label: 'Set app name in metadata.json', done: true },
               { label: 'Configure Tailwind dark graphite tokens', done: true },
@@ -390,15 +390,15 @@ export const SettingsPage: React.FC = () => {
             ].map((chk, i) => (
               <div key={i} className="flex items-center gap-2 text-xs">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span className="text-gray-300 truncate">{chk.label}</span>
+                <span className="ea-soft truncate">{chk.label}</span>
               </div>
             ))}
           </div>
 
-          <div className="pt-3 border-t border-white/10">
+          <div className="pt-3 border-t border-[var(--ea-line)]">
             <button
               onClick={() => handleAction('System diagnostics check passed!')}
-              className="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-sans font-semibold text-xs transition-colors shadow-lg"
+              className="w-full py-2.5 rounded-xl bg-[var(--ea-accent)] hover:brightness-110 text-[var(--ea-accent-ink)] font-sans font-semibold text-xs transition-colors shadow-lg"
             >
               Run Full Diagnostic Suite
             </button>

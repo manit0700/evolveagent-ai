@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { 
-  PlayCircle, 
-  PauseCircle, 
-  StopCircle, 
-  CheckCircle2, 
-  Clock, 
-  ShieldAlert, 
-  Edit3, 
-  Check, 
-  Sparkles,
-  ArrowRight
+import {
+  PlayCircle,
+  PauseCircle,
+  StopCircle,
+  CheckCircle2,
+  Clock,
+  ShieldAlert,
+  Edit3,
+  Check,
+  ArrowRight,
+  Activity,
 } from 'lucide-react';
 
 export const LiveWorkingCard: React.FC = () => {
@@ -42,61 +42,50 @@ export const LiveWorkingCard: React.FC = () => {
 
   if (isStopped) {
     return (
-      <div className="rounded-xl border border-white/10 bg-[#171717]/90 p-4 text-gray-400 text-sm flex items-center justify-between">
+      <div className="ea-card p-4 ea-muted text-sm flex items-center justify-between">
         <span className="flex items-center gap-2">
-          <StopCircle className="w-4 h-4 text-rose-400" /> Orchestration stopped by user.
+          <StopCircle className="w-4 h-4 text-[var(--ea-danger)]" /> Orchestration stopped by user.
         </span>
-        <button 
-          onClick={() => setIsStopped(false)} 
-          className="text-xs text-cyan-400 hover:text-cyan-300 underline"
+        <button
+          onClick={() => setIsStopped(false)}
+          className="text-xs text-[var(--ea-accent)] hover:underline"
         >
-          Restart Pipeline
+          Restart pipeline
         </button>
       </div>
     );
   }
 
   return (
-    <div className="mt-3 rounded-2xl border border-cyan-500/30 bg-[#141418] p-5 shadow-2xl relative overflow-hidden">
-      {/* Background ambient glow */}
-      <div className="absolute -top-10 -right-10 w-40 h-40 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10 relative z-10">
+    <div className="mt-3 ea-card p-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--ea-line)]">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-            <Sparkles className={`w-4 h-4 text-white ${isPaused ? '' : 'animate-spin'}`} style={{ animationDuration: '4s' }} />
+          <div className="w-8 h-8 rounded-[var(--ea-radius-sm)] bg-[var(--ea-accent-soft)] text-[var(--ea-accent)] flex items-center justify-center">
+            <Activity className={`w-4 h-4 ${isPaused ? '' : 'animate-pulse'}`} />
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-white flex items-center gap-2">
-              EvolveAgent is working…
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                {isPaused ? 'PAUSED' : 'LIVE ORCHESTRATION'}
+            <h4 className="text-sm font-semibold ea-ink flex items-center gap-2">
+              EvolveAgent is working
+              <span className="ea-chip ea-chip--accent">
+                {isPaused ? 'Paused' : 'Live'}
               </span>
             </h4>
-            <p className="text-xs text-gray-400">Mission: {mission.title}</p>
+            <p className="text-xs ea-muted">Mission: {mission.title}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5 self-end sm:self-auto">
-          <button
-            onClick={handlePause}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 transition-colors"
-          >
-            {isPaused ? <PlayCircle className="w-3.5 h-3.5 text-emerald-400" /> : <PauseCircle className="w-3.5 h-3.5 text-amber-400" />}
+          <button onClick={handlePause} className="ea-btn text-xs py-1.5 px-2.5">
+            {isPaused ? <PlayCircle className="w-3.5 h-3.5 text-[var(--ea-success)]" /> : <PauseCircle className="w-3.5 h-3.5 text-[var(--ea-warn)]" />}
             <span>{isPaused ? 'Resume' : 'Pause'}</span>
           </button>
-          <button
-            onClick={() => setIsEditing(prev => !prev)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 transition-colors"
-          >
-            <Edit3 className="w-3.5 h-3.5 text-cyan-400" />
+          <button onClick={() => setIsEditing(prev => !prev)} className="ea-btn text-xs py-1.5 px-2.5">
+            <Edit3 className="w-3.5 h-3.5" />
             <span>Edit</span>
           </button>
           <button
             onClick={handleStop}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-xs text-rose-300 transition-colors"
+            className="ea-btn text-xs py-1.5 px-2.5 bg-[var(--ea-danger-soft)] text-[var(--ea-danger)] border-transparent"
           >
             <StopCircle className="w-3.5 h-3.5" />
             <span>Stop</span>
@@ -104,158 +93,119 @@ export const LiveWorkingCard: React.FC = () => {
         </div>
       </div>
 
-      {/* Edit Instructions Drawer */}
       {isEditing && (
-        <form onSubmit={handleEditSubmit} className="mt-4 p-3 rounded-xl bg-[#1d1d23] border border-cyan-500/30 flex gap-2 animate-fadeIn">
+        <form onSubmit={handleEditSubmit} className="mt-4 p-3 rounded-[var(--ea-radius-sm)] ea-surface-2 border border-[var(--ea-line)] flex gap-2">
           <input
             type="text"
             value={customInstruction}
             onChange={(e) => setCustomInstruction(e.target.value)}
-            placeholder="E.g., Prioritize dark theme contrast over animation speed..."
-            className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+            placeholder="Add a clarifying instruction for the orchestrator…"
+            className="ea-input flex-1 py-1.5 text-xs"
             autoFocus
           />
-          <button
-            type="submit"
-            className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium transition-colors"
-          >
+          <button type="submit" className="ea-btn ea-btn--primary text-xs">
             Send
           </button>
         </form>
       )}
 
-      {/* Current action & active agent status rows */}
-      <div className="mt-4 space-y-2.5 relative z-10">
-        <div className="text-[11px] font-mono text-gray-400 uppercase tracking-wider">Active Agent Stack</div>
-        
+      <div className="mt-4 space-y-2.5">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] ea-faint">Active agent stack</div>
         <div className="grid grid-cols-1 gap-2">
-          {/* Master Orchestrator */}
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
-            <div className="flex items-center gap-2.5">
-              <span className="text-base">🤖</span>
-              <div>
-                <div className="text-xs font-medium text-white">Master Orchestrator</div>
-                <div className="text-[11px] text-gray-400">Delegating sub-tasks across 4 worker agents</div>
-              </div>
-            </div>
-            <span className="flex items-center gap-1 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-              <CheckCircle2 className="w-3 h-3" /> Active
-            </span>
-          </div>
-
-          {/* UI Design Agent */}
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-cyan-500/5 border border-cyan-500/20">
-            <div className="flex items-center gap-2.5">
-              <span className="text-base">🎨</span>
-              <div>
-                <div className="text-xs font-medium text-cyan-200">UI Design Agent</div>
-                <div className="text-[11px] text-cyan-300/80">Synthesizing responsive glassmorphism cards</div>
-              </div>
-            </div>
-            <span className="flex items-center gap-1 text-[11px] font-mono text-cyan-300 bg-cyan-500/20 px-2 py-0.5 rounded-full border border-cyan-500/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" /> Running
-            </span>
-          </div>
-
-          {/* Memory Agent */}
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
-            <div className="flex items-center gap-2.5">
-              <span className="text-base">🧠</span>
-              <div>
-                <div className="text-xs font-medium text-white">Memory Agent</div>
-                <div className="text-[11px] text-gray-400">Indexing 19 recent file edits into Project Brain</div>
-              </div>
-            </div>
-            <span className="flex items-center gap-1 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-              <CheckCircle2 className="w-3 h-3" /> Active
-            </span>
-          </div>
-
-          {/* Governance Agent */}
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
-            <div className="flex items-center gap-2.5">
-              <span className="text-base">🛡️</span>
-              <div>
-                <div className="text-xs font-medium text-white">Governance Agent</div>
-                <div className="text-[11px] text-gray-400">Auditing tool calls for Mock-Safe sandboxing</div>
-              </div>
-            </div>
-            <span className="flex items-center gap-1 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-              <CheckCircle2 className="w-3 h-3" /> Active
-            </span>
-          </div>
-
-          {/* Implementation Agent */}
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-amber-500/5 border border-amber-500/20">
-            <div className="flex items-center gap-2.5">
-              <span className="text-base">⚡</span>
-              <div>
-                <div className="text-xs font-medium text-amber-200">Implementation Agent</div>
-                <div className="text-[11px] text-amber-300/80">
-                  {pendingApproval ? `Waiting approval on: ${pendingApproval.toolName}` : 'All requested tool calls approved'}
+          {[
+            { emoji: '🤖', name: 'Master Orchestrator', detail: 'Delegating sub-tasks across 4 worker agents', tone: 'ok' as const },
+            { emoji: '🎨', name: 'UI Design Agent', detail: 'Drafting cleaner layout and spacing proposals', tone: 'run' as const },
+            { emoji: '🧠', name: 'Memory Agent', detail: 'Indexing recent file edits into Project Brain', tone: 'ok' as const },
+            { emoji: '🛡️', name: 'Governance Agent', detail: 'Auditing tool calls for mock-safe sandboxing', tone: 'ok' as const },
+            {
+              emoji: '⚡',
+              name: 'Implementation Agent',
+              detail: pendingApproval ? `Waiting approval on: ${pendingApproval.toolName}` : 'All requested tool calls approved',
+              tone: 'wait' as const,
+            },
+          ].map((row) => (
+            <div
+              key={row.name}
+              className={`flex items-center justify-between p-2.5 rounded-[var(--ea-radius-sm)] border ${
+                row.tone === 'run'
+                  ? 'bg-[var(--ea-info-soft)] border-transparent'
+                  : row.tone === 'wait'
+                    ? 'bg-[var(--ea-warn-soft)] border-transparent'
+                    : 'ea-surface-2 border-[var(--ea-line)]'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="text-base">{row.emoji}</span>
+                <div>
+                  <div className="text-xs font-medium ea-ink">{row.name}</div>
+                  <div className="text-[11px] ea-muted">{row.detail}</div>
                 </div>
               </div>
+              <span
+                className={`flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${
+                  row.tone === 'run'
+                    ? 'bg-[var(--ea-info-soft)] text-[var(--ea-info)]'
+                    : row.tone === 'wait'
+                      ? 'bg-[var(--ea-warn-soft)] text-[var(--ea-warn)]'
+                      : 'bg-[var(--ea-success-soft)] text-[var(--ea-success)]'
+                }`}
+              >
+                {row.tone === 'wait' ? <Clock className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
+                {row.tone === 'run' ? 'Running' : row.tone === 'wait' ? 'Waiting' : 'Active'}
+              </span>
             </div>
-            <span className="flex items-center gap-1 text-[11px] font-mono text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/30">
-              <Clock className="w-3 h-3" /> Waiting Approval
-            </span>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* Progress timeline */}
-      <div className="mt-4 pt-3 border-t border-white/10 relative z-10">
+      <div className="mt-4 pt-3 border-t border-[var(--ea-line)]">
         <div className="flex items-center justify-between text-xs mb-1.5">
-          <span className="text-gray-400 font-mono">Pipeline Progress</span>
-          <span className="text-cyan-300 font-mono font-semibold">{mission.progress}%</span>
+          <span className="ea-muted">Pipeline progress</span>
+          <span className="font-semibold text-[var(--ea-accent)]">{mission.progress}%</span>
         </div>
-        <div className="w-full h-2 rounded-full bg-black/60 overflow-hidden p-0.5 border border-white/5">
-          <div 
-            className="h-full rounded-full bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-500 transition-all duration-500"
+        <div className="w-full h-2 rounded-full ea-surface-3 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-[var(--ea-accent)] transition-all duration-500"
             style={{ width: `${mission.progress}%` }}
           />
         </div>
       </div>
 
-      {/* Approval controls & Safety Banner */}
       {pendingApproval ? (
-        <div className="mt-4 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-10">
+        <div className="mt-4 p-3.5 rounded-[var(--ea-radius-sm)] bg-[var(--ea-warn-soft)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-start gap-2.5">
-            <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <ShieldAlert className="w-5 h-5 text-[var(--ea-warn)] shrink-0 mt-0.5" />
             <div>
-              <div className="text-xs font-semibold text-amber-200">{pendingApproval.title}</div>
-              <div className="text-[11px] text-amber-300/80">
-                Action: {pendingApproval.plannedAction}
-              </div>
+              <div className="text-xs font-semibold ea-ink">{pendingApproval.title}</div>
+              <div className="text-[11px] ea-muted">{pendingApproval.plannedAction}</div>
             </div>
           </div>
           <button
             onClick={() => approveRequest(pendingApproval.id)}
-            className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-semibold text-xs transition-all shadow-lg shrink-0 self-start sm:self-auto"
+            className="ea-btn ea-btn--primary shrink-0 self-start sm:self-auto"
           >
-            <Check className="w-4 h-4 stroke-[3]" />
-            <span>Approve Implementation</span>
+            <Check className="w-4 h-4" />
+            <span>Approve</span>
           </button>
         </div>
       ) : (
-        <div className="mt-4 p-3 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between text-xs text-gray-400 relative z-10">
-          <span className="flex items-center gap-2 font-mono">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" /> All high-risk tool operations have been approved.
+        <div className="mt-4 p-3 rounded-[var(--ea-radius-sm)] ea-surface-2 border border-[var(--ea-line)] flex items-center justify-between text-xs ea-muted">
+          <span className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-[var(--ea-success)]" /> High-risk operations are cleared.
           </span>
           <button
             onClick={() => showToast('Advancing orchestration to next checkpoint...', 'info')}
-            className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-medium"
+            className="text-xs text-[var(--ea-accent)] flex items-center gap-1 font-medium"
           >
-            <span>Next Phase</span>
+            <span>Next phase</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
 
-      {/* Safety text */}
-      <div className="mt-3 text-[11px] text-center text-gray-500 font-mono relative z-10 flex items-center justify-center gap-1.5">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-        <span>No real tool action will run until you approve it. Planning-First Mode Active.</span>
+      <div className="mt-3 text-[11px] text-center ea-faint flex items-center justify-center gap-1.5">
+        <span className="w-1.5 h-1.5 rounded-full bg-[var(--ea-success)]" />
+        <span>No real tool action runs until you approve it.</span>
       </div>
     </div>
   );

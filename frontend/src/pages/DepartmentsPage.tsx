@@ -172,17 +172,16 @@ export const DepartmentsPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
-      <div className="rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="ea-hero">
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-3xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold uppercase tracking-wider">
+              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-[var(--ea-accent-soft)] text-[var(--ea-accent)] border border-[var(--ea-line)] font-semibold uppercase tracking-wider">
                 v300 Digital Departments
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Departments</h1>
-            <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
+            <h1 className="text-2xl sm:text-3xl font-extrabold ea-ink tracking-tight">Departments</h1>
+            <p className="text-xs sm:text-sm ea-soft leading-relaxed">
               Real, governed departments with goals, budgets, and measurable outcomes. Runs are planned, not
               auto-executed -- every workflow plan stays subject to the department's own permission level.
             </p>
@@ -191,21 +190,21 @@ export const DepartmentsPage: React.FC = () => {
             <button
               onClick={handleSeed}
               disabled={busy}
-              className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-200 flex items-center gap-2 transition-colors disabled:opacity-50"
+              className="px-4 py-2.5 rounded-xl bg-[var(--ea-surface-3)] hover:bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-xs ea-soft flex items-center gap-2 transition-colors disabled:opacity-50"
             >
               <Sparkles className="w-4 h-4" />
               Seed Templates
             </button>
             <button
               onClick={() => setShowCreate(true)}
-              className="px-4 py-2.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-bold flex items-center gap-2 transition-colors"
+              className="px-4 py-2.5 rounded-xl bg-[var(--ea-accent-soft)] hover:bg-cyan-500/25 border border-[var(--ea-line)] text-[var(--ea-accent)] text-xs font-bold flex items-center gap-2 transition-colors"
             >
               <Plus className="w-4 h-4" />
               New Department
             </button>
             <button
               onClick={refreshList}
-              className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-200 flex items-center justify-center gap-2 transition-colors"
+              className="px-4 py-2.5 rounded-xl bg-[var(--ea-surface-3)] hover:bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-xs ea-soft flex items-center justify-center gap-2 transition-colors"
             >
               <RefreshCw className="w-4 h-4" />
             </button>
@@ -215,20 +214,20 @@ export const DepartmentsPage: React.FC = () => {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <GlassCard className="space-y-1">
-          <div className="text-[10px] uppercase font-mono tracking-wider text-gray-500">Departments</div>
-          <div className="text-2xl font-extrabold text-white">{overview?.totalDepartments ?? '—'}</div>
+          <div className="text-[10px] uppercase font-mono tracking-wider ea-faint">Departments</div>
+          <div className="text-2xl font-extrabold ea-ink">{overview?.totalDepartments ?? '—'}</div>
         </GlassCard>
         <GlassCard className="space-y-1">
-          <div className="text-[10px] uppercase font-mono tracking-wider text-gray-500">Active</div>
-          <div className="text-2xl font-extrabold text-white">{overview?.activeDepartments ?? '—'}</div>
+          <div className="text-[10px] uppercase font-mono tracking-wider ea-faint">Active</div>
+          <div className="text-2xl font-extrabold ea-ink">{overview?.activeDepartments ?? '—'}</div>
         </GlassCard>
         <GlassCard className="space-y-1">
-          <div className="text-[10px] uppercase font-mono tracking-wider text-gray-500">Runs Planned</div>
-          <div className="text-2xl font-extrabold text-white">{overview?.departmentRuns ?? '—'}</div>
+          <div className="text-[10px] uppercase font-mono tracking-wider ea-faint">Runs Planned</div>
+          <div className="text-2xl font-extrabold ea-ink">{overview?.departmentRuns ?? '—'}</div>
         </GlassCard>
         <GlassCard className="space-y-1">
-          <div className="text-[10px] uppercase font-mono tracking-wider text-gray-500">Collaborations</div>
-          <div className="text-2xl font-extrabold text-white">{overview?.collaborationCount ?? '—'}</div>
+          <div className="text-[10px] uppercase font-mono tracking-wider ea-faint">Collaborations</div>
+          <div className="text-2xl font-extrabold ea-ink">{overview?.collaborationCount ?? '—'}</div>
         </GlassCard>
       </div>
 
@@ -236,14 +235,14 @@ export const DepartmentsPage: React.FC = () => {
         <div className="lg:col-span-1 space-y-4">
           <GlassCard className="space-y-0" padding="none">
             <div className="flex items-center gap-2 p-4 border-b border-white/[0.06]">
-              <Building2 className="w-4 h-4 text-cyan-400" />
-              <span className="text-xs font-bold text-white">Departments</span>
+              <Building2 className="w-4 h-4 text-[var(--ea-accent)]" />
+              <span className="text-xs font-bold ea-ink">Departments</span>
             </div>
             <div className="max-h-[600px] overflow-y-auto divide-y divide-white/[0.05]">
               {!departments ? (
-                <div className="p-8 text-center text-xs text-gray-500 font-mono">Loading departments...</div>
+                <div className="p-8 text-center text-xs ea-faint font-mono">Loading departments...</div>
               ) : departments.length === 0 ? (
-                <div className="p-8 text-center text-xs text-gray-500 font-mono">
+                <div className="p-8 text-center text-xs ea-faint font-mono">
                   No departments yet -- seed templates or create one.
                 </div>
               ) : (
@@ -252,15 +251,15 @@ export const DepartmentsPage: React.FC = () => {
                     key={d.departmentId}
                     onClick={() => setSelectedId(d.departmentId)}
                     className={`w-full text-left p-4 transition-colors ${
-                      d.departmentId === selectedId ? 'bg-cyan-500/10' : 'hover:bg-white/[0.02]'
+                      d.departmentId === selectedId ? 'bg-[var(--ea-accent-soft)]' : 'hover:bg-[var(--ea-surface-2)]'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <span className="text-sm font-bold text-white truncate block">{d.name}</span>
-                        <p className="text-[11px] text-gray-500 truncate">{d.managerAgent}</p>
+                        <span className="text-sm font-bold ea-ink truncate block">{d.name}</span>
+                        <p className="text-[11px] ea-faint truncate">{d.managerAgent}</p>
                       </div>
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-gray-400 shrink-0">
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--ea-surface-3)] ea-muted shrink-0">
                         {d.permissionLevel}
                       </span>
                     </div>
@@ -274,30 +273,30 @@ export const DepartmentsPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-4">
           {!selectedDept ? (
             <GlassCard>
-              <div className="py-12 text-center text-xs text-gray-500">Select a department to inspect.</div>
+              <div className="py-12 text-center text-xs ea-faint">Select a department to inspect.</div>
             </GlassCard>
           ) : (
             <>
               <GlassCard className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-sm font-bold text-white">{selectedDept.name}</h2>
-                    <p className="text-xs text-gray-400 mt-1">{selectedDept.description}</p>
+                    <h2 className="text-sm font-bold ea-ink">{selectedDept.name}</h2>
+                    <p className="text-xs ea-muted mt-1">{selectedDept.description}</p>
                   </div>
                   <StatusBadge status={selectedDept.active ? 'connected' : 'disconnected'} size="sm" />
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-[11px] font-mono">
-                  <div className="p-2 rounded-lg bg-black/30 border border-white/[0.06]">
-                    <div className="text-gray-500">Manager</div>
-                    <div className="text-white truncate">{selectedDept.managerAgent}</div>
+                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-white/[0.06]">
+                    <div className="ea-faint">Manager</div>
+                    <div className="ea-ink truncate">{selectedDept.managerAgent}</div>
                   </div>
-                  <div className="p-2 rounded-lg bg-black/30 border border-white/[0.06]">
-                    <div className="text-gray-500">Workers</div>
-                    <div className="text-white truncate">{selectedDept.workerAgents.join(', ') || '—'}</div>
+                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-white/[0.06]">
+                    <div className="ea-faint">Workers</div>
+                    <div className="ea-ink truncate">{selectedDept.workerAgents.join(', ') || '—'}</div>
                   </div>
-                  <div className="p-2 rounded-lg bg-black/30 border border-white/[0.06]">
-                    <div className="text-gray-500">Permission</div>
-                    <div className="text-white truncate">{selectedDept.permissionLevel}</div>
+                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-white/[0.06]">
+                    <div className="ea-faint">Permission</div>
+                    <div className="ea-ink truncate">{selectedDept.permissionLevel}</div>
                   </div>
                 </div>
               </GlassCard>
@@ -306,27 +305,27 @@ export const DepartmentsPage: React.FC = () => {
                 <GlassCard className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Target className="w-4 h-4 text-emerald-400" />
-                    <h3 className="text-xs font-bold text-white uppercase tracking-wider">Goals</h3>
+                    <h3 className="text-xs font-bold ea-ink uppercase tracking-wider">Goals</h3>
                   </div>
                   <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                     {(scorecard?.goals || []).length === 0 && (
-                      <div className="text-[11px] text-gray-500 font-mono py-2 text-center">No goals yet.</div>
+                      <div className="text-[11px] ea-faint font-mono py-2 text-center">No goals yet.</div>
                     )}
                     {(scorecard?.goals || []).map((g) => (
                       <div key={g.goalId} className="p-2 rounded-lg bg-black/20 border border-white/[0.05]">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[11px] text-white truncate">{g.title}</span>
-                          <span className="text-[10px] font-mono text-gray-500 shrink-0">{g.progressPercent}%</span>
+                          <span className="text-[11px] ea-ink truncate">{g.title}</span>
+                          <span className="text-[10px] font-mono ea-faint shrink-0">{g.progressPercent}%</span>
                         </div>
                       </div>
                     ))}
                   </div>
-                  <div className="space-y-2 pt-2 border-t border-white/10">
+                  <div className="space-y-2 pt-2 border-t border-[var(--ea-line)]">
                     <input
                       value={goalTitle}
                       onChange={(e) => setGoalTitle(e.target.value)}
                       placeholder="New goal title"
-                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-gray-500"
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-xs ea-ink placeholder-gray-500"
                     />
                     <button
                       onClick={handleCreateGoal}
@@ -341,20 +340,20 @@ export const DepartmentsPage: React.FC = () => {
                 <GlassCard className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Wallet className="w-4 h-4 text-amber-400" />
-                    <h3 className="text-xs font-bold text-white uppercase tracking-wider">Budget</h3>
+                    <h3 className="text-xs font-bold ea-ink uppercase tracking-wider">Budget</h3>
                   </div>
                   {scorecard?.budget ? (
                     <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
-                      <div className="p-2 rounded-lg bg-black/30 border border-white/[0.06]">
-                        <div className="text-gray-500">Monthly limit</div>
-                        <div className="text-white">${scorecard.budget.monthlyLimit}</div>
+                      <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-white/[0.06]">
+                        <div className="ea-faint">Monthly limit</div>
+                        <div className="ea-ink">${scorecard.budget.monthlyLimit}</div>
                       </div>
-                      <div className="p-2 rounded-lg bg-black/30 border border-white/[0.06]">
-                        <div className="text-gray-500">This month</div>
-                        <div className="text-white">${scorecard.budget.currentMonthCost.toFixed(2)}</div>
+                      <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-white/[0.06]">
+                        <div className="ea-faint">This month</div>
+                        <div className="ea-ink">${scorecard.budget.currentMonthCost.toFixed(2)}</div>
                       </div>
-                      <div className="col-span-2 p-2 rounded-lg bg-black/30 border border-white/[0.06] flex items-center justify-between">
-                        <span className="text-gray-500">Status</span>
+                      <div className="col-span-2 p-2 rounded-lg bg-[var(--ea-surface-3)] border border-white/[0.06] flex items-center justify-between">
+                        <span className="ea-faint">Status</span>
                         <span
                           className={
                             scorecard.budget.budgetStatus === 'over'
@@ -369,16 +368,16 @@ export const DepartmentsPage: React.FC = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="text-[11px] text-gray-500 font-mono py-2 text-center">No budget set.</div>
+                    <div className="text-[11px] ea-faint font-mono py-2 text-center">No budget set.</div>
                   )}
-                  <div className="space-y-2 pt-2 border-t border-white/10">
+                  <div className="space-y-2 pt-2 border-t border-[var(--ea-line)]">
                     <input
                       type="number"
                       min={0}
                       value={budgetInput}
                       onChange={(e) => setBudgetInput(e.target.value)}
                       placeholder="Monthly limit ($)"
-                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-gray-500"
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-xs ea-ink placeholder-gray-500"
                     />
                     <button
                       onClick={handleSetBudget}
@@ -393,10 +392,10 @@ export const DepartmentsPage: React.FC = () => {
 
               <GlassCard className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <PlayCircle className="w-4 h-4 text-cyan-400" />
-                  <h3 className="text-xs font-bold text-white uppercase tracking-wider">Plan a Run</h3>
+                  <PlayCircle className="w-4 h-4 text-[var(--ea-accent)]" />
+                  <h3 className="text-xs font-bold ea-ink uppercase tracking-wider">Plan a Run</h3>
                 </div>
-                <p className="text-[11px] text-gray-500">
+                <p className="text-[11px] ea-faint">
                   Plans a real workflow across this department's manager/worker/reviewer/auditor agents. Never
                   auto-executed -- blocked automatically if the department is over its monthly budget or its
                   permission level is "blocked".
@@ -406,29 +405,29 @@ export const DepartmentsPage: React.FC = () => {
                     value={runTask}
                     onChange={(e) => setRunTask(e.target.value)}
                     placeholder="Task to plan, e.g. 'Draft the Q3 roadmap'"
-                    className="flex-1 px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-gray-500"
+                    className="flex-1 px-3 py-2 rounded-xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-xs ea-ink placeholder-gray-500"
                   />
                   <button
                     onClick={handlePlanRun}
                     disabled={busy || !runTask.trim()}
-                    className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-white font-bold text-xs transition-colors disabled:opacity-50"
+                    className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 ea-ink font-bold text-xs transition-colors disabled:opacity-50"
                   >
                     Plan Run
                   </button>
                 </div>
-                <div className="grid grid-cols-3 gap-2 text-[11px] font-mono pt-2 border-t border-white/10">
-                  <div className="p-2 rounded-lg bg-black/30 border border-white/[0.06]">
-                    <div className="text-gray-500">Total Runs</div>
-                    <div className="text-white">{scorecard?.measurableOutcomes.totalRuns ?? '—'}</div>
+                <div className="grid grid-cols-3 gap-2 text-[11px] font-mono pt-2 border-t border-[var(--ea-line)]">
+                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-white/[0.06]">
+                    <div className="ea-faint">Total Runs</div>
+                    <div className="ea-ink">{scorecard?.measurableOutcomes.totalRuns ?? '—'}</div>
                   </div>
-                  <div className="p-2 rounded-lg bg-black/30 border border-white/[0.06]">
-                    <div className="text-gray-500">Planned</div>
+                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-white/[0.06]">
+                    <div className="ea-faint">Planned</div>
                     <div className="text-emerald-300">{scorecard?.measurableOutcomes.planned ?? '—'}</div>
                   </div>
-                  <div className="p-2 rounded-lg bg-black/30 border border-white/[0.06] flex items-center gap-1">
+                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-white/[0.06] flex items-center gap-1">
                     <ShieldAlert className="w-3 h-3 text-rose-400 shrink-0" />
                     <div>
-                      <div className="text-gray-500">Blocked</div>
+                      <div className="ea-faint">Blocked</div>
                       <div className="text-rose-300">{scorecard?.measurableOutcomes.blocked ?? '—'}</div>
                     </div>
                   </div>
@@ -443,33 +442,33 @@ export const DepartmentsPage: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <GlassCard className="w-full max-w-md space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white">New Department</h3>
+              <h3 className="text-sm font-bold ea-ink">New Department</h3>
               <button onClick={() => setShowCreate(false)}>
-                <X className="w-4 h-4 text-gray-400" />
+                <X className="w-4 h-4 ea-muted" />
               </button>
             </div>
             <input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="Department name"
-              className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-gray-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-xs ea-ink placeholder-gray-500"
             />
             <textarea
               value={newDescription}
               onChange={(e) => setNewDescription(e.target.value)}
               placeholder="Short description"
-              className="w-full min-h-[60px] rounded-xl bg-black/40 border border-white/10 p-3 text-xs text-white placeholder-gray-500"
+              className="w-full min-h-[60px] rounded-xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] p-3 text-xs ea-ink placeholder-gray-500"
             />
             <input
               value={newManager}
               onChange={(e) => setNewManager(e.target.value)}
               placeholder="Manager agent (optional)"
-              className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-gray-500"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-xs ea-ink placeholder-gray-500"
             />
             <select
               value={newPermission}
               onChange={(e) => setNewPermission(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-xs ea-ink"
             >
               <option value="read_only">read_only</option>
               <option value="plan_only">plan_only</option>
@@ -480,7 +479,7 @@ export const DepartmentsPage: React.FC = () => {
             <button
               onClick={handleCreate}
               disabled={busy || !newName.trim()}
-              className="w-full px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-white font-bold text-xs transition-colors disabled:opacity-50"
+              className="w-full px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 ea-ink font-bold text-xs transition-colors disabled:opacity-50"
             >
               Create
             </button>

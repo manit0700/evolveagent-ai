@@ -1,54 +1,60 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @layer base {
   body {
-    @apply bg-[#0a0a0a] text-[#e5e5e5] font-sans antialiased selection:bg-purple-500/30 selection:text-purple-200 overflow-x-hidden;
-    font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+    @apply antialiased overflow-x-hidden;
+    background: var(--ea-bg, #f4f6f9);
+    color: var(--ea-ink, #0f172a);
+    font-family: var(--ea-font, "Plus Jakarta Sans", "Segoe UI", sans-serif);
   }
 
   code, pre, .font-mono {
-    font-family: 'Geist Mono', monospace;
+    font-family: var(--ea-mono, "IBM Plex Mono", ui-monospace, monospace);
   }
 }
 
 @utility glass-panel {
-  background: rgba(23, 23, 23, 0.75);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--ea-surface);
+  border: 1px solid var(--ea-line);
+  box-shadow: var(--ea-shadow-sm);
 }
 
 @utility glass-card {
-  background: rgba(32, 31, 31, 0.6);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  transition: all 0.2s ease;
+  background: var(--ea-surface);
+  border: 1px solid var(--ea-line);
+  box-shadow: var(--ea-shadow-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 @utility glass-card-hover {
-  @apply glass-card hover:bg-[#262525]/80 hover:border-white/15 hover:shadow-[0_4px_20px_-4px_rgba(160,120,255,0.1)];
+  @apply glass-card;
+}
+
+.glass-card-hover:hover {
+  border-color: var(--ea-line-strong);
+  box-shadow: var(--ea-shadow-md);
 }
 
 @utility glow-purple {
-  box-shadow: 0 0 25px -5px rgba(160, 120, 255, 0.25);
+  box-shadow: var(--ea-shadow-md);
 }
 
 @utility glow-blue {
-  box-shadow: 0 0 25px -5px rgba(5, 102, 217, 0.25);
+  box-shadow: var(--ea-shadow-md);
 }
 
-/* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #0a0a0a;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2a2a2a;
-  border-radius: 3px;
+  background: var(--ea-line-strong);
+  border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f3f;
+  background: var(--ea-muted);
 }

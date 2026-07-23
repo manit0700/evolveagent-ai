@@ -6,6 +6,13 @@ bar, and no browser tab. **Additive:** this lives entirely under `desktop/` and
 does not change the web app or its CI. The web app keeps working exactly as
 before; this is just a native shell around it.
 
+## UI theme (web vs desktop)
+
+Desktop loads the **same** frontend as the browser. At boot the app sets
+`data-platform="desktop"` so `frontend/src/styles/ea-theme.css` applies a denser
+dark command-center theme. The web build stays light and calm. See
+`docs/FRONTEND_DESKTOP_UI.md` for how to diverge further later.
+
 ## What it is (and isn't)
 
 - **Is:** a thin, locked-down native window that loads the same React frontend
