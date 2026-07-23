@@ -314,13 +314,6 @@
   background-color: var(--ea-line) !important;
 }
 
-[data-platform="desktop"] .ea-sidebar .bg-slate-900,
-[data-platform="desktop"] .ea-sidebar .ea-nav-item--active {
-  background-color: var(--ea-accent-soft) !important;
-  color: var(--ea-accent) !important;
-}
-
-[data-platform="desktop"] .ea-sidebar .bg-slate-900.text-white,
 [data-platform="desktop"] .ea-sidebar .bg-slate-900 {
   background-color: var(--ea-ink) !important;
   color: var(--ea-surface) !important;
@@ -331,12 +324,6 @@
   color: var(--ea-ink) !important;
   box-shadow: inset 3px 0 0 var(--ea-accent);
   border-radius: 0.5rem;
-}
-
-[data-platform="desktop"] .ea-sidebar .bg-sky-50,
-[data-platform="desktop"] .ea-sidebar .bg-amber-50,
-[data-platform="desktop"] .ea-sidebar .bg-emerald-500 {
-  /* badge/status soft fills stay semantic via tokens below */
 }
 
 [data-platform="desktop"] .ea-sidebar .bg-sky-50 {
