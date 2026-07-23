@@ -4,9 +4,10 @@ These instructions apply to Antigravity CLI, Gemini-style agents, Codex, Cursor 
 
 ## Project Context
 
-- Repo path: `/Users/manitdankhara/evolveagent-ai`
+- Repo path: `/Users/manitdankhara/evolveagent-ai` (cloud agents may mount at `/workspace`)
 - Product: EvolveAgent AI, a FastAPI + React multi-agent AI workspace.
 - Current focus: continue roadmap work safely without breaking existing chat, files, recordings, image, governance, learning, Linear, and research workflows.
+- Active UI direction: **light calm web** + **dark denser desktop** via shared EA tokens (`frontend/src/styles/ea-theme.css`, `data-platform` in `main.jsx`). Desktop is a Tauri wrapper only — see `docs/FRONTEND_DESKTOP_UI.md`.
 
 ## Hard Safety Rules
 
@@ -59,9 +60,14 @@ Do not use every role for tiny edits. For small documentation or one-line fixes,
 - `backend/app/agents/`: agent logic.
 - `backend/app/models/`: Pydantic request/response models.
 - `backend/tests/`: backend pytest suite.
-- `frontend/`: React frontend.
-- `frontend/src/App.jsx`: main UI.
+- `frontend/`: React frontend (active app is `App.tsx`, not legacy `App.jsx`).
+- `frontend/src/App.tsx`: main UI shell.
 - `frontend/src/api.js`: frontend API client helpers.
+- `frontend/src/styles/ea-theme.css`: web/desktop design tokens.
+- `frontend/src/components/layout/`: Sidebar + TopBar shell.
+- `frontend/src/components/shared/`: GlassCard, PageHero, modals, badges.
+- `desktop/`: Tauri v2 wrapper around the same frontend (no separate React tree).
+- `.cursor/rules/`: Cursor agent rules for workflow + UI system.
 
 ## Backend Conventions
 
@@ -76,10 +82,14 @@ Do not use every role for tiny edits. For small documentation or one-line fixes,
 
 ## Frontend Conventions
 
+- Active shell is `frontend/src/App.tsx` (legacy `App.jsx` is not the mounted entry).
 - Preserve Simple Mode as clean user-facing chat.
 - Show technical details only in Developer Mode or details panels.
 - Do not leak provider keys, raw secrets, internal paths, or raw security internals in Simple Mode.
 - Keep UI changes scoped. Avoid broad redesigns unless the task is specifically a UI redesign.
+- Prefer EA tokens (`ea-card`, `ea-btn`, `ea-hero`, CSS vars) over hardcoded dark glass / cyan-purple glow.
+- Web must stay light/calm; desktop (`data-platform="desktop"`) must stay darker and denser — do not make them identical.
+- TopBar should stay a quiet productivity header; Sidebar should stay sectioned and useful, not flashy.
 
 ## Testing
 

@@ -1,0 +1,41 @@
+---
+description: EvolveAgent UI design system — light web, dark dense desktop
+alwaysApply: true
+---
+
+# EvolveAgent UI system (post-redesign)
+
+## Platforms
+
+- Web and desktop share **one** React tree under `frontend/`.
+- At boot, `frontend/src/main.jsx` sets `data-platform="web"` or `data-platform="desktop"` (Tauri detect).
+- Tokens live in `frontend/src/styles/ea-theme.css`. Prefer CSS vars / `ea-*` classes over hardcoded dark glass or cyan/purple glow.
+
+| | Web | Desktop (Tauri) |
+|---|---|---|
+| Feel | Light, calm, airy productivity | Darker, denser command center |
+| Do not | Copy desktop dark look onto web | Copy the light web look onto desktop |
+
+Desktop has **no separate frontend**. Differentiate via tokens + `desktop/src-tauri/tauri.conf.json` (window, overlay title bar, traffic lights). See `docs/FRONTEND_DESKTOP_UI.md`.
+
+## Shell files
+
+- `frontend/src/App.tsx` — active shell (not legacy `App.jsx`)
+- `frontend/src/components/layout/Sidebar.tsx` — sectioned nav, token surfaces
+- `frontend/src/components/layout/TopBar.tsx` — quiet productivity header (search, refresh, live, health). Avoid mode-tab / glow chrome unless requested.
+
+## Shared surfaces
+
+Use / extend these instead of inventing new dark glass:
+
+- `GlassCard`, `MetricCard`, `PageHero`, badges, `Toast`, `CommandModal`, `LiveWorkingCard`
+- `frontend/src/components/ui/*` → `ea-card` / `ea-btn` / `ea-chip`
+
+Avoid: purple/cyan glow gradients, blur orbs, neon badges, `bg-[#0a0a0a]` / `bg-[#171717]` / `border-white/10` patterns on new work.
+
+## UX priorities
+
+- Clarity and spacing over decoration
+- Preserve functionality
+- Keep Simple Mode clean; technical detail only in Developer Mode / details panels
+---
