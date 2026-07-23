@@ -119,7 +119,7 @@ export const CompliancePage: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <GlassCard className="lg:col-span-1 space-y-3" padding="none">
-          <div className="p-4 border-b border-white/[0.06] flex items-center justify-between">
+          <div className="p-4 border-b border-[var(--ea-line)] flex items-center justify-between">
             <h3 className="text-sm font-bold ea-ink">Packages</h3>
             <span className="text-[11px] font-mono ea-faint">{packages?.length ?? 0}</span>
           </div>
@@ -198,7 +198,7 @@ export const CompliancePage: React.FC = () => {
                     <div className="text-[11px] ea-faint font-mono py-2 text-center">No sensitive-data findings in this bundle.</div>
                   )}
                   {detail.sensitiveFindings.map((f) => (
-                    <div key={f.findingId} className="p-2.5 rounded-xl bg-black/20 border border-white/[0.05]">
+                    <div key={f.findingId} className="p-2.5 rounded-xl ea-surface-3 border border-[var(--ea-line)]">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-xs ea-ink font-mono truncate">{f.label}</span>
                         <RiskBadge level={riskTone(f.riskLevel)} size="sm" />
@@ -232,7 +232,7 @@ export const CompliancePage: React.FC = () => {
                   </div>
                   <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
                     {detail.policies.map((p) => (
-                      <div key={p.policyId} className="p-2 rounded-lg bg-black/20 border border-white/[0.05]">
+                      <div key={p.policyId} className="p-2 rounded-lg ea-surface-3 border border-[var(--ea-line)]">
                         <div className="text-xs ea-ink">{p.name}</div>
                         <div className="text-[10px] ea-faint font-mono">{p.category} · {p.status}</div>
                       </div>
@@ -248,7 +248,7 @@ export const CompliancePage: React.FC = () => {
                   </div>
                   <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
                     {detail.checklists.map((c) => (
-                      <div key={c.checklistId} className="p-2 rounded-lg bg-black/20 border border-white/[0.05]">
+                      <div key={c.checklistId} className="p-2 rounded-lg ea-surface-3 border border-[var(--ea-line)]">
                         <div className="text-xs ea-ink">{c.title}</div>
                         <div className="text-[10px] ea-faint font-mono">{c.framework} · {c.items.filter((i) => i.done).length}/{c.items.length} done</div>
                       </div>
@@ -262,7 +262,7 @@ export const CompliancePage: React.FC = () => {
                   <h3 className="text-sm font-bold ea-ink">Contract reviews</h3>
                   <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
                     {detail.contractReviews.map((r) => (
-                      <div key={r.reviewId} className="p-2.5 rounded-xl bg-black/20 border border-white/[0.05]">
+                      <div key={r.reviewId} className="p-2.5 rounded-xl ea-surface-3 border border-[var(--ea-line)]">
                         <div className="flex items-center justify-between">
                           <span className="text-xs ea-ink">{r.title}</span>
                           <RiskBadge level={riskTone(r.riskLevel)} size="sm" />

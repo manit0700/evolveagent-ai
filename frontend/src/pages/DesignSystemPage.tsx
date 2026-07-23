@@ -144,7 +144,7 @@ export const DesignSystemPage: React.FC = () => {
             {radiusTokens.map((rad, idx) => (
               <div key={idx} className="p-3 rounded-xl bg-[var(--ea-surface-2)] border border-[var(--ea-line)] flex flex-col items-center justify-center space-y-2">
                 <span className="text-xs font-mono font-bold ea-soft">{rad.name.split('(')[0]}</span>
-                <div className={`w-full border border-white/20 ${rad.style} ea-soft`}>
+                <div className={`w-full border border-[var(--ea-line-strong)] ${rad.style} ea-soft`}>
                   {rad.name.split('(')[1]?.replace(')', '')} radius
                 </div>
               </div>
@@ -191,7 +191,7 @@ export const DesignSystemPage: React.FC = () => {
           </div>
 
           {/* Component 3: Mini Agent Card */}
-          <div className="p-4 rounded-2xl bg-[#1e1e28]/90 border border-[var(--ea-line-strong)] space-y-2">
+          <div className="p-4 rounded-2xl ea-surface-2 border border-[var(--ea-line-strong)] space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-mono uppercase text-[var(--ea-accent)]">Agent Spotlight Preview</span>
               <StatusBadge status="running" size="sm" />

@@ -101,7 +101,7 @@ export const MissionControl: React.FC = () => {
                 <span className="text-[var(--ea-accent)] font-bold">{mission.progress}%</span>
               </div>
               <div className="w-full h-2 rounded-full bg-[var(--ea-surface-3)] overflow-hidden p-0.5 border border-[var(--ea-line)]">
-                <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${mission.progress}%` }} />
+                <div className="h-full rounded-full bg-[var(--ea-accent)]" style={{ width: `${mission.progress}%` }} />
               </div>
             </div>
           </div>
@@ -134,7 +134,7 @@ export const MissionControl: React.FC = () => {
                     <span className={`text-[10px] font-mono ${tone}`}>{run.status.replace('_', ' ')}</span>
                   </div>
                   <div className="mt-2 w-full h-1.5 rounded-full bg-black/50 overflow-hidden">
-                    <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${pct}%` }} />
+                    <div className="h-full rounded-full bg-[var(--ea-accent)]" style={{ width: `${pct}%` }} />
                   </div>
                   <div className="text-[10px] ea-faint font-mono mt-1">{run.done}/{run.total} steps</div>
                 </div>
@@ -227,7 +227,7 @@ export const MissionControl: React.FC = () => {
                     colTasks.map(t => (
                       <div
                         key={t.id}
-                        className="p-3 rounded-xl ea-surface-2 border border-[var(--ea-line)] hover:border-white/20 transition-all space-y-2 shadow-md"
+                        className="p-3 rounded-xl ea-surface-2 border border-[var(--ea-line)] hover:border-[var(--ea-line-strong)] transition-all space-y-2 shadow-md"
                       >
                         <div className="flex items-start justify-between gap-1.5">
                           <span className="text-xs font-semibold ea-ink line-clamp-2">{t.title}</span>

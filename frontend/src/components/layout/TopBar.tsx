@@ -50,26 +50,26 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
     };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[var(--ea-line)] backdrop-blur-xl" style={{ background: 'color-mix(in srgb, var(--ea-surface) 88%, transparent)' }}>
-      <div className="flex items-center justify-between gap-4 px-4 sm:px-6" style={{ height: 'var(--ea-topbar-h)' }}>
+    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/85 backdrop-blur-xl ea-topbar">
+      <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <button
             onClick={() => setMobileOpen(true)}
-            className="rounded-[var(--ea-radius-sm)] border border-[var(--ea-line)] ea-surface-2 p-2 ea-soft transition hover:bg-[var(--ea-surface)] hover:text-[var(--ea-ink)] lg:hidden"
+            className="rounded-xl border border-slate-200 bg-slate-50 p-2 text-slate-600 transition hover:bg-white hover:text-slate-900 lg:hidden"
           >
             <Menu className="h-5 w-5" />
           </button>
 
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h2 className="truncate text-sm font-semibold tracking-tight ea-ink sm:text-base">
+              <h2 className="truncate text-sm font-semibold tracking-tight text-slate-900 sm:text-base">
                 {currentInfo.title}
               </h2>
 
               {pendingApprovalsCount > 0 && activePage !== 'approvals' && (
                 <button
                   onClick={() => setActivePage('approvals')}
-                  className="hidden items-center gap-1 rounded-full bg-[var(--ea-warn-soft)] px-2.5 py-1 text-[11px] font-medium text-[var(--ea-warn)] transition sm:inline-flex"
+                  className="hidden items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700 transition hover:bg-amber-100 sm:inline-flex"
                 >
                   <ShieldAlert className="h-3.5 w-3.5" />
                   <span>{pendingApprovalsCount} pending</span>
@@ -77,7 +77,7 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
               )}
             </div>
 
-            <p className="hidden truncate text-[11px] ea-muted sm:block">
+            <p className="hidden truncate text-[11px] text-slate-500 sm:block">
               {currentInfo.subtitle}
             </p>
           </div>
@@ -86,47 +86,47 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
         <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={() => setIsCommandModalOpen(true)}
-            className="flex w-40 items-center justify-between gap-3 rounded-[var(--ea-radius-sm)] border border-[var(--ea-line)] ea-surface-2 px-3 py-2 text-xs ea-muted transition hover:bg-[var(--ea-surface)] hover:text-[var(--ea-ink)] sm:w-64"
+            className="flex w-40 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500 transition hover:bg-white hover:text-slate-800 sm:w-64"
           >
             <div className="flex min-w-0 items-center gap-2">
-              <Search className="h-3.5 w-3.5 shrink-0 text-[var(--ea-accent)]" />
+              <Search className="h-3.5 w-3.5 shrink-0 text-sky-600" />
               <span className="truncate">Search or ask anything</span>
             </div>
-            <kbd className="hidden rounded-md border border-[var(--ea-line)] ea-surface px-1.5 py-0.5 font-mono text-[10px] ea-faint sm:inline-block">
+            <kbd className="hidden rounded-md border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-400 sm:inline-block">
               ⌘K
             </kbd>
           </button>
 
           <button
             onClick={() => refreshLive()}
-            className="inline-flex items-center gap-2 rounded-[var(--ea-radius-sm)] border border-[var(--ea-line)] ea-surface px-3 py-2 text-xs font-medium ea-soft transition hover:bg-[var(--ea-surface-2)] hover:text-[var(--ea-ink)]"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Refresh</span>
           </button>
 
-          <div className="hidden items-center gap-2 rounded-[var(--ea-radius-sm)] border border-[var(--ea-line)] ea-surface px-3 py-2 sm:flex">
+          <div className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 sm:flex">
             <span
               className={`h-2.5 w-2.5 rounded-full ${
-                liveConnected ? 'bg-[var(--ea-success)]' : 'bg-[var(--ea-faint)]'
+                liveConnected ? 'bg-emerald-500' : 'bg-slate-300'
               }`}
             />
-            <span className="text-xs font-medium ea-soft">
+            <span className="text-xs font-medium text-slate-600">
               {liveConnected ? 'Live connected' : 'Offline'}
             </span>
           </div>
 
-          <button className="rounded-[var(--ea-radius-sm)] border border-[var(--ea-line)] ea-surface p-2 ea-muted transition hover:bg-[var(--ea-surface-2)] hover:text-[var(--ea-ink)]">
+          <button className="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900">
             <Bell className="h-4 w-4" />
           </button>
 
-          <div className="hidden h-10 items-center gap-2 rounded-[var(--ea-radius-sm)] border border-[var(--ea-line)] ea-surface-2 px-3 md:flex">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--ea-success-soft)] text-[var(--ea-success)]">
+          <div className="hidden h-10 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 md:flex">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
               <CheckCircle2 className="h-4 w-4" />
             </div>
             <div className="leading-tight">
-              <div className="text-[11px] font-medium ea-ink">Workspace healthy</div>
-              <div className="text-[10px] ea-muted">Core systems available</div>
+              <div className="text-[11px] font-medium text-slate-900">Workspace healthy</div>
+              <div className="text-[10px] text-slate-500">Core systems available</div>
             </div>
           </div>
         </div>

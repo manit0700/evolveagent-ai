@@ -201,7 +201,7 @@ export const ProjectBrain: React.FC = () => {
           { label: 'Decisions Saved', value: '31', sub: 'ADR records', color: 'text-amber-400' },
           { label: 'Last Sync', value: '2m ago', sub: 'Auto-vectorized', color: 'text-emerald-400' },
         ].map((item, idx) => (
-          <div key={idx} className="p-3 rounded-2xl bg-[#171717]/80 border border-[var(--ea-line)] backdrop-blur-xl space-y-1">
+          <div key={idx} className="p-3 rounded-2xl ea-surface border border-[var(--ea-line)] space-y-1">
             <div className="text-[11px] font-mono ea-muted uppercase tracking-wider">{item.label}</div>
             <div className={`text-2xl font-bold font-mono tracking-tight ${item.color}`}>{item.value}</div>
             <div className="text-[10px] ea-faint font-mono truncate">{item.sub}</div>
@@ -268,7 +268,7 @@ export const ProjectBrain: React.FC = () => {
                     <div className="text-sm font-bold font-mono text-[var(--ea-accent)]">{mem.relevance}%</div>
                     <div className="text-[10px] font-mono ea-faint">Relevance Match</div>
                     <div className="mt-1 w-16 h-1 rounded-full bg-[var(--ea-surface-3)] overflow-hidden ml-auto">
-                      <div className="h-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${mem.relevance}%` }} />
+                      <div className="h-full bg-[var(--ea-accent)]" style={{ width: `${mem.relevance}%` }} />
                     </div>
                   </div>
                 </div>
@@ -328,7 +328,7 @@ export const ProjectBrain: React.FC = () => {
               
               {/* Central Hub Node */}
               <div className="relative z-10 flex flex-col items-center">
-                <div className="w-14 h-14 rounded-full bg-[var(--ea-accent)] flex items-center justify-center ea-ink shadow-[var(--ea-shadow-sm)] border-2 border-white/20 animate-pulse">
+                <div className="w-14 h-14 rounded-full bg-[var(--ea-accent)] flex items-center justify-center ea-ink shadow-[var(--ea-shadow-sm)] border-2 border-[var(--ea-line-strong)] animate-pulse">
                   <Brain className="w-7 h-7" />
                 </div>
                 <span className="mt-2 text-xs font-mono font-bold ea-ink bg-[var(--ea-surface-3)] px-2 py-0.5 rounded border border-[var(--ea-line)]">

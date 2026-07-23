@@ -227,7 +227,7 @@ export const CodeChangesPage: React.FC = () => {
             </p>
           </div>
         </div>
-        <div className="p-3 rounded-2xl bg-white/[0.025] border border-white/[0.06]">
+        <div className="p-3 rounded-2xl ea-surface-2 border border-[var(--ea-line)]">
           <div className="text-[10px] uppercase tracking-wider font-mono ea-faint mb-2">Allowed repos</div>
           <div className="flex flex-wrap gap-2">
             {(codeStatus?.allowedRepos || []).length ? codeStatus!.allowedRepos.map((repo) => (
@@ -267,7 +267,7 @@ export const CodeChangesPage: React.FC = () => {
                   key={run.id}
                   onClick={() => setSelectedRunId(run.id)}
                   className={`w-full text-left p-3 rounded-2xl border transition-all ${
-                    active ? 'bg-[var(--ea-accent-soft)] border-[var(--ea-line-strong)]' : 'bg-[var(--ea-surface-2)] border-white/[0.06] hover:border-white/20'
+                    active ? 'bg-[var(--ea-accent-soft)] border-[var(--ea-line-strong)]' : 'bg-[var(--ea-surface-2)] border-[var(--ea-line)] hover:border-[var(--ea-line-strong)]'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -370,17 +370,17 @@ export const CodeChangesPage: React.FC = () => {
 
                 {selectedEffect?.result && Object.keys(selectedEffect.result).length > 0 && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="p-3 rounded-2xl bg-white/[0.025] border border-white/[0.06]">
+                    <div className="p-3 rounded-2xl ea-surface-2 border border-[var(--ea-line)]">
                       <GitBranch className="w-4 h-4 text-[var(--ea-accent)] mb-2" />
                       <div className="text-[10px] ea-faint uppercase font-mono">Branch</div>
                       <div className="text-xs ea-ink font-mono break-all">{selectedEffect.result.branch || selectedStep.actionParams.branch_name || '—'}</div>
                     </div>
-                    <div className="p-3 rounded-2xl bg-white/[0.025] border border-white/[0.06]">
+                    <div className="p-3 rounded-2xl ea-surface-2 border border-[var(--ea-line)]">
                       <GitCommit className="w-4 h-4 text-emerald-300 mb-2" />
                       <div className="text-[10px] ea-faint uppercase font-mono">Commit</div>
                       <div className="text-xs ea-ink font-mono">{selectedEffect.result.commit_sha ? String(selectedEffect.result.commit_sha).slice(0, 12) : '—'}</div>
                     </div>
-                    <div className="p-3 rounded-2xl bg-white/[0.025] border border-white/[0.06]">
+                    <div className="p-3 rounded-2xl ea-surface-2 border border-[var(--ea-line)]">
                       <GitPullRequestArrow className="w-4 h-4 text-blue-300 mb-2" />
                       <div className="text-[10px] ea-faint uppercase font-mono">Pull request</div>
                       {pr?.url ? (
@@ -401,8 +401,8 @@ export const CodeChangesPage: React.FC = () => {
                       <h3 className="text-sm font-bold ea-ink">Proposed file content</h3>
                     </div>
                     {proposedFiles.map((file, index) => (
-                      <div key={`${file.file_path}-${index}`} className="rounded-2xl border border-white/[0.08] overflow-hidden bg-[var(--ea-surface-3)]">
-                        <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.08] bg-[var(--ea-surface-2)]">
+                      <div key={`${file.file_path}-${index}`} className="rounded-2xl border border-[var(--ea-line)] overflow-hidden bg-[var(--ea-surface-3)]">
+                        <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--ea-line)] bg-[var(--ea-surface-2)]">
                           <span className="text-xs ea-ink font-mono break-all">{file.file_path}</span>
                           <span className="text-[10px] ea-faint font-mono">{file.content.length.toLocaleString()} chars</span>
                         </div>
@@ -427,7 +427,7 @@ export const CodeChangesPage: React.FC = () => {
                       <div><span className="ea-faint">Title:</span> <span className="ea-ink">{selectedStep.actionParams.title || '—'}</span></div>
                     </div>
                     {selectedStep.actionParams.body && (
-                      <pre className="p-3 rounded-xl bg-[var(--ea-surface-3)] border border-white/[0.06] text-[11px] ea-soft font-mono whitespace-pre-wrap max-h-48 overflow-auto">
+                      <pre className="p-3 rounded-xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-[11px] ea-soft font-mono whitespace-pre-wrap max-h-48 overflow-auto">
                         {selectedStep.actionParams.body}
                       </pre>
                     )}
@@ -475,7 +475,7 @@ export const CodeChangesPage: React.FC = () => {
               <Code2 className="w-4 h-4 ea-soft" />
               <h3 className="text-sm font-bold ea-ink">Raw action params</h3>
             </div>
-            <pre className="p-4 rounded-2xl bg-[var(--ea-surface-3)] border border-white/[0.06] text-[11px] ea-soft font-mono whitespace-pre-wrap max-h-72 overflow-auto">
+            <pre className="p-4 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-[11px] ea-soft font-mono whitespace-pre-wrap max-h-72 overflow-auto">
               {selectedStep ? JSON.stringify(selectedStep.actionParams, null, 2) : '{}'}
             </pre>
           </GlassCard>

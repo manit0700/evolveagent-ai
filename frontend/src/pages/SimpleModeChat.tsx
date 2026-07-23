@@ -117,7 +117,7 @@ export const SimpleModeChat: React.FC = () => {
                   >
                     <p className="whitespace-pre-wrap">{msg.text}</p>
                     {msg.attachments && msg.attachments.length > 0 && (
-                      <div className={`mt-3 pt-3 flex flex-wrap gap-2 ${isUser ? 'border-t border-white/20' : 'border-t border-[var(--ea-line)]'}`}>
+                      <div className={`mt-3 pt-3 flex flex-wrap gap-2 ${isUser ? 'border-t border-[var(--ea-line-strong)]' : 'border-t border-[var(--ea-line)]'}`}>
                         {msg.attachments.map((file, idx) => (
                           <div
                             key={idx}

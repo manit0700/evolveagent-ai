@@ -147,7 +147,7 @@ export const ToolsMcpHub: React.FC = () => {
           { label: 'Calls Today', value: '32', sub: 'Mock sandbox verified', color: 'text-[var(--ea-accent)]' },
           { label: 'Failed Checks', value: '00', sub: '100% compliant', color: 'text-emerald-400' },
         ].map((item, idx) => (
-          <div key={idx} className="p-3 rounded-2xl bg-[#171717]/80 border border-[var(--ea-line)] backdrop-blur-xl space-y-1">
+          <div key={idx} className="p-3 rounded-2xl ea-surface border border-[var(--ea-line)] space-y-1">
             <div className="text-[11px] font-mono ea-muted uppercase tracking-wider">{item.label}</div>
             <div className={`text-2xl font-bold font-mono tracking-tight ${item.color}`}>{item.value}</div>
             <div className="text-[10px] ea-faint font-mono truncate">{item.sub}</div>
@@ -389,8 +389,8 @@ export const ToolsMcpHub: React.FC = () => {
                 onClick={() => { setSelectedConnectorId(tool.id); setPlanResult(null); resetExecFlow(); }}
                 className={`cursor-pointer rounded-2xl border transition-all p-5 flex flex-col justify-between ${
                   isSel
-                    ? 'bg-[#1e1e28]/90 border-cyan-500/50 shadow-[0_4px_25px_-5px_rgba(34,211,238,0.2)]'
-                    : 'bg-[#171717]/80 border-[var(--ea-line)] hover:ea-surface-2/90 hover:border-[var(--ea-line-strong)]'
+                    ? 'ea-surface-2 border-[var(--ea-accent)] shadow-[var(--ea-shadow-sm)]'
+                    : 'ea-surface border-[var(--ea-line)] hover:bg-[var(--ea-surface-2)] hover:border-[var(--ea-line-strong)]'
                 }`}
               >
                 <div>

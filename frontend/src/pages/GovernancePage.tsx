@@ -56,7 +56,7 @@ export const GovernancePage: React.FC = () => {
           { label: 'Approval Rate', value: '86%', sub: 'Safe execution', color: 'text-[var(--ea-accent)]' },
           { label: 'Safety Incidents', value: '00', sub: 'Zero leaks', color: 'text-emerald-400' },
         ].map((item, idx) => (
-          <div key={idx} className="p-3 rounded-2xl bg-[#171717]/80 border border-[var(--ea-line)] backdrop-blur-xl space-y-1">
+          <div key={idx} className="p-3 rounded-2xl ea-surface border border-[var(--ea-line)] space-y-1">
             <div className="text-[11px] font-mono ea-muted uppercase tracking-wider">{item.label}</div>
             <div className={`text-2xl font-bold font-mono tracking-tight ${item.color}`}>{item.value}</div>
             <div className="text-[10px] ea-faint font-mono truncate">{item.sub}</div>

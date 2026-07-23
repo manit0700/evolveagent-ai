@@ -213,6 +213,64 @@
 .ea-surface-2 { background: var(--ea-surface-2); }
 .ea-surface-3 { background: var(--ea-surface-3); }
 
+/* Desktop remaps for the light productivity TopBar (hardcoded slate on web) */
+[data-platform="desktop"] .ea-topbar {
+  background: color-mix(in srgb, var(--ea-surface) 92%, transparent) !important;
+  border-color: var(--ea-line) !important;
+}
+
+[data-platform="desktop"] .ea-topbar .text-slate-900,
+[data-platform="desktop"] .ea-topbar .hover\:text-slate-900:hover {
+  color: var(--ea-ink) !important;
+}
+
+[data-platform="desktop"] .ea-topbar .text-slate-600,
+[data-platform="desktop"] .ea-topbar .text-slate-500,
+[data-platform="desktop"] .ea-topbar .text-slate-400,
+[data-platform="desktop"] .ea-topbar .hover\:text-slate-800:hover {
+  color: var(--ea-muted) !important;
+}
+
+[data-platform="desktop"] .ea-topbar .bg-white,
+[data-platform="desktop"] .ea-topbar .bg-white\/85,
+[data-platform="desktop"] .ea-topbar .hover\:bg-white:hover,
+[data-platform="desktop"] .ea-topbar .bg-slate-50,
+[data-platform="desktop"] .ea-topbar .hover\:bg-slate-50:hover {
+  background-color: var(--ea-surface-2) !important;
+}
+
+[data-platform="desktop"] .ea-topbar .border-slate-200 {
+  border-color: var(--ea-line) !important;
+}
+
+[data-platform="desktop"] .ea-topbar .bg-emerald-100 {
+  background-color: var(--ea-success-soft) !important;
+}
+
+[data-platform="desktop"] .ea-topbar .text-emerald-700,
+[data-platform="desktop"] .ea-topbar .text-sky-600 {
+  color: var(--ea-accent) !important;
+}
+
+[data-platform="desktop"] .ea-topbar .bg-amber-50,
+[data-platform="desktop"] .ea-topbar .hover\:bg-amber-100:hover {
+  background-color: var(--ea-warn-soft) !important;
+}
+
+[data-platform="desktop"] .ea-topbar .text-amber-700,
+[data-platform="desktop"] .ea-topbar .border-amber-200 {
+  color: var(--ea-warn) !important;
+  border-color: transparent !important;
+}
+
+[data-platform="desktop"] .ea-topbar {
+  height: auto;
+}
+
+[data-platform="desktop"] .ea-topbar > div {
+  height: var(--ea-topbar-h);
+}
+
 /* Desktop titlebar drag region under overlay traffic lights */
 [data-platform="desktop"] .ea-shell header {
   -webkit-app-region: drag;

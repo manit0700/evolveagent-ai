@@ -234,7 +234,7 @@ export const DepartmentsPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1 space-y-4">
           <GlassCard className="space-y-0" padding="none">
-            <div className="flex items-center gap-2 p-4 border-b border-white/[0.06]">
+            <div className="flex items-center gap-2 p-4 border-b border-[var(--ea-line)]">
               <Building2 className="w-4 h-4 text-[var(--ea-accent)]" />
               <span className="text-xs font-bold ea-ink">Departments</span>
             </div>
@@ -286,15 +286,15 @@ export const DepartmentsPage: React.FC = () => {
                   <StatusBadge status={selectedDept.active ? 'connected' : 'disconnected'} size="sm" />
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-[11px] font-mono">
-                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-white/[0.06]">
+                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-[var(--ea-line)]">
                     <div className="ea-faint">Manager</div>
                     <div className="ea-ink truncate">{selectedDept.managerAgent}</div>
                   </div>
-                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-white/[0.06]">
+                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-[var(--ea-line)]">
                     <div className="ea-faint">Workers</div>
                     <div className="ea-ink truncate">{selectedDept.workerAgents.join(', ') || '—'}</div>
                   </div>
-                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-white/[0.06]">
+                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-[var(--ea-line)]">
                     <div className="ea-faint">Permission</div>
                     <div className="ea-ink truncate">{selectedDept.permissionLevel}</div>
                   </div>
@@ -312,7 +312,7 @@ export const DepartmentsPage: React.FC = () => {
                       <div className="text-[11px] ea-faint font-mono py-2 text-center">No goals yet.</div>
                     )}
                     {(scorecard?.goals || []).map((g) => (
-                      <div key={g.goalId} className="p-2 rounded-lg bg-black/20 border border-white/[0.05]">
+                      <div key={g.goalId} className="p-2 rounded-lg ea-surface-3 border border-[var(--ea-line)]">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-[11px] ea-ink truncate">{g.title}</span>
                           <span className="text-[10px] font-mono ea-faint shrink-0">{g.progressPercent}%</span>
@@ -344,15 +344,15 @@ export const DepartmentsPage: React.FC = () => {
                   </div>
                   {scorecard?.budget ? (
                     <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
-                      <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-white/[0.06]">
+                      <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-[var(--ea-line)]">
                         <div className="ea-faint">Monthly limit</div>
                         <div className="ea-ink">${scorecard.budget.monthlyLimit}</div>
                       </div>
-                      <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-white/[0.06]">
+                      <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-[var(--ea-line)]">
                         <div className="ea-faint">This month</div>
                         <div className="ea-ink">${scorecard.budget.currentMonthCost.toFixed(2)}</div>
                       </div>
-                      <div className="col-span-2 p-2 rounded-lg bg-[var(--ea-surface-3)] border border-white/[0.06] flex items-center justify-between">
+                      <div className="col-span-2 p-2 rounded-lg bg-[var(--ea-surface-3)] border border-[var(--ea-line)] flex items-center justify-between">
                         <span className="ea-faint">Status</span>
                         <span
                           className={
@@ -416,15 +416,15 @@ export const DepartmentsPage: React.FC = () => {
                   </button>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-[11px] font-mono pt-2 border-t border-[var(--ea-line)]">
-                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-white/[0.06]">
+                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-[var(--ea-line)]">
                     <div className="ea-faint">Total Runs</div>
                     <div className="ea-ink">{scorecard?.measurableOutcomes.totalRuns ?? '—'}</div>
                   </div>
-                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-white/[0.06]">
+                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-[var(--ea-line)]">
                     <div className="ea-faint">Planned</div>
                     <div className="text-emerald-300">{scorecard?.measurableOutcomes.planned ?? '—'}</div>
                   </div>
-                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-white/[0.06] flex items-center gap-1">
+                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-[var(--ea-line)] flex items-center gap-1">
                     <ShieldAlert className="w-3 h-3 text-rose-400 shrink-0" />
                     <div>
                       <div className="ea-faint">Blocked</div>

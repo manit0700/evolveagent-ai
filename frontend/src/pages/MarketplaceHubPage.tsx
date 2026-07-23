@@ -198,7 +198,7 @@ export const MarketplaceHubPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           <GlassCard className="space-y-0" padding="none">
-            <div className="flex flex-wrap items-center gap-2 p-4 border-b border-white/[0.06]">
+            <div className="flex flex-wrap items-center gap-2 p-4 border-b border-[var(--ea-line)]">
               <div className="flex items-center gap-1.5 mr-2">
                 <TrendingUp className="w-4 h-4 text-[var(--ea-accent)]" />
                 <span className="text-xs font-bold ea-ink">Sort</span>
@@ -208,7 +208,7 @@ export const MarketplaceHubPage: React.FC = () => {
                   key={s}
                   onClick={() => setSort(s)}
                   className={`px-3 py-1.5 rounded-lg text-[11px] font-mono transition-colors ${
-                    sort === s ? 'bg-[var(--ea-accent-soft)] text-[var(--ea-accent)] border border-[var(--ea-line-strong)]' : 'bg-[var(--ea-surface-2)] ea-muted border border-white/[0.06] hover:border-white/20'
+                    sort === s ? 'bg-[var(--ea-accent-soft)] text-[var(--ea-accent)] border border-[var(--ea-line-strong)]' : 'bg-[var(--ea-surface-2)] ea-muted border border-[var(--ea-line)] hover:border-[var(--ea-line-strong)]'
                   }`}
                 >
                   {s.replace('_', ' ')}
@@ -271,11 +271,11 @@ export const MarketplaceHubPage: React.FC = () => {
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
-                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-white/[0.06]">
+                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-[var(--ea-line)]">
                     <div className="ea-faint">Publisher</div>
                     <div className="ea-ink truncate">{selected.publisher}</div>
                   </div>
-                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-white/[0.06]">
+                  <div className="p-2 rounded-lg bg-[var(--ea-surface-3)] border border-[var(--ea-line)]">
                     <div className="ea-faint">Installs</div>
                     <div className="ea-ink">{selected.installs}</div>
                   </div>
@@ -314,7 +314,7 @@ export const MarketplaceHubPage: React.FC = () => {
                 </button>
                 <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                   {(ratings || []).map((r) => (
-                    <div key={r.ratingId} className="p-2 rounded-lg bg-black/20 border border-white/[0.05]">
+                    <div key={r.ratingId} className="p-2 rounded-lg ea-surface-3 border border-[var(--ea-line)]">
                       <StarRow value={r.rating} />
                       {r.review && <p className="text-[11px] ea-muted mt-1">{r.review}</p>}
                     </div>

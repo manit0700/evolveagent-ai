@@ -290,7 +290,7 @@ export const ChiefOfStaffPage: React.FC = () => {
                 <div className="text-[11px] ea-faint font-mono py-2 text-center">No open follow-ups.</div>
               )}
               {openFollowups.map((f) => (
-                <div key={f.followupId} className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-black/20 border border-white/[0.05]">
+                <div key={f.followupId} className="flex items-center justify-between gap-2 p-2.5 rounded-xl ea-surface-3 border border-[var(--ea-line)]">
                   <div className="min-w-0">
                     <div className="text-xs ea-ink truncate">{f.title}</div>
                     <div className="flex items-center gap-1.5 mt-0.5">

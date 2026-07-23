@@ -156,9 +156,9 @@ export const CommandCenterPage: React.FC = () => {
                 </div>
               </button>
               {openDomains[d.domain] !== false && (
-                <div className="px-4 pb-4 space-y-1.5 border-t border-white/[0.06] pt-3">
+                <div className="px-4 pb-4 space-y-1.5 border-t border-[var(--ea-line)] pt-3">
                   {d.systems.map((s) => (
-                    <div key={s.route + s.label} className="flex items-center justify-between gap-2 p-2 rounded-xl bg-black/20 border border-white/[0.05]">
+                    <div key={s.route + s.label} className="flex items-center justify-between gap-2 p-2 rounded-xl ea-surface-3 border border-[var(--ea-line)]">
                       <div className="flex items-center gap-2 min-w-0">
                         {s.active ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> : <Circle className="w-3.5 h-3.5 text-gray-600 shrink-0" />}
                         <span className="text-xs ea-ink truncate">{s.label}</span>
@@ -233,7 +233,7 @@ export const CommandCenterPage: React.FC = () => {
             </div>
             <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
               {(snapshots || []).slice(0, 10).map((s) => (
-                <div key={s.snapshotId} className="flex items-center justify-between text-[11px] font-mono p-2 rounded-lg bg-black/20 border border-white/[0.05]">
+                <div key={s.snapshotId} className="flex items-center justify-between text-[11px] font-mono p-2 rounded-lg ea-surface-3 border border-[var(--ea-line)]">
                   <span className="ea-muted">{s.createdAt ? s.createdAt.slice(0, 16).replace('T', ' ') : '—'}</span>
                   <span className={`px-1.5 rounded ${gradeTone(s.overallGrade)}`}>{s.overallGrade} · {s.coveragePct}%</span>
                 </div>

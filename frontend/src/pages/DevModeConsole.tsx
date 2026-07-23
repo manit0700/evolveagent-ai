@@ -137,7 +137,7 @@ export const DevModeConsole: React.FC = () => {
           { label: 'Active Agents', value: `${agents.filter(a => a.status !== 'idle').length}/${agents.length}`, sub: 'Orchestrating', color: 'text-[var(--ea-accent)]' },
           { label: 'Workflow Runs', value: health ? `${health.workflowRuns}` : '0', sub: 'Durable', color: 'text-amber-400' },
         ].map((item, idx) => (
-          <div key={idx} className="p-3 rounded-2xl bg-[#171717]/80 border border-[var(--ea-line)] backdrop-blur-xl space-y-1">
+          <div key={idx} className="p-3 rounded-2xl ea-surface border border-[var(--ea-line)] space-y-1">
             <div className="text-[11px] font-mono ea-muted uppercase tracking-wider">{item.label}</div>
             <div className={`text-2xl font-bold font-mono tracking-tight ${item.color}`}>{item.value}</div>
             <div className="text-[10px] ea-faint font-mono truncate">{item.sub}</div>
@@ -219,15 +219,15 @@ export const DevModeConsole: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px] font-mono ea-soft">
-          <div className="flex items-center gap-2 rounded-xl bg-white/[0.025] border border-white/[0.06] px-3 py-2">
+          <div className="flex items-center gap-2 rounded-xl ea-surface-2 border border-[var(--ea-line)] px-3 py-2">
             <span className={`w-2 h-2 rounded-full ${storageStatus ? 'bg-emerald-400' : 'bg-amber-400'}`} />
             <span>{storageStatus ? 'Live backend status loaded' : 'Using safe loading state'}</span>
           </div>
-          <div className="flex items-center gap-2 rounded-xl bg-white/[0.025] border border-white/[0.06] px-3 py-2">
+          <div className="flex items-center gap-2 rounded-xl ea-surface-2 border border-[var(--ea-line)] px-3 py-2">
             <span className={`w-2 h-2 rounded-full ${storageStatus?.postgresReady ? 'bg-emerald-400' : 'bg-gray-500'}`} />
             <span>Postgres JSONB backend is {storageStatus?.postgresReady ? 'reachable' : 'not required'}</span>
           </div>
-          <div className="flex items-center gap-2 rounded-xl bg-white/[0.025] border border-white/[0.06] px-3 py-2">
+          <div className="flex items-center gap-2 rounded-xl ea-surface-2 border border-[var(--ea-line)] px-3 py-2">
             <span className={`w-2 h-2 rounded-full ${storageStatus?.redisReady ? 'bg-emerald-400' : 'bg-gray-500'}`} />
             <span>Redis cache is {storageStatus?.redisReady ? 'reachable' : 'optional'}</span>
           </div>
@@ -460,11 +460,11 @@ export const DevModeConsole: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] font-mono ea-soft">
-          <div className="flex items-center gap-2 rounded-xl bg-white/[0.025] border border-white/[0.06] px-3 py-2">
+          <div className="flex items-center gap-2 rounded-xl ea-surface-2 border border-[var(--ea-line)] px-3 py-2">
             <span className={`w-2 h-2 rounded-full ${tickStatus?.lastTickAt ? 'bg-emerald-400' : 'bg-gray-500'}`} />
             <span>Last tick: {tickStatus?.lastTickAt || 'never (tick disabled or not yet run)'}</span>
           </div>
-          <div className="flex items-center gap-2 rounded-xl bg-white/[0.025] border border-white/[0.06] px-3 py-2">
+          <div className="flex items-center gap-2 rounded-xl ea-surface-2 border border-[var(--ea-line)] px-3 py-2">
             <span className={`w-2 h-2 rounded-full ${tickStatus?.lastError ? 'bg-rose-400' : 'bg-emerald-400'}`} />
             <span>{tickStatus?.lastError ? `Last error: ${tickStatus.lastError}` : 'No errors on the last tick'}</span>
           </div>
@@ -560,8 +560,8 @@ export const DevModeConsole: React.FC = () => {
                     onClick={() => setSelectedStep(s.step)}
                     className={`cursor-pointer p-4 rounded-2xl border transition-all ${
                       isSelected
-                        ? 'bg-cyan-900/20 border-cyan-500/50 shadow-[0_0_20px_-5px_rgba(34,211,238,0.2)]'
-                        : 'bg-[#171717]/60 border-[var(--ea-line)] hover:ea-surface-2/80 hover:border-[var(--ea-line-strong)]'
+                        ? 'bg-cyan-900/20 border-[var(--ea-accent)] shadow-[0_0_20px_-5px_rgba(34,211,238,0.2)]'
+                        : 'ea-surface/60 border-[var(--ea-line)] hover:ea-surface-2/80 hover:border-[var(--ea-line-strong)]'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -725,7 +725,7 @@ export const DevModeConsole: React.FC = () => {
                 <span className="text-[10px] font-mono text-[var(--ea-accent)]">{agent.qualityScore}% Q-Score</span>
               </div>
               <div className="w-full h-1.5 rounded-full bg-[var(--ea-surface-3)] overflow-hidden">
-                <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${agent.qualityScore}%` }} />
+                <div className="h-full rounded-full bg-[var(--ea-accent)]" style={{ width: `${agent.qualityScore}%` }} />
               </div>
               <div className="flex items-center justify-between text-[10px] font-mono ea-faint">
                 <span>Tokens: {agent.tokensUsed}</span>
