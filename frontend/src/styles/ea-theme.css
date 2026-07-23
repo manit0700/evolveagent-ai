@@ -271,6 +271,100 @@
   height: var(--ea-topbar-h);
 }
 
+/* Sidebar nav item helpers (web + desktop) */
+.ea-nav-item--active {
+  box-shadow: none;
+}
+
+.ea-sidebar .ea-nav-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ea-accent-soft), 0 0 0 3px var(--ea-accent);
+}
+
+/* Desktop remaps for light productivity Sidebar */
+[data-platform="desktop"] .ea-sidebar {
+  background: color-mix(in srgb, var(--ea-surface) 94%, transparent) !important;
+  border-color: var(--ea-line) !important;
+  box-shadow: none !important;
+}
+
+[data-platform="desktop"] .ea-sidebar .text-slate-900,
+[data-platform="desktop"] .ea-sidebar .hover\:text-slate-900:hover {
+  color: var(--ea-ink) !important;
+}
+
+[data-platform="desktop"] .ea-sidebar .text-slate-600,
+[data-platform="desktop"] .ea-sidebar .text-slate-500,
+[data-platform="desktop"] .ea-sidebar .text-slate-400 {
+  color: var(--ea-muted) !important;
+}
+
+[data-platform="desktop"] .ea-sidebar .bg-white,
+[data-platform="desktop"] .ea-sidebar .bg-white\/92,
+[data-platform="desktop"] .ea-sidebar .hover\:bg-white:hover,
+[data-platform="desktop"] .ea-sidebar .bg-slate-50,
+[data-platform="desktop"] .ea-sidebar .bg-slate-100,
+[data-platform="desktop"] .ea-sidebar .hover\:bg-slate-100:hover {
+  background-color: var(--ea-surface-2) !important;
+}
+
+[data-platform="desktop"] .ea-sidebar .border-slate-200,
+[data-platform="desktop"] .ea-sidebar .bg-slate-200 {
+  border-color: var(--ea-line) !important;
+  background-color: var(--ea-line) !important;
+}
+
+[data-platform="desktop"] .ea-sidebar .bg-slate-900,
+[data-platform="desktop"] .ea-sidebar .ea-nav-item--active {
+  background-color: var(--ea-accent-soft) !important;
+  color: var(--ea-accent) !important;
+}
+
+[data-platform="desktop"] .ea-sidebar .bg-slate-900.text-white,
+[data-platform="desktop"] .ea-sidebar .bg-slate-900 {
+  background-color: var(--ea-ink) !important;
+  color: var(--ea-surface) !important;
+}
+
+[data-platform="desktop"] .ea-sidebar .ea-nav-item--active {
+  background-color: var(--ea-surface-3) !important;
+  color: var(--ea-ink) !important;
+  box-shadow: inset 3px 0 0 var(--ea-accent);
+  border-radius: 0.5rem;
+}
+
+[data-platform="desktop"] .ea-sidebar .bg-sky-50,
+[data-platform="desktop"] .ea-sidebar .bg-amber-50,
+[data-platform="desktop"] .ea-sidebar .bg-emerald-500 {
+  /* badge/status soft fills stay semantic via tokens below */
+}
+
+[data-platform="desktop"] .ea-sidebar .bg-sky-50 {
+  background-color: var(--ea-accent-soft) !important;
+  color: var(--ea-accent) !important;
+  border-color: transparent !important;
+}
+
+[data-platform="desktop"] .ea-sidebar .text-sky-700 {
+  color: var(--ea-accent) !important;
+}
+
+[data-platform="desktop"] .ea-sidebar .bg-amber-50,
+[data-platform="desktop"] .ea-sidebar .border-amber-200,
+[data-platform="desktop"] .ea-sidebar .text-amber-700 {
+  background-color: var(--ea-warn-soft) !important;
+  color: var(--ea-warn) !important;
+  border-color: transparent !important;
+}
+
+[data-platform="desktop"] .ea-sidebar .bg-emerald-500 {
+  background-color: var(--ea-success) !important;
+}
+
+[data-platform="desktop"] .ea-sidebar {
+  font-size: 0.8125rem;
+}
+
 /* Desktop titlebar drag region under overlay traffic lights */
 [data-platform="desktop"] .ea-shell header {
   -webkit-app-region: drag;
@@ -305,8 +399,4 @@
 [data-platform="desktop"] .ea-btn {
   padding: 0.45rem 0.75rem;
   font-size: 0.75rem;
-}
-
-[data-platform="desktop"] aside {
-  font-size: 0.8125rem;
 }

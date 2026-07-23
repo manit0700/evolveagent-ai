@@ -40,7 +40,9 @@ so they flip with the platform without a second component library.
 | `desktop/src-tauri/tauri.conf.json` | Window size, overlay title bar, traffic lights, CSP |
 | `desktop/src-tauri/src/lib.rs` | Minimal Tauri bootstrap (no elevated capabilities) |
 | `frontend/src/main.jsx` | Sets `data-platform="desktop"` when Tauri is present |
-| `frontend/src/styles/ea-theme.css` | Desktop token overrides + denser spacing + drag region |
+| `frontend/src/styles/ea-theme.css` | Desktop token overrides, denser spacing, drag region, `.ea-topbar` / `.ea-sidebar` remaps |
+| `frontend/src/components/layout/TopBar.tsx` | Light productivity header (`.ea-topbar`) |
+| `frontend/src/components/layout/Sidebar.tsx` | Collapsible nav rail (`.ea-sidebar`) aligned with TopBar |
 
 ## Future desktop-only divergence
 
