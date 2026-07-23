@@ -35,7 +35,7 @@ const MainContent: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-[#0a0a0a] text-[#e5e5e5] selection:bg-cyan-500/30 font-sans">
+    <div className="ea-shell flex min-h-screen font-sans">
       {/* Sidebar navigation */}
       <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
 
@@ -43,7 +43,8 @@ const MainContent: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
         <TopBar setMobileOpen={setMobileOpen} />
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <main className="flex-1 w-full max-w-[1380px] mx-auto px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
+          <div className="ea-page">
           {activePage === 'home' && <HomeDashboard />}
           {activePage === 'instructions' && <InstructionsPage />}
           {activePage === 'chat' && <SimpleModeChat />}
@@ -62,6 +63,7 @@ const MainContent: React.FC = () => {
           {activePage === 'marketplace-hub' && <MarketplaceHubPage />}
           {activePage === 'compliance' && <CompliancePage />}
           {activePage === 'departments' && <DepartmentsPage />}
+          </div>
         </main>
       </div>
 

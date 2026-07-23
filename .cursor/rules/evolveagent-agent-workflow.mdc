@@ -1,0 +1,46 @@
+---
+description: Multi-agent workflow and safety for EvolveAgent Cursor agents
+alwaysApply: true
+---
+
+# Cursor agent workflow
+
+Before substantial edits, run:
+
+```bash
+git status --short
+git branch --show-current
+```
+
+Leave unrelated dirty files alone.
+
+## Roles (non-trivial tasks)
+
+1. Planner — scope + smallest safe plan
+2. Backend — FastAPI routes/services/agents/tests
+3. Frontend — React UI, `api.js`, Simple/Developer Mode, EA theme
+4. Security/Governance — secrets, protected paths, unsafe commands
+5. Testing — focused then full backend pytest / frontend build
+6. Reviewer — diff hygiene before commit
+
+Tiny docs/one-line fixes: Planner + Reviewer only.
+
+## Never edit or stage
+
+`.env`, `backend/.env`, `.git/`, `node_modules/`, `venv/`, `__pycache__/`, `backend/app/data/`, `backend/app/uploads/`, `frontend/dist/`, logs/cache.
+
+## Forbidden unless user explicitly asks
+
+`git reset --hard`, `git checkout -- .`, `rm -rf`, force push, auth/payments/Docker/migrations/vector DB/unrestricted shell/real external integrations.
+
+## Verify
+
+```bash
+cd backend && ./venv/bin/pytest -q
+cd frontend && npm run build
+```
+
+## Finish report
+
+branch, files changed, commit hash, backend test result, frontend build result, Linear status if updated, limitations/follow-ups.
+---

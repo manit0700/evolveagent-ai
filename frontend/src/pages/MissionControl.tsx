@@ -1,24 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { fetchWorkflowRuns, startDurableRun, LiveWorkflowRun } from '../data/api';
 import { GlassCard } from '../components/shared/GlassCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
 import { RiskBadge } from '../components/shared/RiskBadge';
-import { 
-  Compass, 
-  CheckSquare, 
-  Users, 
-  Sparkles, 
-  ArrowRight, 
-  Play, 
-  ShieldAlert, 
-  Activity, 
-  CheckCircle2, 
-  Clock, 
-  AlertTriangle, 
-  Layers, 
-  Check, 
-  Cpu 
+import { PageHero } from '../components/shared/PageHero';
+import {
+  CheckSquare,
+  Sparkles,
+  Check,
+  Activity,
+  Layers,
 } from 'lucide-react';
 import { TaskStatus } from '../types';
 
@@ -26,8 +18,11 @@ export const MissionControl: React.FC = () => {
   const { mission, tasks, agents, approvals, runMockWorkflowStep, showToast } = useApp();
   const [liveRuns, setLiveRuns] = useState<LiveWorkflowRun[] | null>(null);
   const [starting, setStarting] = useState(false);
+
   const loadRuns = () => fetchWorkflowRuns().then(setLiveRuns);
-  useEffect(() => { loadRuns(); }, []);
+  useEffect(() => {
+    loadRuns();
+  }, []);
 
   const handleStartRun = async () => {
     setStarting(true);
@@ -35,9 +30,18 @@ export const MissionControl: React.FC = () => {
       const ok = await startDurableRun('Mission Control run', [
         { name: 'Collect mission context' },
         { name: 'Summarize progress' },
-        { name: 'Notify on completion', action_type: 'notify', action_params: { message: 'Mission Control workflow complete' } },
+        {
+          name: 'Notify on completion',
+          action_type: 'notify',
+          action_params: { message: 'Mission Control workflow complete' },
+        },
       ]);
-      showToast(ok ? 'Started a real durable workflow — the notify step is held for approval.' : 'Backend offline — could not start a real run.', ok ? 'success' : 'warning');
+      showToast(
+        ok
+          ? 'Started a real durable workflow — the notify step is held for approval.'
+          : 'Backend offline — could not start a real run.',
+        ok ? 'success' : 'warning'
+      );
       if (ok) await loadRuns();
     } finally {
       setStarting(false);
@@ -49,95 +53,87 @@ export const MissionControl: React.FC = () => {
     showToast('Next recommended action approved & delegated to agents!', 'success');
   };
 
-  const columns: { id: TaskStatus; label: string; color: string }[] = [
-    { id: 'planned', label: 'Planned / Backlog', color: 'border-blue-500/30' },
-    { id: 'running', label: 'In Progress / Running', color: 'border-cyan-500/40' },
-    { id: 'waiting_approval', label: 'Waiting Approval', color: 'border-amber-500/40' },
-    { id: 'completed', label: 'Completed', color: 'border-emerald-500/40' }
+  const columns: { id: TaskStatus; label: string }[] = [
+    { id: 'planned', label: 'Planned' },
+    { id: 'running', label: 'In progress' },
+    { id: 'waiting_approval', label: 'Waiting' },
+    { id: 'completed', label: 'Done' },
   ];
 
+  const pendingApprovals = approvals.filter((a) => a.status === 'pending').length;
+
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
-      {/* 1. Active Mission Overview Header Card */}
-      <div className="relative rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#121216] p-6 sm:p-8 shadow-2xl overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
-        
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
-          <div className="space-y-2 max-w-2xl">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold uppercase tracking-wider">
-                Active Mission #01
-              </span>
-              <span className="text-xs font-mono text-emerald-400 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Running
-              </span>
+    <div className="space-y-5 pb-8">
+      <PageHero
+        eyebrow="Active mission"
+        title={mission.title}
+        description={mission.description}
+        actions={
+          <button type="button" onClick={handleStartRun} disabled={starting} className="ea-btn ea-btn--primary disabled:opacity-50">
+            {starting ? 'Starting…' : 'Start real run'}
+          </button>
+        }
+      >
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex -space-x-2">
+              {mission.assignedAgents.map((agId) => {
+                const ag = agents.find((a) => a.id === agId);
+                return (
+                  <div
+                    key={agId}
+                    title={ag?.name}
+                    className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[var(--ea-surface)] ea-surface-3 text-sm"
+                  >
+                    {ag?.avatar || '🤖'}
+                  </div>
+                );
+              })}
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{mission.title}</h1>
-            <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">{mission.description}</p>
+            <div>
+              <div className="text-[11px] ea-muted">Assigned squad</div>
+              <div className="text-xs font-medium ea-ink">{mission.assignedAgents.length} agents · running</div>
+            </div>
           </div>
 
-          {/* Assigned Agents Avatars & Progress Radial/Bar */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 shrink-0 bg-white/[0.03] p-4 rounded-2xl border border-white/10">
-            <div>
-              <div className="text-[10px] font-mono uppercase text-gray-400 mb-1.5">Assigned Squad</div>
-              <div className="flex items-center -space-x-2">
-                {mission.assignedAgents.map((agId, idx) => {
-                  const ag = agents.find(a => a.id === agId);
-                  return (
-                    <div
-                      key={idx}
-                      title={ag?.name}
-                      className="w-9 h-9 rounded-full bg-[#1e1e26] border-2 border-[#121216] flex items-center justify-center text-sm shadow-md"
-                    >
-                      {ag?.avatar || '🤖'}
-                    </div>
-                  );
-                })}
-              </div>
+          <div className="w-full sm:max-w-xs space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="ea-muted">Progress</span>
+              <span className="font-semibold text-[var(--ea-accent)]">{mission.progress}%</span>
             </div>
-
-            <div className="w-full sm:w-44 space-y-1.5">
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-gray-400">Total Progress</span>
-                <span className="text-cyan-300 font-bold">{mission.progress}%</span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-black/60 overflow-hidden p-0.5 border border-white/5">
-                <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${mission.progress}%` }} />
-              </div>
+            <div className="h-2 overflow-hidden rounded-full ea-surface-3">
+              <div className="h-full rounded-full bg-[var(--ea-accent)]" style={{ width: `${mission.progress}%` }} />
             </div>
           </div>
         </div>
-      </div>
+      </PageHero>
 
-      {/* Live durable-workflow runs (real backend data) */}
       {liveRuns && liveRuns.length > 0 && (
         <GlassCard>
-          <div className="flex items-center justify-between pb-3 border-b border-white/10">
-            <span className="text-sm font-bold text-white flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Live Workflow Runs
-            </span>
-            <button
-              onClick={handleStartRun}
-              disabled={starting}
-              className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-200 transition-colors disabled:opacity-50"
-            >
-              {starting ? 'Starting…' : '▶ Start real run'}
+          <div className="flex items-center justify-between border-b border-[var(--ea-line)] pb-3">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-[var(--ea-success)]" />
+              <h3 className="text-sm font-semibold ea-ink">Live workflow runs</h3>
+            </div>
+            <button type="button" onClick={handleStartRun} disabled={starting} className="ea-btn text-xs py-1.5 disabled:opacity-50">
+              {starting ? 'Starting…' : 'New run'}
             </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3">
-            {liveRuns.map(run => {
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {liveRuns.map((run) => {
               const pct = run.total ? Math.round((run.done / run.total) * 100) : 0;
-              const tone = run.status === 'completed' ? 'text-emerald-300' : run.status === 'waiting_approval' ? 'text-amber-300' : run.status === 'cancelled' ? 'text-gray-400' : 'text-cyan-300';
               return (
-                <div key={run.id} className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                <div key={run.id} className="rounded-[var(--ea-radius-sm)] border border-[var(--ea-line)] ea-surface-2 p-3">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-medium text-gray-200 truncate">{run.name}</span>
-                    <span className={`text-[10px] font-mono ${tone}`}>{run.status.replace('_', ' ')}</span>
+                    <span className="truncate text-xs font-medium ea-ink">{run.name}</span>
+                    <span className="shrink-0 text-[11px] capitalize ea-muted">{run.status.replace('_', ' ')}</span>
                   </div>
-                  <div className="mt-2 w-full h-1.5 rounded-full bg-black/50 overflow-hidden">
-                    <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${pct}%` }} />
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full ea-surface-3">
+                    <div className="h-full rounded-full bg-[var(--ea-accent)]" style={{ width: `${pct}%` }} />
                   </div>
-                  <div className="text-[10px] text-gray-500 font-mono mt-1">{run.done}/{run.total} steps</div>
+                  <div className="mt-1 text-[11px] ea-faint">
+                    {run.done}/{run.total} steps
+                  </div>
                 </div>
               );
             })}
@@ -145,54 +141,53 @@ export const MissionControl: React.FC = () => {
         </GlassCard>
       )}
 
-      {/* 2. Next Best Action Recommendation Banner */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-900/30 via-sky-900/20 to-blue-900/30 border border-cyan-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+      <section className="flex flex-col gap-3 rounded-[var(--ea-radius)] border border-[var(--ea-line)] ea-surface p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <div className="p-2.5 rounded-xl bg-cyan-500/20 text-cyan-300 shrink-0">
-            <Sparkles className="w-5 h-5 animate-spin" style={{ animationDuration: '8s' }} />
+          <div className="rounded-[var(--ea-radius-sm)] bg-[var(--ea-accent-soft)] p-2.5 text-[var(--ea-accent)]">
+            <Sparkles className="h-4 w-4" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-cyan-200 uppercase tracking-wide font-mono">Recommended Next Action</div>
-            <p className="text-xs sm:text-sm text-white font-medium mt-0.5">
-              UI Design Agent recommends synthesizing the <span className="text-cyan-300 font-bold">Agents Overview grid</span> and verifying Mock-Safe permission profiles next.
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ea-accent)]">Next best action</div>
+            <p className="mt-0.5 text-sm ea-ink">
+              Synthesize the Agents overview grid and verify mock-safe permission profiles.
             </p>
           </div>
         </div>
-        <button
-          onClick={handleApproveNext}
-          className="px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition-all shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 shrink-0 self-start sm:self-auto"
-        >
-          <Check className="w-4 h-4 stroke-[3]" />
-          <span>Approve Next Task</span>
+        <button type="button" onClick={handleApproveNext} className="ea-btn ea-btn--primary shrink-0 self-start sm:self-auto">
+          <Check className="h-4 w-4" />
+          Approve next task
         </button>
-      </div>
+      </section>
 
-      {/* 3. Mission Phase Tracker (5 Phases Step Bar) */}
       <GlassCard>
-        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <Layers className="w-4 h-4 text-cyan-400" />
-          <span>Mission Phase Tracker</span>
+        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold ea-ink">
+          <Layers className="h-4 w-4 text-[var(--ea-accent)]" />
+          Phase tracker
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-5">
           {mission.phases.map((phase, idx) => {
             const isDone = phase.status === 'completed';
             const isCurr = phase.status === 'in_progress';
             return (
               <div
                 key={phase.id}
-                className={`p-3 rounded-xl border transition-all ${
-                  isDone ? 'bg-emerald-500/[0.04] border-emerald-500/20 text-emerald-300' :
-                  isCurr ? 'bg-cyan-500/[0.08] border-cyan-500/40 text-cyan-200 shadow-md' :
-                  'bg-white/[0.01] border-white/5 text-gray-500'
+                className={`rounded-[var(--ea-radius-sm)] border p-3 ${
+                  isDone
+                    ? 'border-transparent bg-[var(--ea-success-soft)]'
+                    : isCurr
+                      ? 'border-transparent bg-[var(--ea-accent-soft)]'
+                      : 'border-[var(--ea-line)] ea-surface-2'
                 }`}
               >
-                <div className="flex items-center justify-between text-[11px] font-mono mb-1">
-                  <span>Phase 0{idx + 1}</span>
+                <div className="mb-1 flex items-center justify-between text-[11px] ea-muted">
+                  <span>Phase {idx + 1}</span>
                   <StatusBadge status={phase.status} size="sm" showIcon={false} />
                 </div>
-                <div className="text-xs font-semibold truncate text-white">{phase.title}</div>
-                <div className="mt-2 flex items-center justify-between text-[10px] font-mono opacity-80">
-                  <span>{phase.completedCount}/{phase.tasksCount} tasks</span>
+                <div className="truncate text-xs font-semibold ea-ink">{phase.title}</div>
+                <div className="mt-2 flex items-center justify-between text-[10px] ea-faint">
+                  <span>
+                    {phase.completedCount}/{phase.tasksCount}
+                  </span>
                   <span>{Math.round((phase.completedCount / phase.tasksCount) * 100)}%</span>
                 </div>
               </div>
@@ -201,42 +196,40 @@ export const MissionControl: React.FC = () => {
         </div>
       </GlassCard>
 
-      {/* 4. Task Graph / Kanban Flow (4 columns) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-            <CheckSquare className="w-4 h-4 text-cyan-400" />
-            <span>Task Graph & Execution Pipeline</span>
+          <h3 className="flex items-center gap-2 text-sm font-semibold ea-ink">
+            <CheckSquare className="h-4 w-4 text-[var(--ea-accent)]" />
+            Task pipeline
           </h3>
-          <span className="text-xs text-gray-400 font-mono">Showing {tasks.length} atomic operations</span>
+          <span className="text-xs ea-muted">{tasks.length} tasks</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {columns.map(col => {
-            const colTasks = tasks.filter(t => t.status === col.id);
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+          {columns.map((col) => {
+            const colTasks = tasks.filter((t) => t.status === col.id);
             return (
-              <div key={col.id} className={`p-4 rounded-2xl bg-[#141418] border ${col.color} flex flex-col min-h-[350px]`}>
-                <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
-                  <span className="text-xs font-bold text-white uppercase tracking-wider font-mono">{col.label}</span>
-                  <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-white/10 text-gray-300">{colTasks.length}</span>
+              <div key={col.id} className="flex min-h-[20rem] flex-col rounded-[var(--ea-radius)] border border-[var(--ea-line)] ea-surface p-3">
+                <div className="mb-3 flex items-center justify-between border-b border-[var(--ea-line)] pb-2">
+                  <span className="text-xs font-semibold ea-ink">{col.label}</span>
+                  <span className="ea-chip">{colTasks.length}</span>
                 </div>
-
-                <div className="flex-1 space-y-3">
+                <div className="flex-1 space-y-2">
                   {colTasks.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-gray-500 font-mono">No tasks in this state</div>
+                    <div className="py-8 text-center text-xs ea-faint">Empty</div>
                   ) : (
-                    colTasks.map(t => (
+                    colTasks.map((t) => (
                       <div
                         key={t.id}
-                        className="p-3 rounded-xl bg-[#1a1a20] border border-white/10 hover:border-white/20 transition-all space-y-2 shadow-md"
+                        className="space-y-2 rounded-[var(--ea-radius-sm)] border border-[var(--ea-line)] ea-surface-2 p-3"
                       >
-                        <div className="flex items-start justify-between gap-1.5">
-                          <span className="text-xs font-semibold text-white line-clamp-2">{t.title}</span>
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="line-clamp-2 text-xs font-semibold ea-ink">{t.title}</span>
                           <RiskBadge level={t.riskLevel} size="sm" />
                         </div>
-                        <p className="text-[11px] text-gray-400 line-clamp-2">{t.description}</p>
-                        <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-gray-500">
-                          <span className="text-cyan-300">{t.assignedAgentName}</span>
+                        <p className="line-clamp-2 text-[11px] ea-muted">{t.description}</p>
+                        <div className="flex items-center justify-between border-t border-[var(--ea-line)] pt-2 text-[10px] ea-faint">
+                          <span className="text-[var(--ea-accent)]">{t.assignedAgentName}</span>
                           <span>{t.timestamp}</span>
                         </div>
                       </div>
@@ -249,33 +242,34 @@ export const MissionControl: React.FC = () => {
         </div>
       </div>
 
-      {/* 5. Mission Intelligence & Health Panel */}
-      <GlassCard glow="purple">
-        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <Activity className="w-4 h-4 text-cyan-400" />
-          <span>Mission Intelligence & Agent Confidence Scores</span>
+      <GlassCard>
+        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold ea-ink">
+          <Activity className="h-4 w-4 text-[var(--ea-accent)]" />
+          Mission health
         </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-          <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-            <div className="text-xs font-mono text-gray-400">Agent Confidence</div>
-            <div className="text-2xl font-bold font-mono text-cyan-300 mt-1">94%</div>
-            <div className="text-[10px] text-emerald-400 mt-1">High predictability</div>
-          </div>
-          <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-            <div className="text-xs font-mono text-gray-400">Blockers Detected</div>
-            <div className="text-2xl font-bold font-mono text-white mt-1">00</div>
-            <div className="text-[10px] text-gray-500 mt-1">Smooth execution</div>
-          </div>
-          <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-            <div className="text-xs font-mono text-gray-400">Pending Approvals</div>
-            <div className="text-2xl font-bold font-mono text-amber-400 mt-1">{approvals.filter(a => a.status === 'pending').length}</div>
-            <div className="text-[10px] text-amber-300/80 mt-1">Gating external writes</div>
-          </div>
-          <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-            <div className="text-xs font-mono text-gray-400">Sandboxing Mode</div>
-            <div className="text-2xl font-bold font-mono text-emerald-400 mt-1">Active</div>
-            <div className="text-[10px] text-gray-500 mt-1">Zero unplanned side effects</div>
-          </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { label: 'Confidence', value: '94%', hint: 'Stable', tone: 'accent' as const },
+            { label: 'Blockers', value: '0', hint: 'Clear', tone: 'ok' as const },
+            { label: 'Approvals', value: String(pendingApprovals), hint: 'Gating writes', tone: 'warn' as const },
+            { label: 'Sandbox', value: 'On', hint: 'Mock-safe', tone: 'ok' as const },
+          ].map((m) => (
+            <div key={m.label} className="rounded-[var(--ea-radius-sm)] border border-[var(--ea-line)] ea-surface-2 p-3 text-center">
+              <div className="text-[11px] ea-muted">{m.label}</div>
+              <div
+                className={`mt-1 text-2xl font-semibold tabular-nums ${
+                  m.tone === 'ok'
+                    ? 'text-[var(--ea-success)]'
+                    : m.tone === 'warn'
+                      ? 'text-[var(--ea-warn)]'
+                      : 'text-[var(--ea-accent)]'
+                }`}
+              >
+                {m.value}
+              </div>
+              <div className="mt-1 text-[10px] ea-faint">{m.hint}</div>
+            </div>
+          ))}
         </div>
       </GlassCard>
     </div>

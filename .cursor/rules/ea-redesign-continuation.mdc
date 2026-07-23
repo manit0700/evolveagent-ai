@@ -1,0 +1,20 @@
+---
+description: Continue the EvolveAgent light-web / dark-desktop redesign
+globs: frontend/**/*.{tsx,jsx,css},desktop/**/*
+alwaysApply: false
+---
+
+# Redesign continuation checklist
+
+When editing frontend or desktop UI:
+
+1. Audit shell + shared components first (`App.tsx`, layout, `components/shared/*`, `components/ui/*`, `styles/ea-theme.css`).
+2. Prefer token/CSS changes that cascade over one-off page rewrites.
+3. Keep web light/calm; keep desktop darker/denser via `data-platform`.
+4. Do not reintroduce glow-heavy “AI control panel” chrome.
+5. Preserve approvals, command modal, live refresh, and navigation behavior.
+6. After UI changes: `cd frontend && npm run build`.
+7. If desktop framing changes, update `docs/FRONTEND_DESKTOP_UI.md` when shared vs desktop-specific boundaries shift.
+
+Active redesign branch context: `cursor/light-calm-frontend-shell-44d4` / PR #289.
+---

@@ -4,8 +4,15 @@ project:
   stack:
     backend: FastAPI
     frontend: React
+    desktop: Tauri v2 wrapper (same frontend bundle)
     storage: JSON files through StorageService
   default_branch: main
+  ui_direction:
+    web: light_calm_productivity
+    desktop: dark_dense_command_center
+    shared_tokens: frontend/src/styles/ea-theme.css
+    platform_attr: data-platform
+    docs: docs/FRONTEND_DESKTOP_UI.md
 
 agent_policy:
   mode: guarded
@@ -32,7 +39,7 @@ agent_roles:
   backend:
     purpose: Handle FastAPI routes, services, agents, storage, governance integration, and backend tests.
   frontend:
-    purpose: Handle React UI, frontend API helpers, Simple Mode, and Developer Mode behavior.
+    purpose: Handle React UI (App.tsx shell), EA theme tokens, Simple Mode, Developer Mode, and frontend API helpers.
   security_governance:
     purpose: Check protected paths, secret exposure, permission rules, unsafe commands, and runtime data.
   testing:
@@ -63,8 +70,6 @@ forbidden_commands:
   - git checkout -- .
   - rm -rf
   - git push --force
-  - npm install
-  - pip install
   - git clean
 
 allowed_verification_commands:
@@ -90,13 +95,43 @@ backend_conventions:
     - Preserve mock fallback when real APIs are unavailable.
 
 frontend_conventions:
-  main_file: frontend/src/App.jsx
+  main_file: frontend/src/App.tsx
+  legacy_main_file: frontend/src/App.jsx
   api_client: frontend/src/api.js
+  theme_tokens: frontend/src/styles/ea-theme.css
+  shell:
+    - frontend/src/components/layout/Sidebar.tsx
+    - frontend/src/components/layout/TopBar.tsx
+  shared_surfaces:
+    - frontend/src/components/shared/GlassCard.tsx
+    - frontend/src/components/shared/PageHero.tsx
+    - frontend/src/components/shared/MetricCard.tsx
+    - frontend/src/components/ui/
   rules:
     - Simple Mode shows user-facing answers only.
     - Developer Mode shows provider, workflow, governance, analytics, and raw details.
     - Do not expose secrets, internal file paths, or raw security internals in Simple Mode.
     - Keep frontend changes focused and avoid broad redesigns unless requested.
+    - Prefer ea-* tokens/classes; do not reintroduce glow-heavy dark glass chrome.
+    - Web stays light/calm; desktop stays darker/denser via data-platform.
+    - TopBar stays a quiet productivity header; Sidebar stays sectioned and useful.
+
+desktop_conventions:
+  package: desktop/package.json
+  tauri_config: desktop/src-tauri/tauri.conf.json
+  rust_entry: desktop/src-tauri/src/lib.rs
+  rules:
+    - Desktop loads the same frontend bundle; there is no separate desktop React UI.
+    - Differentiate with window framing and data-platform desktop tokens.
+    - Keep capabilities minimal (no unrestricted shell/fs/network).
+    - Document shared vs desktop-specific changes in docs/FRONTEND_DESKTOP_UI.md.
+
+cursor_rules:
+  directory: .cursor/rules
+  files:
+    - ea-ui-design-system.mdc
+    - evolveagent-agent-workflow.mdc
+    - ea-redesign-continuation.mdc
 
 git_policy:
   stage_only_intended_files: true
@@ -121,3 +156,13 @@ task_completion_report:
     - frontend_build_result
     - linear_status_if_updated
     - known_limitations
+
+recent_ui_work:
+  branch: cursor/light-calm-frontend-shell-44d4
+  pr: 289
+  summary:
+    - Introduced EA theme tokens and platform detection
+    - Lightened web shell (App, Sidebar, TopBar)
+    - Rethemed shared cards/modals/chat and page surfaces
+    - Desktop dark denser tokens + Tauri window polish
+    - Documented shared vs desktop UI in docs/FRONTEND_DESKTOP_UI.md

@@ -17,19 +17,17 @@ export const GlassCard: React.FC<GlassCardProps> = ({
   onClick,
   padding = 'md'
 }) => {
-  const baseClass = hover ? 'glass-card-hover cursor-pointer' : 'glass-card';
-  const glowClass = glow === 'purple' ? 'glow-purple' : glow === 'blue' ? 'glow-blue' : '';
-  
-  const padClass = 
+  const padClass =
     padding === 'none' ? 'p-0' :
-    padding === 'sm' ? 'p-3 sm:p-4' :
-    padding === 'lg' ? 'p-6 sm:p-8' :
-    'p-4 sm:p-6'; // md default
+    padding === 'sm' ? 'p-3 sm:p-3.5' :
+    padding === 'lg' ? 'p-5 sm:p-6' :
+    'p-4 sm:p-5';
 
   return (
     <div
       onClick={onClick}
-      className={`rounded-2xl border border-white/[0.07] bg-[#171717]/80 backdrop-blur-xl shadow-xl transition-all duration-200 ${baseClass} ${glowClass} ${padClass} ${className}`}
+      className={`ea-card ${hover ? 'ea-card--hover ea-card--interactive' : ''} ${padClass} ${className}`}
+      data-glow={glow === 'none' ? undefined : glow}
     >
       {children}
     </div>

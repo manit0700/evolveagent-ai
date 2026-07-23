@@ -1,11 +1,10 @@
 // EvolveAgent desktop shell.
 //
-// Deliberately minimal: this wraps the existing web frontend in a native
-// window. It registers NO extra native capabilities (no shell, no filesystem,
-// no arbitrary network) — see capabilities/default.json. That keeps the desktop
-// build aligned with EvolveAgent's safety model (no unrestricted shell access,
-// no destructive autonomous file operations). Add capabilities explicitly and
-// narrowly if a feature ever needs them.
+// Thin native window around the shared React frontend. Theme divergence is
+// handled in the web bundle via `data-platform="desktop"` (see frontend
+// main.jsx + styles/ea-theme.css): denser dark command-center tokens, while
+// the browser build stays light/calm. This Rust layer stays capability-light
+// (no shell/fs/arbitrary network) so desktop keeps EvolveAgent's safety model.
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

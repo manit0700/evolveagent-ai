@@ -1,206 +1,214 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { GlassCard } from '../components/shared/GlassCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
 import { RiskBadge } from '../components/shared/RiskBadge';
-import { 
-  ShieldCheck, 
-  ShieldAlert, 
-  Check, 
-  X, 
-  Clock, 
-  Search, 
-  Filter, 
-  AlertTriangle, 
-  CheckCircle2, 
-  ArrowRight, 
-  Wrench, 
-  Cpu, 
-  FileCode, 
-  DollarSign, 
-  FolderGit2, 
+import { PageHero } from '../components/shared/PageHero';
+import {
+  ShieldAlert,
+  Check,
+  X,
+  Search,
+  AlertTriangle,
+  CheckCircle2,
+  Edit3,
   Sparkles,
-  Edit3
 } from 'lucide-react';
-import { ApprovalRequest } from '../types';
+
+type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
 
 export const ApprovalsPage: React.FC = () => {
-  const { approvals, approveRequest, rejectRequest, approveBatchLowRisk, governanceLogs, showToast } = useApp();
-  const [selectedId, setSelectedId] = useState<string>(approvals.find(a => a.status === 'pending')?.id || approvals[0]?.id || 'app-01');
+  const { approvals, approveRequest, rejectRequest, approveBatchLowRisk, showToast } = useApp();
+  const [selectedId, setSelectedId] = useState<string>(
+    approvals.find((a) => a.status === 'pending')?.id || approvals[0]?.id || 'app-01'
+  );
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
 
-  const selectedItem = approvals.find(a => a.id === selectedId) || approvals[0];
+  const selectedItem = approvals.find((a) => a.id === selectedId) || approvals[0];
 
-  const filteredApprovals = approvals.filter(a => {
-    const matchesStatus = statusFilter === 'all' ? true : a.status === statusFilter;
-    const matchesQuery = a.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         a.agentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         a.toolName.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesStatus && matchesQuery;
-  });
+  const filteredApprovals = useMemo(
+    () =>
+      approvals.filter((a) => {
+        const matchesStatus = statusFilter === 'all' ? true : a.status === statusFilter;
+        const q = searchQuery.toLowerCase();
+        const matchesQuery =
+          a.title.toLowerCase().includes(q) ||
+          a.agentName.toLowerCase().includes(q) ||
+          a.toolName.toLowerCase().includes(q);
+        return matchesStatus && matchesQuery;
+      }),
+    [approvals, searchQuery, statusFilter]
+  );
 
-  const pendingCount = approvals.filter(a => a.status === 'pending').length;
-  const approvedToday = approvals.filter(a => a.status === 'approved').length + 14;
-  const rejectedToday = approvals.filter(a => a.status === 'rejected').length + 2;
+  const pendingCount = approvals.filter((a) => a.status === 'pending').length;
+  const approvedToday = approvals.filter((a) => a.status === 'approved').length + 14;
+  const rejectedToday = approvals.filter((a) => a.status === 'rejected').length + 2;
+  const highRiskPending = approvals.filter((a) => a.status === 'pending' && a.riskLevel === 'high').length;
+
+  const metrics = [
+    { label: 'Pending', value: String(pendingCount), hint: 'Need sign-off', tone: 'warn' as const },
+    { label: 'Approved', value: String(approvedToday), hint: 'Today', tone: 'ok' as const },
+    { label: 'Rejected', value: String(rejectedToday), hint: 'Today', tone: 'danger' as const },
+    { label: 'High risk', value: String(highRiskPending), hint: 'In queue', tone: 'warn' as const },
+  ];
+
+  const toneValue = (tone: 'ok' | 'warn' | 'danger' | 'accent') =>
+    tone === 'ok'
+      ? 'text-[var(--ea-success)]'
+      : tone === 'warn'
+        ? 'text-[var(--ea-warn)]'
+        : tone === 'danger'
+          ? 'text-[var(--ea-danger)]'
+          : 'text-[var(--ea-accent)]';
+
+  if (!selectedItem) {
+    return (
+      <div className="ea-hero">
+        <h1 className="text-xl font-semibold ea-ink">Approvals</h1>
+        <p className="mt-2 text-sm ea-muted">No approval requests yet.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
-      {/* 1. Overview Metrics & Batch Approval Action Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 rounded-3xl bg-[#141418] border border-white/10 shadow-xl">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 flex-1">
-          {[
-            { label: 'Pending Review', value: `${pendingCount}`, sub: 'Requires sign-off', color: 'text-amber-400' },
-            { label: 'Approved Today', value: `${approvedToday}`, sub: 'Mock sandbox', color: 'text-emerald-400' },
-            { label: 'Rejected Today', value: `${rejectedToday}`, sub: 'Safety blocks', color: 'text-rose-400' },
-            { label: 'Blocked Actions', value: '02', sub: 'Destructive shell', color: 'text-rose-400' },
-            { label: 'Avg Review Time', value: '42s', sub: 'Fast governance', color: 'text-cyan-400' },
-            { label: 'High-Risk Tools', value: '01', sub: 'Filesystem write', color: 'text-amber-400' },
-          ].map((m, idx) => (
-            <div key={idx} className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 space-y-0.5">
-              <div className="text-[10px] font-mono text-gray-400 uppercase tracking-wider">{m.label}</div>
-              <div className={`text-xl font-bold font-mono ${m.color}`}>{m.value}</div>
-              <div className="text-[10px] text-gray-500 font-mono truncate">{m.sub}</div>
+    <div className="space-y-5 pb-8">
+      <PageHero
+        eyebrow="Governance"
+        title="Approvals"
+        description="Review planned actions, risk, and scope before anything runs outside the sandbox."
+        actions={
+          <button type="button" onClick={approveBatchLowRisk} className="ea-btn ea-btn--primary">
+            <Sparkles className="h-4 w-4" />
+            Approve low-risk batch
+          </button>
+        }
+      >
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {metrics.map((m) => (
+            <div key={m.label} className="rounded-[var(--ea-radius-sm)] border border-[var(--ea-line)] ea-surface-2 px-3 py-2.5">
+              <div className="text-[11px] font-medium ea-muted">{m.label}</div>
+              <div className={`mt-1 text-2xl font-semibold tabular-nums ${toneValue(m.tone)}`}>{m.value}</div>
+              <div className="text-[11px] ea-faint">{m.hint}</div>
             </div>
           ))}
         </div>
+      </PageHero>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
-          <button
-            onClick={approveBatchLowRisk}
-            className="px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-600 to-sky-600 hover:from-cyan-500 hover:to-sky-500 text-white font-semibold text-xs transition-all shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Approve Low-Risk Batch</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 2. Priority Approval Spotlight Card (if pending exists) */}
-      {selectedItem && selectedItem.status === 'pending' && (
-        <div className="rounded-3xl border border-amber-500/40 bg-gradient-to-br from-[#241c14] via-[#1a1716] to-[#141418] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-          
-          <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 relative z-10">
-            <div className="space-y-4 flex-1">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-mono px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase font-semibold">
-                  Priority Sign-Off Required
-                </span>
+      {selectedItem.status === 'pending' && (
+        <section className="ea-hero">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0 flex-1 space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="ea-chip bg-[var(--ea-warn-soft)] text-[var(--ea-warn)] border-transparent">Needs review</span>
                 <RiskBadge level={selectedItem.riskLevel} />
-                <span className="text-xs font-mono text-gray-400">{selectedItem.timestamp}</span>
+                <span className="text-[11px] ea-faint">{selectedItem.timestamp}</span>
               </div>
 
               <div>
-                <h2 className="text-2xl font-extrabold text-white tracking-tight">{selectedItem.title}</h2>
-                <p className="text-xs sm:text-sm text-gray-300 mt-1">Requested by <strong className="text-white">{selectedItem.agentName}</strong></p>
+                <h2 className="text-xl font-semibold tracking-tight ea-ink">{selectedItem.title}</h2>
+                <p className="mt-1 text-sm ea-muted">
+                  Requested by <span className="font-medium ea-ink">{selectedItem.agentName}</span>
+                </p>
               </div>
 
-              {/* Intent & Planned Action Box */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-2xl bg-black/40 border border-white/10 font-mono text-xs">
-                <div>
-                  <span className="text-gray-500 text-[10px] uppercase block mb-1">Agent Intent & Purpose</span>
-                  <p className="text-gray-200">{selectedItem.intent}</p>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="rounded-[var(--ea-radius-sm)] border border-[var(--ea-line)] ea-surface-2 p-3.5">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.12em] ea-faint">Intent</div>
+                  <p className="mt-1.5 text-sm ea-soft leading-relaxed">{selectedItem.intent}</p>
                 </div>
-                <div>
-                  <span className="text-gray-500 text-[10px] uppercase block mb-1">Exact Planned Tool Action</span>
-                  <p className="text-amber-300 font-semibold">{selectedItem.plannedAction}</p>
+                <div className="rounded-[var(--ea-radius-sm)] border border-[var(--ea-line)] ea-surface-2 p-3.5">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.12em] ea-faint">Planned action</div>
+                  <p className="mt-1.5 text-sm font-medium text-[var(--ea-warn)] leading-relaxed">{selectedItem.plannedAction}</p>
                 </div>
               </div>
 
-              {/* Permission Scope Tags */}
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <span className="text-xs text-gray-400 font-mono">Permission Scopes:</span>
-                {selectedItem.permissionScopes.map((scope, i) => (
-                  <span key={i} className="text-xs font-mono px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-200">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs ea-muted">Scopes</span>
+                {selectedItem.permissionScopes.map((scope) => (
+                  <span key={scope} className="ea-chip">
                     {scope}
                   </span>
                 ))}
               </div>
             </div>
 
-            {/* Action buttons on the right */}
-            <div className="flex flex-col sm:flex-row lg:flex-col gap-2.5 shrink-0 bg-black/30 p-4 rounded-2xl border border-white/10 w-full lg:w-64">
-              <button
-                onClick={() => approveRequest(selectedItem.id)}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-black font-extrabold text-xs transition-all shadow-lg flex items-center justify-center gap-2"
-              >
-                <Check className="w-4 h-4 stroke-[3]" />
-                <span>Approve & Execute</span>
+            <div className="flex w-full shrink-0 flex-col gap-2 rounded-[var(--ea-radius)] border border-[var(--ea-line)] ea-surface-2 p-3.5 lg:w-56">
+              <button type="button" onClick={() => approveRequest(selectedItem.id)} className="ea-btn ea-btn--primary w-full">
+                <Check className="h-4 w-4" />
+                Approve
               </button>
               <button
+                type="button"
                 onClick={() => rejectRequest(selectedItem.id)}
-                className="w-full py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-semibold text-xs transition-all flex items-center justify-center gap-2"
+                className="ea-btn w-full bg-[var(--ea-danger-soft)] text-[var(--ea-danger)] border-transparent"
               >
-                <X className="w-4 h-4" />
-                <span>Reject Request</span>
+                <X className="h-4 w-4" />
+                Reject
               </button>
               <button
+                type="button"
                 onClick={() => showToast('Opened scope modification modal...', 'info')}
-                className="w-full py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-medium text-xs transition-all flex items-center justify-center gap-2"
+                className="ea-btn w-full"
               >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>Edit Scope / Restrict</span>
+                <Edit3 className="h-3.5 w-3.5" />
+                Edit scope
               </button>
             </div>
           </div>
-        </div>
+        </section>
       )}
 
-      {/* 3. Split Section: Approval Queue Data Table (Left 2 cols) & Detail Drawer (Right 1 col) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Data Table & Filters */}
-        <div className="lg:col-span-2 space-y-4">
-          <GlassCard>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <GlassCard className="h-full">
+            <div className="flex flex-col gap-3 border-b border-[var(--ea-line)] pb-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
-                <ShieldAlert className="w-4 h-4 text-amber-400" />
-                <h3 className="text-sm font-semibold text-white">Approval Queue ({filteredApprovals.length})</h3>
+                <ShieldAlert className="h-4 w-4 text-[var(--ea-warn)]" />
+                <h3 className="text-sm font-semibold ea-ink">Queue</h3>
+                <span className="ea-chip">{filteredApprovals.length}</span>
               </div>
-
-              <div className="flex items-center gap-2">
-                {/* Status tabs */}
-                <div className="flex items-center p-1 rounded-xl bg-white/[0.03] border border-white/10 text-xs font-mono">
-                  {(['pending', 'approved', 'rejected', 'all'] as const).map(s => (
-                    <button
-                      key={s}
-                      onClick={() => setStatusFilter(s)}
-                      className={`px-2.5 py-1 rounded-lg capitalize transition-colors ${
-                        statusFilter === s ? 'bg-cyan-600 text-white font-semibold' : 'text-gray-400 hover:text-white'
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
+              <div className="flex items-center rounded-[var(--ea-radius-sm)] border border-[var(--ea-line)] ea-surface-2 p-1 text-xs">
+                {(['pending', 'approved', 'rejected', 'all'] as const).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setStatusFilter(s)}
+                    className={`rounded-md px-2.5 py-1 capitalize transition-colors ${
+                      statusFilter === s
+                        ? 'bg-[var(--ea-ink)] text-[var(--ea-surface)] font-semibold'
+                        : 'ea-muted hover:ea-ink'
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Search Input */}
-            <div className="mt-4 relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <div className="relative mt-3">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ea-faint" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by action title, agent name, or MCP tool..."
-                className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                placeholder="Search title, agent, or tool…"
+                className="ea-input py-2 pl-10 text-sm"
               />
             </div>
 
-            {/* Table */}
-            <div className="mt-4 overflow-x-auto font-mono text-xs">
-              <table className="w-full text-left">
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-white/10 text-gray-400 text-[11px] uppercase">
-                    <th className="py-2.5 px-3">Request Title</th>
-                    <th className="py-2.5 px-3">Agent</th>
-                    <th className="py-2.5 px-3">Risk</th>
-                    <th className="py-2.5 px-3">Status</th>
-                    <th className="py-2.5 px-3 text-right">Quick Action</th>
+                  <tr className="border-b border-[var(--ea-line)] text-[11px] uppercase tracking-wide ea-faint">
+                    <th className="px-2 py-2 font-medium">Request</th>
+                    <th className="px-2 py-2 font-medium">Agent</th>
+                    <th className="px-2 py-2 font-medium">Risk</th>
+                    <th className="px-2 py-2 font-medium">Status</th>
+                    <th className="px-2 py-2 text-right font-medium">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody>
                   {filteredApprovals.map((item) => {
                     const isSel = item.id === selectedId;
                     const isPend = item.status === 'pending';
@@ -208,34 +216,40 @@ export const ApprovalsPage: React.FC = () => {
                       <tr
                         key={item.id}
                         onClick={() => setSelectedId(item.id)}
-                        className={`cursor-pointer transition-colors ${
-                          isSel ? 'bg-cyan-900/20 font-medium' : 'hover:bg-white/[0.03]'
+                        className={`cursor-pointer border-b border-[var(--ea-line)] transition-colors last:border-0 ${
+                          isSel ? 'bg-[var(--ea-accent-soft)]' : 'hover:bg-[var(--ea-surface-2)]'
                         }`}
                       >
-                        <td className="py-3 px-3 font-sans text-white font-semibold truncate max-w-[200px]">{item.title}</td>
-                        <td className="py-3 px-3 text-gray-300">{item.agentName}</td>
-                        <td className="py-3 px-3"><RiskBadge level={item.riskLevel} size="sm" /></td>
-                        <td className="py-3 px-3"><StatusBadge status={item.status} size="sm" /></td>
-                        <td className="py-3 px-3 text-right">
+                        <td className="max-w-[220px] truncate px-2 py-3 font-medium ea-ink">{item.title}</td>
+                        <td className="px-2 py-3 ea-muted">{item.agentName}</td>
+                        <td className="px-2 py-3">
+                          <RiskBadge level={item.riskLevel} size="sm" />
+                        </td>
+                        <td className="px-2 py-3">
+                          <StatusBadge status={item.status} size="sm" />
+                        </td>
+                        <td className="px-2 py-3 text-right">
                           {isPend ? (
                             <div className="inline-flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                               <button
+                                type="button"
                                 onClick={() => approveRequest(item.id)}
                                 title="Approve"
-                                className="p-1.5 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/30"
+                                className="rounded-lg bg-[var(--ea-success-soft)] p-1.5 text-[var(--ea-success)]"
                               >
-                                <Check className="w-3.5 h-3.5" />
+                                <Check className="h-3.5 w-3.5" />
                               </button>
                               <button
+                                type="button"
                                 onClick={() => rejectRequest(item.id)}
                                 title="Reject"
-                                className="p-1.5 rounded bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30"
+                                className="rounded-lg bg-[var(--ea-danger-soft)] p-1.5 text-[var(--ea-danger)]"
                               >
-                                <X className="w-3.5 h-3.5" />
+                                <X className="h-3.5 w-3.5" />
                               </button>
                             </div>
                           ) : (
-                            <span className="text-[10px] text-gray-500">{item.timestamp}</span>
+                            <span className="text-[11px] ea-faint">{item.timestamp}</span>
                           )}
                         </td>
                       </tr>
@@ -243,87 +257,80 @@ export const ApprovalsPage: React.FC = () => {
                   })}
                 </tbody>
               </table>
+              {filteredApprovals.length === 0 && (
+                <div className="py-10 text-center text-sm ea-muted">No requests match this filter.</div>
+              )}
             </div>
           </GlassCard>
         </div>
 
-        {/* Right 1 Col: Approval Detail Panel */}
-        <div className="space-y-4">
-          <GlassCard className="h-full flex flex-col justify-between font-mono">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                <span className="text-xs font-sans font-semibold text-white">Governance Risk Explanation</span>
-                <span className="text-[10px] text-cyan-400">{selectedItem.id}</span>
-              </div>
+        <GlassCard className="flex h-full flex-col justify-between">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b border-[var(--ea-line)] pb-3">
+              <span className="text-sm font-semibold ea-ink">Risk detail</span>
+              <span className="text-[11px] ea-faint">{selectedItem.id}</span>
+            </div>
 
-              {/* Title & Tool info */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-sans font-bold text-white">{selectedItem.title}</h4>
-                <div className="p-2.5 rounded-xl bg-black/50 border border-white/10 space-y-1.5 text-xs">
-                  <div className="flex items-center justify-between text-gray-400">
-                    <span>MCP Tool Name:</span>
-                    <strong className="text-cyan-300">{selectedItem.toolName}</strong>
-                  </div>
-                  <div className="flex items-center justify-between text-gray-400">
-                    <span>Workspace Scope:</span>
-                    <strong className="text-white truncate max-w-[150px]">{selectedItem.workspaceScope}</strong>
-                  </div>
-                  <div className="flex items-center justify-between text-gray-400">
-                    <span>Estimated Cost:</span>
-                    <strong className="text-emerald-400">{selectedItem.costLimit || '$0.00'}</strong>
-                  </div>
+            <div>
+              <h4 className="text-sm font-semibold ea-ink">{selectedItem.title}</h4>
+              <div className="mt-2 space-y-2 rounded-[var(--ea-radius-sm)] border border-[var(--ea-line)] ea-surface-2 p-3 text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="ea-muted">Tool</span>
+                  <strong className="truncate text-[var(--ea-accent)]">{selectedItem.toolName}</strong>
                 </div>
-              </div>
-
-              {/* Governance Automated Checks */}
-              <div className="space-y-2">
-                <span className="text-[10px] text-gray-500 uppercase block">Automated Governance Checks</span>
-                <div className="space-y-2">
-                  {selectedItem.governanceChecks.map((chk, i) => (
-                    <div key={i} className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 space-y-1">
-                      <div className="flex items-center justify-between text-xs font-sans font-semibold">
-                        <span className="text-gray-200">{chk.label}</span>
-                        {chk.passed ? (
-                          <span className="text-emerald-400 flex items-center gap-1 text-[11px] font-mono">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Passed
-                          </span>
-                        ) : (
-                          <span className="text-amber-400 flex items-center gap-1 text-[11px] font-mono">
-                            <AlertTriangle className="w-3.5 h-3.5" /> Required
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] font-sans text-gray-400">{chk.detail}</p>
-                    </div>
-                  ))}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="ea-muted">Scope</span>
+                  <strong className="truncate ea-ink">{selectedItem.workspaceScope}</strong>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="ea-muted">Cost limit</span>
+                  <strong className="text-[var(--ea-success)]">{selectedItem.costLimit || '$0.00'}</strong>
                 </div>
               </div>
             </div>
 
-            {/* Bottom action buttons in detail drawer */}
-            {selectedItem.status === 'pending' ? (
-              <div className="mt-6 pt-4 border-t border-white/10 space-y-2">
-                <button
-                  onClick={() => approveRequest(selectedItem.id)}
-                  className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-sans font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-lg"
-                >
-                  <Check className="w-4 h-4 stroke-[3]" />
-                  <span>Grant Permission</span>
-                </button>
-                <button
-                  onClick={() => rejectRequest(selectedItem.id)}
-                  className="w-full py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-sans font-semibold text-xs transition-all"
-                >
-                  Reject Request
-                </button>
-              </div>
-            ) : (
-              <div className="mt-6 pt-4 border-t border-white/10 text-center text-xs font-sans">
-                <StatusBadge status={selectedItem.status} />
-              </div>
-            )}
-          </GlassCard>
-        </div>
+            <div className="space-y-2">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] ea-faint">Checks</div>
+              {selectedItem.governanceChecks.map((chk) => (
+                <div key={chk.label} className="rounded-[var(--ea-radius-sm)] border border-[var(--ea-line)] ea-surface-2 p-2.5">
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="font-medium ea-ink">{chk.label}</span>
+                    {chk.passed ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--ea-success)]">
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Passed
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--ea-warn)]">
+                        <AlertTriangle className="h-3.5 w-3.5" /> Review
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-[11px] ea-muted">{chk.detail}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {selectedItem.status === 'pending' ? (
+            <div className="mt-5 space-y-2 border-t border-[var(--ea-line)] pt-4">
+              <button type="button" onClick={() => approveRequest(selectedItem.id)} className="ea-btn ea-btn--primary w-full">
+                <Check className="h-4 w-4" />
+                Grant permission
+              </button>
+              <button
+                type="button"
+                onClick={() => rejectRequest(selectedItem.id)}
+                className="ea-btn w-full bg-[var(--ea-danger-soft)] text-[var(--ea-danger)] border-transparent"
+              >
+                Reject request
+              </button>
+            </div>
+          ) : (
+            <div className="mt-5 border-t border-[var(--ea-line)] pt-4 text-center">
+              <StatusBadge status={selectedItem.status} />
+            </div>
+          )}
+        </GlassCard>
       </div>
     </div>
   );

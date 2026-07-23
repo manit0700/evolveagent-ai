@@ -1,33 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { 
-  Search, 
-  Terminal, 
-  Sparkles, 
-  ArrowRight, 
-  ShieldAlert, 
-  Brain, 
-  Bot, 
-  CheckSquare, 
-  Settings, 
+import {
+  Search,
+  ArrowRight,
+  ShieldAlert,
+  Brain,
+  Bot,
+  CheckSquare,
   X,
   Play,
-  FileCode,
-  Sliders,
-  Layers
+  Layers,
+  Sparkles,
 } from 'lucide-react';
 import { PageId } from '../../types';
 
 export const CommandModal: React.FC = () => {
-  const { 
-    isCommandModalOpen, 
-    setIsCommandModalOpen, 
-    setActivePage, 
-    agents, 
-    memories, 
-    approvals,
-    runMockWorkflowStep,
+  const {
+    isCommandModalOpen,
+    setIsCommandModalOpen,
+    setActivePage,
+    agents,
+    memories,
     approveBatchLowRisk,
+    runMockWorkflowStep,
     showToast
   } = useApp();
   const [query, setQuery] = useState('');
@@ -68,32 +63,29 @@ export const CommandModal: React.FC = () => {
   const filteredMemories = memories.filter(m => m.title.toLowerCase().includes(query.toLowerCase()));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div className="w-full max-w-2xl rounded-2xl border border-white/15 bg-[#141418] shadow-2xl overflow-hidden relative">
-        {/* Top Search bar */}
-        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-white/10 bg-[#1a1a20]/60">
-          <Search className="w-5 h-5 text-cyan-400" />
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4 animate-fadeIn" style={{ background: 'var(--ea-overlay)' }}>
+      <div className="w-full max-w-2xl rounded-[calc(var(--ea-radius)+4px)] border border-[var(--ea-line)] ea-surface shadow-[var(--ea-shadow-lg)] overflow-hidden relative">
+        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[var(--ea-line)] ea-surface-2">
+          <Search className="w-5 h-5 ea-faint" />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Type a command or search EvolveAgent AI (e.g. 'repo', 'approve', 'brain')..."
-            className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 focus:outline-none"
+            placeholder="Search pages, agents, memories, or run a quick action…"
+            className="flex-1 bg-transparent text-sm ea-ink placeholder:text-[var(--ea-faint)] focus:outline-none"
             autoFocus
           />
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/10 text-gray-400 border border-white/10">ESC</span>
-            <button onClick={handleClose} className="p-1 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white">
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded ea-surface-3 ea-muted border border-[var(--ea-line)]">ESC</span>
+            <button onClick={handleClose} className="p-1 rounded-lg ea-muted hover:ea-ink hover:bg-[var(--ea-surface-3)]">
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Content list */}
         <div className="max-h-[65vh] overflow-y-auto p-3 space-y-4">
-          {/* Quick Actions */}
           <div>
-            <div className="text-[10px] font-mono uppercase tracking-wider text-gray-400 px-2 mb-1.5">Quick Commands & Actions</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] ea-faint px-2 mb-1.5">Quick actions</div>
             <div className="space-y-1">
               {filteredActions.map((item, idx) => {
                 const Icon = item.icon;
@@ -101,36 +93,35 @@ export const CommandModal: React.FC = () => {
                   <button
                     key={idx}
                     onClick={item.action}
-                    className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-white/[0.06] text-left transition-colors group"
+                    className="w-full flex items-center justify-between p-2.5 rounded-[var(--ea-radius-sm)] hover:bg-[var(--ea-surface-2)] text-left transition-colors group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500/20 group-hover:text-cyan-300 transition-colors">
+                      <div className="p-2 rounded-lg bg-[var(--ea-accent-soft)] text-[var(--ea-accent)]">
                         <Icon className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="text-xs font-medium text-white group-hover:text-cyan-200 transition-colors">{item.title}</div>
-                        <div className="text-[11px] text-gray-500">{item.tag}</div>
+                        <div className="text-xs font-medium ea-ink">{item.title}</div>
+                        <div className="text-[11px] ea-muted">{item.tag}</div>
                       </div>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-gray-600 group-hover:text-white transition-colors" />
+                    <ArrowRight className="w-4 h-4 ea-faint group-hover:text-[var(--ea-ink)] transition-colors" />
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Navigation Pages */}
           {query && (
             <div>
-              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-400 px-2 mb-1.5">Navigate to Screen</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] ea-faint px-2 mb-1.5">Navigate</div>
               <div className="grid grid-cols-2 gap-1.5">
                 {(['home', 'chat', 'dev-console', 'mission-control', 'agents', 'approvals', 'project-brain', 'tools', 'governance', 'settings', 'design-system'] as PageId[]).map((page) => (
                   <button
                     key={page}
                     onClick={() => navigateTo(page)}
-                    className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.08] border border-white/5 text-xs text-gray-300 capitalize transition-colors"
+                    className="flex items-center gap-2 p-2 rounded-lg ea-surface-2 hover:bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-xs ea-soft capitalize transition-colors"
                   >
-                    <Layers className="w-3.5 h-3.5 text-cyan-400" />
+                    <Layers className="w-3.5 h-3.5 text-[var(--ea-accent)]" />
                     <span>{page.replace('-', ' ')}</span>
                   </button>
                 ))}
@@ -138,25 +129,24 @@ export const CommandModal: React.FC = () => {
             </div>
           )}
 
-          {/* Agents */}
           {filteredAgents.length > 0 && (
             <div>
-              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-400 px-2 mb-1.5">Active Agents ({filteredAgents.length})</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] ea-faint px-2 mb-1.5">Agents ({filteredAgents.length})</div>
               <div className="space-y-1">
                 {filteredAgents.map(agent => (
                   <button
                     key={agent.id}
                     onClick={() => navigateTo('agents')}
-                    className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-white/[0.06] text-left transition-colors"
+                    className="w-full flex items-center justify-between p-2 rounded-[var(--ea-radius-sm)] hover:bg-[var(--ea-surface-2)] text-left transition-colors"
                   >
                     <div className="flex items-center gap-2.5">
                       <span className="text-base">{agent.avatar}</span>
                       <div>
-                        <div className="text-xs font-medium text-white">{agent.name}</div>
-                        <div className="text-[11px] text-gray-400">{agent.role}</div>
+                        <div className="text-xs font-medium ea-ink">{agent.name}</div>
+                        <div className="text-[11px] ea-muted">{agent.role}</div>
                       </div>
                     </div>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/5 text-gray-300 border border-white/10 capitalize">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full ea-surface-3 ea-muted border border-[var(--ea-line)] capitalize">
                       {agent.status}
                     </span>
                   </button>
@@ -165,22 +155,21 @@ export const CommandModal: React.FC = () => {
             </div>
           )}
 
-          {/* Project Brain Matches */}
           {filteredMemories.length > 0 && (
             <div>
-              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-400 px-2 mb-1.5">Project Brain ({filteredMemories.length})</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] ea-faint px-2 mb-1.5">Project Brain ({filteredMemories.length})</div>
               <div className="space-y-1">
                 {filteredMemories.slice(0, 3).map(mem => (
                   <button
                     key={mem.id}
                     onClick={() => navigateTo('project-brain')}
-                    className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-white/[0.06] text-left transition-colors"
+                    className="w-full flex items-center justify-between p-2 rounded-[var(--ea-radius-sm)] hover:bg-[var(--ea-surface-2)] text-left transition-colors"
                   >
                     <div className="flex items-center gap-2">
-                      <Brain className="w-3.5 h-3.5 text-sky-400" />
-                      <span className="text-xs text-gray-300 truncate max-w-md">{mem.title}</span>
+                      <Brain className="w-3.5 h-3.5 text-[var(--ea-accent)]" />
+                      <span className="text-xs ea-soft truncate max-w-md">{mem.title}</span>
                     </div>
-                    <span className="text-[10px] font-mono text-cyan-400">{mem.relevance}% Match</span>
+                    <span className="text-[10px] font-medium text-[var(--ea-accent)]">{mem.relevance}%</span>
                   </button>
                 ))}
               </div>
@@ -188,16 +177,15 @@ export const CommandModal: React.FC = () => {
           )}
         </div>
 
-        {/* Footer */}
-        <div className="px-4 py-2.5 border-t border-white/10 bg-[#121215] flex items-center justify-between text-[11px] text-gray-500 font-mono">
+        <div className="px-4 py-2.5 border-t border-[var(--ea-line)] ea-surface-2 flex items-center justify-between text-[11px] ea-muted">
           <div className="flex items-center gap-3">
-            <span>↑↓ to navigate</span>
-            <span>ENTER to select</span>
-            <span>ESC to close</span>
+            <span>↑↓ navigate</span>
+            <span>↵ select</span>
+            <span>esc close</span>
           </div>
-          <div className="flex items-center gap-1.5 text-emerald-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Mock-Safe Environment</span>
+          <div className="flex items-center gap-1.5 text-[var(--ea-success)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--ea-success)]" />
+            <span>Mock-safe</span>
           </div>
         </div>
       </div>

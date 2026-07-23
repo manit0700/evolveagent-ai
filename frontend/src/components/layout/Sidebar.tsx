@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PageId } from '../../types';
 import {
@@ -14,131 +14,175 @@ import {
   Shield,
   Settings,
   Palette,
-  Sparkles,
-  ChevronRight,
-  ChevronDown,
-  ShieldAlert,
-  Activity,
+  Bot,
   Gauge,
   Target,
-  BookOpen,
   Store,
   Scale,
-  Building2
+  BookOpen,
+  Building2,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
+
+type BadgeTone = 'neutral' | 'accent' | 'urgent';
 
 interface NavItem {
   id: PageId;
   label: string;
   icon: React.ElementType;
   badge?: string | number;
-  badgeColor?: 'purple' | 'amber' | 'emerald';
+  badgeTone?: BadgeTone;
 }
 
-interface NavGroup {
+interface NavSection {
   id: string;
-  label: string;
-  defaultOpen: boolean;
+  label?: string;
   items: NavItem[];
+}
+
+const COLLAPSE_KEY = 'evolveagent-sidebar-collapsed';
+
+function navItemClass(active: boolean, collapsed: boolean): string {
+  const base =
+    'ea-nav-item group flex w-full items-center rounded-xl text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-200';
+  const pad = collapsed ? 'justify-center px-0 py-2.5' : 'gap-2.5 px-2.5 py-2';
+  const state = active
+    ? 'ea-nav-item--active bg-slate-900 text-white'
+    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900';
+  return `${base} ${pad} ${state}`;
+}
+
+function badgeClass(active: boolean, tone: BadgeTone = 'neutral'): string {
+  if (active) return 'bg-white/15 text-white';
+  if (tone === 'urgent') return 'bg-amber-50 text-amber-700 border border-amber-200';
+  if (tone === 'accent') return 'bg-sky-50 text-sky-700 border border-sky-100';
+  return 'bg-slate-100 text-slate-600';
 }
 
 export const Sidebar: React.FC<{ mobileOpen?: boolean; setMobileOpen?: (open: boolean) => void }> = ({
   mobileOpen = false,
-  setMobileOpen
+  setMobileOpen,
 }) => {
-  const { activePage, setActivePage, approvals, agents, memories, safetySettings } = useApp();
+  const { activePage, setActivePage, approvals, agents, memories } = useApp();
+  const [collapsed, setCollapsed] = useState(false);
 
-  const pendingApprovalsCount = approvals.filter(a => a.status === 'pending').length;
-  const activeAgentsCount = agents.filter(a => a.status === 'active' || a.status === 'running').length;
-
-  // Always-visible items: the ones you touch most, plus anything needing action right now
-  const priorityItems: NavItem[] = [
-    { id: 'home', label: 'Home Dashboard', icon: LayoutDashboard },
-    { id: 'instructions', label: 'Instructions', icon: BookOpen, badge: 'Start Here', badgeColor: 'purple' },
-    { id: 'chat', label: 'Simple Mode Chat', icon: MessageSquare, badge: 'Live', badgeColor: 'purple' },
-    { id: 'approvals', label: 'Approvals', icon: ShieldCheck, badge: pendingApprovalsCount > 0 ? `${pendingApprovalsCount} pending` : undefined, badgeColor: 'amber' },
-  ];
-
-  // Everything else, grouped under collapsible sections so the sidebar stays scannable
-  const groups: NavGroup[] = [
-    {
-      id: 'work',
-      label: 'Work',
-      defaultOpen: true,
-      items: [
-        { id: 'mission-control', label: 'Mission Control', icon: Compass, badge: '62%', badgeColor: 'purple' },
-        { id: 'agents', label: 'Agents', icon: Users, badge: activeAgentsCount, badgeColor: 'emerald' },
-        { id: 'project-brain', label: 'Project Brain', icon: Brain, badge: memories.length, badgeColor: 'purple' },
-        { id: 'tools', label: 'Tools / MCP Hub', icon: Wrench, badge: '07', badgeColor: 'emerald' },
-        { id: 'command-center', label: 'Command Center', icon: Gauge, badge: 'v200', badgeColor: 'purple' },
-        { id: 'chief-of-staff', label: 'Chief of Staff', icon: Target, badge: 'v180', badgeColor: 'amber' },
-        { id: 'marketplace-hub', label: 'Marketplace Hub', icon: Store, badge: 'v160', badgeColor: 'purple' },
-        { id: 'departments', label: 'Departments', icon: Building2, badge: 'v300', badgeColor: 'purple' },
-      ]
-    },
-    {
-      id: 'safety',
-      label: 'Safety',
-      defaultOpen: true,
-      items: [
-        { id: 'governance', label: 'Governance', icon: Shield, badge: '98%', badgeColor: 'emerald' },
-        { id: 'compliance', label: 'Compliance', icon: Scale, badge: 'v190', badgeColor: 'amber' },
-      ]
-    },
-    {
-      id: 'system',
-      label: 'System',
-      defaultOpen: false,
-      items: [
-        { id: 'dev-console', label: 'Dev Mode Console', icon: Terminal, badge: 'Trace', badgeColor: 'emerald' },
-        { id: 'code-changes', label: 'Code Changes', icon: GitPullRequestArrow, badge: 'v150', badgeColor: 'amber' },
-        { id: 'settings', label: 'Settings', icon: Settings },
-        { id: 'design-system', label: 'Design System', icon: Palette },
-      ]
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(COLLAPSE_KEY);
+      if (saved === '1') setCollapsed(true);
+    } catch {
+      /* ignore */
     }
-  ];
+  }, []);
 
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
-    Object.fromEntries(groups.map(g => [g.id, g.defaultOpen]))
+  const pendingApprovalsCount = approvals.filter((a) => a.status === 'pending').length;
+  const activeAgentsCount = agents.filter((a) => a.status === 'active' || a.status === 'running').length;
+
+  const sections: NavSection[] = useMemo(
+    () => [
+      {
+        id: 'primary',
+        label: 'Workspace',
+        items: [
+          { id: 'home', label: 'Overview', icon: LayoutDashboard },
+          { id: 'chat', label: 'Assistant', icon: MessageSquare, badge: 'Live', badgeTone: 'accent' },
+          {
+            id: 'approvals',
+            label: 'Approvals',
+            icon: ShieldCheck,
+            badge: pendingApprovalsCount > 0 ? pendingApprovalsCount : undefined,
+            badgeTone: 'urgent',
+          },
+          { id: 'mission-control', label: 'Mission Control', icon: Compass },
+        ],
+      },
+      {
+        id: 'work',
+        label: 'Work',
+        items: [
+          { id: 'agents', label: 'Agents', icon: Users, badge: activeAgentsCount || undefined },
+          { id: 'project-brain', label: 'Project Brain', icon: Brain, badge: memories.length || undefined },
+          { id: 'tools', label: 'Tools', icon: Wrench },
+          { id: 'instructions', label: 'Getting started', icon: BookOpen },
+        ],
+      },
+      {
+        id: 'ops',
+        label: 'Operations',
+        items: [
+          { id: 'command-center', label: 'Command Center', icon: Gauge },
+          { id: 'chief-of-staff', label: 'Chief of Staff', icon: Target },
+          { id: 'marketplace-hub', label: 'Marketplace', icon: Store },
+          { id: 'departments', label: 'Departments', icon: Building2 },
+          { id: 'governance', label: 'Governance', icon: Shield },
+          { id: 'compliance', label: 'Compliance', icon: Scale },
+        ],
+      },
+      {
+        id: 'system',
+        label: 'System',
+        items: [
+          { id: 'dev-console', label: 'Dev Console', icon: Terminal },
+          { id: 'code-changes', label: 'Code Changes', icon: GitPullRequestArrow },
+          { id: 'settings', label: 'Settings', icon: Settings },
+          { id: 'design-system', label: 'Design System', icon: Palette },
+        ],
+      },
+    ],
+    [activeAgentsCount, memories.length, pendingApprovalsCount]
   );
 
-  const toggleGroup = (id: string) => {
-    setOpenGroups(prev => ({ ...prev, [id]: !prev[id] }));
-  };
+  const activeSectionLabel = useMemo(() => {
+    for (const section of sections) {
+      if (section.items.some((item) => item.id === activePage)) return section.label;
+    }
+    return 'Workspace';
+  }, [activePage, sections]);
 
   const handleNav = (id: PageId) => {
     setActivePage(id);
     if (setMobileOpen) setMobileOpen(false);
   };
 
-  const badgeClass = (color?: 'purple' | 'amber' | 'emerald') => {
-    if (color === 'purple') return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
-    if (color === 'amber') return 'bg-amber-500/20 text-amber-300 border-amber-500/30 animate-pulse';
-    if (color === 'emerald') return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
-    return 'bg-white/10 text-gray-300 border-white/10';
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0');
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
   };
 
-  const renderNavItem = (item: NavItem) => {
+  const renderItem = (item: NavItem) => {
     const Icon = item.icon;
     const isActive = activePage === item.id;
     return (
       <button
         key={item.id}
+        type="button"
         onClick={() => handleNav(item.id)}
-        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 group ${
-          isActive
-            ? 'bg-gradient-to-r from-cyan-600/20 to-blue-600/10 text-white border border-cyan-500/30 shadow-[0_0_15px_-3px_rgba(34,211,238,0.15)] font-semibold'
-            : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
-        }`}
+        title={collapsed ? item.label : undefined}
+        aria-current={isActive ? 'page' : undefined}
+        aria-label={item.label}
+        className={navItemClass(isActive, collapsed)}
       >
-        <div className="flex items-center gap-3">
-          <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-cyan-400' : 'text-gray-500 group-hover:text-gray-300'}`} />
-          <span>{item.label}</span>
-        </div>
-        {item.badge !== undefined && (
-          <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${badgeClass(item.badgeColor)}`}>
-            {item.badge}
-          </span>
+        <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'opacity-100' : 'opacity-75'}`} />
+        {!collapsed && (
+          <>
+            <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{item.label}</span>
+            {item.badge !== undefined && (
+              <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${badgeClass(isActive, item.badgeTone)}`}>
+                {item.badge}
+              </span>
+            )}
+          </>
+        )}
+        {collapsed && item.badgeTone === 'urgent' && item.badge !== undefined && (
+          <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-amber-500" />
         )}
       </button>
     );
@@ -146,88 +190,97 @@ export const Sidebar: React.FC<{ mobileOpen?: boolean; setMobileOpen?: (open: bo
 
   return (
     <>
-      {/* Mobile backdrop */}
       {mobileOpen && (
         <div
           onClick={() => setMobileOpen && setMobileOpen(false)}
-          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-900/30 backdrop-blur-sm lg:hidden"
         />
       )}
 
       <aside
-        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-64 shrink-0 bg-[#0d0d10] border-r border-white/[0.08] flex flex-col justify-between transition-transform duration-300 lg:translate-x-0 ${
-          mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
-        }`}
+        className={`ea-sidebar fixed lg:sticky top-0 left-0 z-50 h-screen shrink-0 border-r border-slate-200 bg-white/92 backdrop-blur-xl flex flex-col transition-[width,transform] duration-300 lg:translate-x-0 ${
+          mobileOpen ? 'translate-x-0 shadow-xl shadow-slate-300/30' : '-translate-x-full'
+        } ${collapsed ? 'ea-sidebar--collapsed' : ''}`}
+        style={{ width: collapsed ? '4.5rem' : 'var(--ea-sidebar-w)' }}
+        data-collapsed={collapsed ? 'true' : 'false'}
       >
-        {/* Brand Header */}
-        <div className="p-4 border-b border-white/[0.08]">
-          <div className="flex items-center justify-between">
+        {/* Brand / identity */}
+        <div className={`border-b border-slate-200 ${collapsed ? 'px-2 py-3' : 'px-3.5 py-3.5'}`}>
+          {collapsed ? (
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white">
+                <Bot className="h-4 w-4" />
+              </div>
+              <button
+                type="button"
+                onClick={toggleCollapsed}
+                className="hidden lg:inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1.5 text-slate-500 transition hover:bg-white hover:text-slate-900"
+                title="Expand sidebar"
+                aria-label="Expand sidebar"
+              >
+                <PanelLeftOpen className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : (
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-600 via-sky-600 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-                <Sparkles className="w-4 h-4 text-white" />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white">
+                <Bot className="h-4 w-4" />
               </div>
-              <div>
-                <h1 className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
-                  EvolveAgent <span className="text-cyan-400 font-mono text-xs">AI</span>
-                </h1>
-                <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-mono">
-                  <span>vNext 2.4.0</span>
-                  <span className="w-1 h-1 rounded-full bg-emerald-400" />
-                  <span className="text-emerald-400">Local-First</span>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-sm font-semibold tracking-tight text-slate-900">EvolveAgent</h1>
+                <p className="truncate text-[11px] text-slate-500">{activeSectionLabel}</p>
+              </div>
+              <button
+                type="button"
+                onClick={toggleCollapsed}
+                className="hidden lg:inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1.5 text-slate-500 transition hover:bg-white hover:text-slate-900"
+                title="Collapse sidebar"
+                aria-label="Collapse sidebar"
+              >
+                <PanelLeftClose className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation zones */}
+        <div className={`flex-1 overflow-y-auto ${collapsed ? 'px-1.5 py-2.5 space-y-3' : 'px-2.5 py-3 space-y-4'}`}>
+          {sections.map((section) => (
+            <div key={section.id}>
+              {!collapsed && section.label && (
+                <div className="px-2.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  {section.label}
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation items */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-1">
-          {/* Priority items — no group label, always visible */}
-          {priorityItems.map(renderNavItem)}
-
-          <div className="h-px bg-white/[0.06] my-2" />
-
-          {/* Collapsible groups */}
-          {groups.map((group) => {
-            const isOpen = openGroups[group.id];
-            return (
-              <div key={group.id} className="mb-1">
-                <button
-                  onClick={() => toggleGroup(group.id)}
-                  className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-gray-500 hover:text-gray-300 transition-colors"
-                >
-                  <span>{group.label}</span>
-                  {isOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                </button>
-                {isOpen && (
-                  <div className="space-y-1">
-                    {group.items.map(renderNavItem)}
+              )}
+              {collapsed && section.id !== 'primary' && (
+                <div className="mx-auto mb-1.5 h-px w-6 bg-slate-200" aria-hidden />
+              )}
+              <nav className="space-y-0.5" aria-label={section.label || section.id}>
+                {section.items.map((item) => (
+                  <div key={item.id} className="relative">
+                    {renderItem(item)}
                   </div>
-                )}
-              </div>
-            );
-          })}
+                ))}
+              </nav>
+            </div>
+          ))}
         </div>
 
-        {/* System Health / Safety Footer */}
-        <div className="p-3 border-t border-white/[0.08] bg-[#0a0a0c]">
-          <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-400 flex items-center gap-1.5">
-                <Activity className="w-3.5 h-3.5 text-emerald-400" /> System Health
-              </span>
-              <span className="font-mono font-semibold text-emerald-400">98% A+</span>
+        {/* Utility footer */}
+        <div className={`border-t border-slate-200 ${collapsed ? 'p-2' : 'p-3'}`}>
+          {collapsed ? (
+            <div className="flex flex-col items-center gap-2" title="Workspace healthy">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
             </div>
-            
-            <div className="w-full h-1.5 rounded-full bg-black/60 overflow-hidden p-0.5">
-              <div className="h-full w-[98%] rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500" />
+          ) : (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+              <div className="text-[11px] font-semibold text-slate-900">Workspace healthy</div>
+              <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                Core systems available
+              </div>
             </div>
-
-            <div className="flex items-center justify-between text-[10px] font-mono text-gray-500 pt-1 border-t border-white/5">
-              <span>Mode: {safetySettings.planningFirst ? 'Planning-First' : 'Direct'}</span>
-              <span className="text-cyan-400">Mock-Safe</span>
-            </div>
-          </div>
+          )}
         </div>
       </aside>
     </>

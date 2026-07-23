@@ -10,17 +10,25 @@
     "beforeBuildCommand": "npm --prefix ../frontend run build"
   },
   "app": {
+    "withGlobalTauri": false,
     "windows": [
       {
         "label": "main",
         "title": "EvolveAgent",
-        "width": 1280,
-        "height": 832,
-        "minWidth": 900,
-        "minHeight": 600,
+        "width": 1480,
+        "height": 920,
+        "minWidth": 1100,
+        "minHeight": 700,
         "resizable": true,
+        "maximizable": true,
+        "fullscreen": false,
+        "focus": true,
+        "decorations": true,
+        "transparent": false,
+        "center": true,
         "titleBarStyle": "Overlay",
-        "hiddenTitle": true
+        "hiddenTitle": true,
+        "trafficLightPosition": { "x": 18.0, "y": 20.0 }
       }
     ],
     "security": {

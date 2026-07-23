@@ -86,25 +86,24 @@ export const CommandCenterPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
-      <div className="rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="space-y-5 pb-8">
+      <div className="ea-hero">
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-3xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold uppercase tracking-wider">
+              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-[var(--ea-accent-soft)] text-[var(--ea-accent)] border border-[var(--ea-line)] font-semibold uppercase tracking-wider">
                 {dashboard?.version || 'v200.0'} Capstone
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Command Center</h1>
-            <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
+            <h1 className="text-2xl sm:text-3xl font-semibold ea-ink tracking-tight">Command Center</h1>
+            <p className="text-xs sm:text-sm ea-soft leading-relaxed">
               A live capability directory across every system this platform has built — which ones are wired to
               real data right now, and which are still dormant. {dashboard?.disclaimer}
             </p>
           </div>
           <button
             onClick={refreshAll}
-            className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-200 flex items-center justify-center gap-2 transition-colors self-start lg:self-auto"
+            className="px-4 py-2.5 rounded-xl bg-[var(--ea-surface-3)] hover:bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-xs ea-soft flex items-center justify-center gap-2 transition-colors self-start lg:self-auto"
           >
             <RefreshCw className="w-4 h-4" />
             <span>Refresh</span>
@@ -114,21 +113,21 @@ export const CommandCenterPage: React.FC = () => {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <GlassCard className="space-y-1">
-          <div className="flex items-center gap-2 text-gray-400"><Layers className="w-4 h-4" /><span className="text-[10px] uppercase font-mono tracking-wider">Systems active</span></div>
-          <div className="text-2xl font-extrabold text-white">{dashboard?.activeSystems ?? '—'}<span className="text-sm text-gray-500">/{dashboard?.totalSystems ?? '—'}</span></div>
+          <div className="flex items-center gap-2 ea-muted"><Layers className="w-4 h-4" /><span className="text-[10px] uppercase font-mono tracking-wider">Systems active</span></div>
+          <div className="text-2xl font-semibold ea-ink">{dashboard?.activeSystems ?? '—'}<span className="text-sm ea-faint">/{dashboard?.totalSystems ?? '—'}</span></div>
         </GlassCard>
         <GlassCard className="space-y-1">
-          <div className="flex items-center gap-2 text-gray-400"><Gauge className="w-4 h-4" /><span className="text-[10px] uppercase font-mono tracking-wider">Coverage</span></div>
-          <div className="text-2xl font-extrabold text-white">{dashboard?.coveragePct ?? '—'}%</div>
+          <div className="flex items-center gap-2 ea-muted"><Gauge className="w-4 h-4" /><span className="text-[10px] uppercase font-mono tracking-wider">Coverage</span></div>
+          <div className="text-2xl font-semibold ea-ink">{dashboard?.coveragePct ?? '—'}%</div>
         </GlassCard>
         <GlassCard className="space-y-1">
-          <div className="flex items-center gap-2 text-gray-400"><Sparkles className="w-4 h-4" /><span className="text-[10px] uppercase font-mono tracking-wider">Overall grade</span></div>
-          <div className={`inline-flex text-2xl font-extrabold px-2 rounded-lg border ${gradeTone(dashboard?.overallGrade || '')}`}>
+          <div className="flex items-center gap-2 ea-muted"><Sparkles className="w-4 h-4" /><span className="text-[10px] uppercase font-mono tracking-wider">Overall grade</span></div>
+          <div className={`inline-flex text-2xl font-semibold px-2 rounded-lg border ${gradeTone(dashboard?.overallGrade || '')}`}>
             {dashboard?.overallGrade || '—'}
           </div>
         </GlassCard>
         <GlassCard className="space-y-1">
-          <div className="flex items-center gap-2 text-gray-400"><Activity className="w-4 h-4" /><span className="text-[10px] uppercase font-mono tracking-wider">Health</span></div>
+          <div className="flex items-center gap-2 ea-muted"><Activity className="w-4 h-4" /><span className="text-[10px] uppercase font-mono tracking-wider">Health</span></div>
           <StatusBadge status={dashboard?.healthStatus || 'unknown'} size="sm" />
         </GlassCard>
       </div>
@@ -136,19 +135,19 @@ export const CommandCenterPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-3">
           {!dashboard ? (
-            <GlassCard><div className="text-xs text-gray-500 font-mono py-8 text-center">Loading command center...</div></GlassCard>
+            <GlassCard><div className="text-xs ea-faint font-mono py-8 text-center">Loading command center...</div></GlassCard>
           ) : dashboard.domains.map((d) => (
             <GlassCard key={d.domain} className="space-y-0" padding="none">
               <button
                 onClick={() => toggleDomain(d.domain)}
-                className="w-full flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors"
+                className="w-full flex items-center justify-between p-4 hover:bg-[var(--ea-surface-2)] transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-bold text-white">{d.domain}</span>
-                  <span className="text-[11px] font-mono text-gray-500">{d.activeCount}/{d.systemCount} active</span>
+                  <span className="text-sm font-bold ea-ink">{d.domain}</span>
+                  <span className="text-[11px] font-mono ea-faint">{d.activeCount}/{d.systemCount} active</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-24 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                  <div className="w-24 h-1.5 rounded-full bg-[var(--ea-surface-3)] overflow-hidden">
                     <div
                       className={`h-full ${d.activeCount === d.systemCount ? 'bg-emerald-400' : d.activeCount === 0 ? 'bg-rose-400' : 'bg-amber-400'}`}
                       style={{ width: `${d.systemCount ? (d.activeCount / d.systemCount) * 100 : 0}%` }}
@@ -157,15 +156,15 @@ export const CommandCenterPage: React.FC = () => {
                 </div>
               </button>
               {openDomains[d.domain] !== false && (
-                <div className="px-4 pb-4 space-y-1.5 border-t border-white/[0.06] pt-3">
+                <div className="px-4 pb-4 space-y-1.5 border-t border-[var(--ea-line)] pt-3">
                   {d.systems.map((s) => (
-                    <div key={s.route + s.label} className="flex items-center justify-between gap-2 p-2 rounded-xl bg-black/20 border border-white/[0.05]">
+                    <div key={s.route + s.label} className="flex items-center justify-between gap-2 p-2 rounded-xl ea-surface-3 border border-[var(--ea-line)]">
                       <div className="flex items-center gap-2 min-w-0">
                         {s.active ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> : <Circle className="w-3.5 h-3.5 text-gray-600 shrink-0" />}
-                        <span className="text-xs text-white truncate">{s.label}</span>
-                        <span className="text-[10px] font-mono text-gray-500 truncate hidden sm:inline">{s.route}</span>
+                        <span className="text-xs ea-ink truncate">{s.label}</span>
+                        <span className="text-[10px] font-mono ea-faint truncate hidden sm:inline">{s.route}</span>
                       </div>
-                      <span className="text-[11px] font-mono text-gray-400 shrink-0">{s.recordCount.toLocaleString()} rec.</span>
+                      <span className="text-[11px] font-mono ea-muted shrink-0">{s.recordCount.toLocaleString()} rec.</span>
                     </div>
                   ))}
                 </div>
@@ -177,17 +176,17 @@ export const CommandCenterPage: React.FC = () => {
         <div className="space-y-6">
           <GlassCard className="space-y-3">
             <div className="flex items-center gap-2">
-              <Gauge className="w-4 h-4 text-cyan-400" />
-              <h3 className="text-sm font-bold text-white">Scorecard dimensions</h3>
+              <Gauge className="w-4 h-4 text-[var(--ea-accent)]" />
+              <h3 className="text-sm font-bold ea-ink">Scorecard dimensions</h3>
             </div>
             <div className="space-y-2">
               {(dashboard?.scoreDimensions || []).map((dim) => (
                 <div key={dim.name} className="space-y-1">
                   <div className="flex items-center justify-between text-[11px] font-mono">
-                    <span className="text-gray-400 capitalize">{dim.name.replace(/_/g, ' ')}</span>
+                    <span className="ea-muted capitalize">{dim.name.replace(/_/g, ' ')}</span>
                     <span className={`px-1.5 rounded ${gradeTone(dim.grade)}`}>{dim.grade} · {dim.score}</span>
                   </div>
-                  <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+                  <div className="w-full h-1.5 rounded-full bg-[var(--ea-surface-3)] overflow-hidden">
                     <div className="h-full bg-cyan-400" style={{ width: `${dim.score}%` }} />
                   </div>
                 </div>
@@ -198,11 +197,11 @@ export const CommandCenterPage: React.FC = () => {
           <GlassCard className="space-y-3">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <h3 className="text-sm font-bold text-white">Safety boundaries</h3>
+              <h3 className="text-sm font-bold ea-ink">Safety boundaries</h3>
             </div>
             <ul className="space-y-1.5">
               {(dashboard?.safetyBoundaries || []).map((b) => (
-                <li key={b} className="text-[11px] text-gray-400 leading-relaxed flex gap-1.5">
+                <li key={b} className="text-[11px] ea-muted leading-relaxed flex gap-1.5">
                   <span className="text-emerald-400">•</span><span>{b}</span>
                 </li>
               ))}
@@ -212,21 +211,21 @@ export const CommandCenterPage: React.FC = () => {
           <GlassCard className="space-y-3">
             <div className="flex items-center gap-2">
               <History className="w-4 h-4 text-blue-400" />
-              <h3 className="text-sm font-bold text-white">Snapshots</h3>
-              <span className="text-[11px] font-mono text-gray-500">{snapshots?.length ?? 0}</span>
+              <h3 className="text-sm font-bold ea-ink">Snapshots</h3>
+              <span className="text-[11px] font-mono ea-faint">{snapshots?.length ?? 0}</span>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
               <button
                 onClick={handleSnapshot}
                 disabled={busy}
-                className="flex-1 px-3 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 font-bold text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                className="flex-1 px-3 py-2 rounded-xl bg-[var(--ea-accent-soft)] hover:bg-cyan-500/25 border border-[var(--ea-line)] text-[var(--ea-accent)] font-bold text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
               >
                 Create snapshot
               </button>
               <button
                 onClick={handleReport}
                 disabled={busy}
-                className="flex-1 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 font-bold text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                className="flex-1 px-3 py-2 rounded-xl bg-[var(--ea-surface-3)] hover:bg-[var(--ea-surface-3)] border border-[var(--ea-line)] ea-soft font-bold text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
               >
                 <FileText className="w-3.5 h-3.5" />
                 Generate report
@@ -234,13 +233,13 @@ export const CommandCenterPage: React.FC = () => {
             </div>
             <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
               {(snapshots || []).slice(0, 10).map((s) => (
-                <div key={s.snapshotId} className="flex items-center justify-between text-[11px] font-mono p-2 rounded-lg bg-black/20 border border-white/[0.05]">
-                  <span className="text-gray-400">{s.createdAt ? s.createdAt.slice(0, 16).replace('T', ' ') : '—'}</span>
+                <div key={s.snapshotId} className="flex items-center justify-between text-[11px] font-mono p-2 rounded-lg ea-surface-3 border border-[var(--ea-line)]">
+                  <span className="ea-muted">{s.createdAt ? s.createdAt.slice(0, 16).replace('T', ' ') : '—'}</span>
                   <span className={`px-1.5 rounded ${gradeTone(s.overallGrade)}`}>{s.overallGrade} · {s.coveragePct}%</span>
                 </div>
               ))}
               {snapshots && snapshots.length === 0 && (
-                <div className="text-[11px] text-gray-500 font-mono py-2 text-center">No snapshots yet.</div>
+                <div className="text-[11px] ea-faint font-mono py-2 text-center">No snapshots yet.</div>
               )}
             </div>
           </GlassCard>
@@ -248,8 +247,8 @@ export const CommandCenterPage: React.FC = () => {
           {report && (
             <GlassCard className="space-y-2 border-emerald-500/20">
               <div className="text-[10px] uppercase tracking-wider font-mono text-emerald-300">Latest report</div>
-              <p className="text-xs text-white leading-relaxed">{report.headline}</p>
-              <p className="text-[11px] text-gray-500 italic">{report.disclaimer}</p>
+              <p className="text-xs ea-ink leading-relaxed">{report.headline}</p>
+              <p className="text-[11px] ea-faint italic">{report.disclaimer}</p>
             </GlassCard>
           )}
         </div>

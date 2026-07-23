@@ -164,25 +164,24 @@ export const CodeChangesPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
-      <div className="rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#101018] p-6 sm:p-8 shadow-2xl overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="space-y-5 pb-8">
+      <div className="ea-hero">
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-3xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold uppercase tracking-wider">
+              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-[var(--ea-accent-soft)] text-[var(--ea-accent)] border border-[var(--ea-line)] font-semibold uppercase tracking-wider">
                 v150 Autonomous Software Team
               </span>
               <RiskBadge level="high" size="sm" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Code Changes</h1>
-            <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
+            <h1 className="text-2xl sm:text-3xl font-semibold ea-ink tracking-tight">Code Changes</h1>
+            <p className="text-xs sm:text-sm ea-soft leading-relaxed">
               Human approval gate for real local commits, branch pushes, and GitHub pull requests. Declined writes are shown as safe outcomes, not hidden errors.
             </p>
           </div>
           <button
             onClick={refreshAll}
-            className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-200 flex items-center justify-center gap-2 transition-colors self-start lg:self-auto"
+            className="px-4 py-2.5 rounded-xl bg-[var(--ea-surface-3)] hover:bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-xs ea-soft flex items-center justify-center gap-2 transition-colors self-start lg:self-auto"
           >
             <RefreshCw className="w-4 h-4" />
             <span>Refresh</span>
@@ -193,43 +192,43 @@ export const CodeChangesPage: React.FC = () => {
       <GlassCard className="space-y-4">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          <h2 className="text-sm font-bold text-white">Write + PR Configuration</h2>
-          <span className="text-[11px] font-mono text-gray-500">secret-safe status only</span>
+          <h2 className="text-sm font-bold ea-ink">Write + PR Configuration</h2>
+          <span className="text-[11px] font-mono ea-faint">secret-safe status only</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-2">
-            <div className="text-[10px] uppercase tracking-wider font-mono text-gray-500">Code writer</div>
+          <div className="p-3 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] space-y-2">
+            <div className="text-[10px] uppercase tracking-wider font-mono ea-faint">Code writer</div>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-white">Local commits</span>
+              <span className="text-sm font-bold ea-ink">Local commits</span>
               <StatusBadge status={codeStatus?.writesEnabled ? 'connected' : 'waiting'} size="sm" />
             </div>
-            <p className="text-[11px] text-gray-400 font-mono">
+            <p className="text-[11px] ea-muted font-mono">
               {codeStatus?.writesEnabled ? 'Enabled' : `Enable with ${codeStatus?.writesOptInEnv || 'CODE_WRITES_ENABLED'}`}
             </p>
           </div>
-          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-2">
-            <div className="text-[10px] uppercase tracking-wider font-mono text-gray-500">Push gate</div>
+          <div className="p-3 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] space-y-2">
+            <div className="text-[10px] uppercase tracking-wider font-mono ea-faint">Push gate</div>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-white">Branch push</span>
+              <span className="text-sm font-bold ea-ink">Branch push</span>
               <StatusBadge status={codeStatus?.pushEnabled ? 'connected' : 'waiting'} size="sm" />
             </div>
-            <p className="text-[11px] text-gray-400 font-mono">
+            <p className="text-[11px] ea-muted font-mono">
               {codeStatus?.pushEnabled ? 'Enabled' : `Enable with ${codeStatus?.pushOptInEnv || 'CODE_WRITER_PUSH_ENABLED'}`}
             </p>
           </div>
-          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-2">
-            <div className="text-[10px] uppercase tracking-wider font-mono text-gray-500">GitHub writes</div>
+          <div className="p-3 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] space-y-2">
+            <div className="text-[10px] uppercase tracking-wider font-mono ea-faint">GitHub writes</div>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-white">Pull requests</span>
+              <span className="text-sm font-bold ea-ink">Pull requests</span>
               <StatusBadge status={githubStatus?.writesEnabled ? 'connected' : 'waiting'} size="sm" />
             </div>
-            <p className="text-[11px] text-gray-400 font-mono">
+            <p className="text-[11px] ea-muted font-mono">
               {githubStatus?.writesEnabled ? 'Enabled' : 'GitHub writes disabled or not configured'}
             </p>
           </div>
         </div>
-        <div className="p-3 rounded-2xl bg-white/[0.025] border border-white/[0.06]">
-          <div className="text-[10px] uppercase tracking-wider font-mono text-gray-500 mb-2">Allowed repos</div>
+        <div className="p-3 rounded-2xl ea-surface-2 border border-[var(--ea-line)]">
+          <div className="text-[10px] uppercase tracking-wider font-mono ea-faint mb-2">Allowed repos</div>
           <div className="flex flex-wrap gap-2">
             {(codeStatus?.allowedRepos || []).length ? codeStatus!.allowedRepos.map((repo) => (
               <span key={repo} className="text-[11px] font-mono px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
@@ -247,17 +246,17 @@ export const CodeChangesPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <GlassCard className="lg:col-span-1 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-white flex items-center gap-2">
-              <GitBranch className="w-4 h-4 text-cyan-400" />
+            <h2 className="text-sm font-bold ea-ink flex items-center gap-2">
+              <GitBranch className="w-4 h-4 text-[var(--ea-accent)]" />
               Runs
             </h2>
-            <span className="text-[11px] font-mono text-gray-500">{runs?.length ?? 0} code workflow(s)</span>
+            <span className="text-[11px] font-mono ea-faint">{runs?.length ?? 0} code workflow(s)</span>
           </div>
           <div className="space-y-2 max-h-[720px] overflow-y-auto pr-1">
             {!runs ? (
-              <div className="text-xs text-gray-500 font-mono">Loading durable workflows...</div>
+              <div className="text-xs ea-faint font-mono">Loading durable workflows...</div>
             ) : runs.length === 0 ? (
-              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 text-xs text-gray-400">
+              <div className="p-4 rounded-xl bg-[var(--ea-surface-2)] border border-[var(--ea-line)] text-xs ea-muted">
                 No durable workflow has a `write_code_change` or `open_pull_request` step yet.
               </div>
             ) : runs.map((run) => {
@@ -268,18 +267,18 @@ export const CodeChangesPage: React.FC = () => {
                   key={run.id}
                   onClick={() => setSelectedRunId(run.id)}
                   className={`w-full text-left p-3 rounded-2xl border transition-all ${
-                    active ? 'bg-cyan-500/10 border-cyan-500/40' : 'bg-white/[0.02] border-white/[0.06] hover:border-white/20'
+                    active ? 'bg-[var(--ea-accent-soft)] border-[var(--ea-line-strong)]' : 'bg-[var(--ea-surface-2)] border-[var(--ea-line)] hover:border-[var(--ea-line-strong)]'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="text-xs font-bold text-white truncate">{run.name}</div>
-                      <div className="text-[10px] text-gray-500 font-mono truncate">{run.id}</div>
+                      <div className="text-xs font-bold ea-ink truncate">{run.name}</div>
+                      <div className="text-[10px] ea-faint font-mono truncate">{run.id}</div>
                     </div>
                     <StatusBadge status={run.status} size="sm" />
                   </div>
                   <div className="mt-2 flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-mono text-cyan-300">{step?.actionType || 'code step'}</span>
+                    <span className="text-[11px] font-mono text-[var(--ea-accent)]">{step?.actionType || 'code step'}</span>
                     {step && <RiskBadge level={stepTone(step)} size="sm" />}
                   </div>
                 </button>
@@ -291,10 +290,10 @@ export const CodeChangesPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           <GlassCard className="space-y-4">
             {!selectedRun || !selectedStep ? (
-              <div className="py-16 text-center text-sm text-gray-400">Select a code-change workflow to inspect.</div>
+              <div className="py-16 text-center text-sm ea-muted">Select a code-change workflow to inspect.</div>
             ) : (
               <>
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-white/10 pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-[var(--ea-line)] pb-4">
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <StatusBadge status={selectedStep.status} />
@@ -317,25 +316,25 @@ export const CodeChangesPage: React.FC = () => {
                         </a>
                       )}
                     </div>
-                    <h2 className="text-xl font-extrabold text-white">{selectedStep.name}</h2>
-                    <p className="text-xs text-gray-400 font-mono">{selectedStep.actionType}</p>
+                    <h2 className="text-xl font-semibold ea-ink">{selectedStep.name}</h2>
+                    <p className="text-xs ea-muted font-mono">{selectedStep.actionType}</p>
                   </div>
-                  <div className="text-right text-[11px] font-mono text-gray-500">
+                  <div className="text-right text-[11px] font-mono ea-faint">
                     <div>Run: {selectedRun.id}</div>
                     <div>Updated: {selectedRun.updatedAt ? selectedRun.updatedAt.slice(0, 19) : '—'}</div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07]">
-                    <div className="text-[10px] uppercase tracking-wider font-mono text-gray-500">Target repo</div>
-                    <div className="text-xs text-white font-mono mt-1 break-all">
+                  <div className="p-3 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)]">
+                    <div className="text-[10px] uppercase tracking-wider font-mono ea-faint">Target repo</div>
+                    <div className="text-xs ea-ink font-mono mt-1 break-all">
                       {selectedStep.actionParams.repo_path || selectedStep.actionParams.github_repo || '—'}
                     </div>
                   </div>
-                  <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07]">
-                    <div className="text-[10px] uppercase tracking-wider font-mono text-gray-500">Commit / PR intent</div>
-                    <div className="text-xs text-white font-mono mt-1">
+                  <div className="p-3 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)]">
+                    <div className="text-[10px] uppercase tracking-wider font-mono ea-faint">Commit / PR intent</div>
+                    <div className="text-xs ea-ink font-mono mt-1">
                       {selectedStep.actionParams.commit_message || selectedStep.actionParams.title || '—'}
                     </div>
                   </div>
@@ -346,11 +345,11 @@ export const CodeChangesPage: React.FC = () => {
                     <div className="text-[10px] uppercase tracking-wider font-mono text-amber-300">Approval progress</div>
                     <div className="flex flex-wrap gap-2">
                       {selectedStep.approvalProgress?.steps?.length ? selectedStep.approvalProgress.steps.map((item: any, idx: number) => (
-                        <span key={`${item.title}-${idx}`} className="text-[11px] font-mono px-2 py-1 rounded-lg bg-black/30 border border-white/10 text-gray-200">
+                        <span key={`${item.title}-${idx}`} className="text-[11px] font-mono px-2 py-1 rounded-lg bg-[var(--ea-surface-3)] border border-[var(--ea-line)] ea-soft">
                           {item.title}: {item.status}
                         </span>
                       )) : selectedStep.approvers.map((name) => (
-                        <span key={name} className="text-[11px] font-mono px-2 py-1 rounded-lg bg-black/30 border border-white/10 text-gray-200">
+                        <span key={name} className="text-[11px] font-mono px-2 py-1 rounded-lg bg-[var(--ea-surface-3)] border border-[var(--ea-line)] ea-soft">
                           {name}: pending
                         </span>
                       ))}
@@ -371,25 +370,25 @@ export const CodeChangesPage: React.FC = () => {
 
                 {selectedEffect?.result && Object.keys(selectedEffect.result).length > 0 && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="p-3 rounded-2xl bg-white/[0.025] border border-white/[0.06]">
-                      <GitBranch className="w-4 h-4 text-cyan-300 mb-2" />
-                      <div className="text-[10px] text-gray-500 uppercase font-mono">Branch</div>
-                      <div className="text-xs text-white font-mono break-all">{selectedEffect.result.branch || selectedStep.actionParams.branch_name || '—'}</div>
+                    <div className="p-3 rounded-2xl ea-surface-2 border border-[var(--ea-line)]">
+                      <GitBranch className="w-4 h-4 text-[var(--ea-accent)] mb-2" />
+                      <div className="text-[10px] ea-faint uppercase font-mono">Branch</div>
+                      <div className="text-xs ea-ink font-mono break-all">{selectedEffect.result.branch || selectedStep.actionParams.branch_name || '—'}</div>
                     </div>
-                    <div className="p-3 rounded-2xl bg-white/[0.025] border border-white/[0.06]">
+                    <div className="p-3 rounded-2xl ea-surface-2 border border-[var(--ea-line)]">
                       <GitCommit className="w-4 h-4 text-emerald-300 mb-2" />
-                      <div className="text-[10px] text-gray-500 uppercase font-mono">Commit</div>
-                      <div className="text-xs text-white font-mono">{selectedEffect.result.commit_sha ? String(selectedEffect.result.commit_sha).slice(0, 12) : '—'}</div>
+                      <div className="text-[10px] ea-faint uppercase font-mono">Commit</div>
+                      <div className="text-xs ea-ink font-mono">{selectedEffect.result.commit_sha ? String(selectedEffect.result.commit_sha).slice(0, 12) : '—'}</div>
                     </div>
-                    <div className="p-3 rounded-2xl bg-white/[0.025] border border-white/[0.06]">
+                    <div className="p-3 rounded-2xl ea-surface-2 border border-[var(--ea-line)]">
                       <GitPullRequestArrow className="w-4 h-4 text-blue-300 mb-2" />
-                      <div className="text-[10px] text-gray-500 uppercase font-mono">Pull request</div>
+                      <div className="text-[10px] ea-faint uppercase font-mono">Pull request</div>
                       {pr?.url ? (
                         <a className="text-xs text-blue-300 font-mono hover:underline" href={pr.url} target="_blank" rel="noreferrer">
                           #{pr.number || 'open'}
                         </a>
                       ) : (
-                        <div className="text-xs text-white font-mono">—</div>
+                        <div className="text-xs ea-ink font-mono">—</div>
                       )}
                     </div>
                   </div>
@@ -398,16 +397,16 @@ export const CodeChangesPage: React.FC = () => {
                 {selectedStep.actionType === 'write_code_change' && (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <FileCode2 className="w-4 h-4 text-cyan-400" />
-                      <h3 className="text-sm font-bold text-white">Proposed file content</h3>
+                      <FileCode2 className="w-4 h-4 text-[var(--ea-accent)]" />
+                      <h3 className="text-sm font-bold ea-ink">Proposed file content</h3>
                     </div>
                     {proposedFiles.map((file, index) => (
-                      <div key={`${file.file_path}-${index}`} className="rounded-2xl border border-white/[0.08] overflow-hidden bg-black/40">
-                        <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.08] bg-white/[0.03]">
-                          <span className="text-xs text-white font-mono break-all">{file.file_path}</span>
-                          <span className="text-[10px] text-gray-500 font-mono">{file.content.length.toLocaleString()} chars</span>
+                      <div key={`${file.file_path}-${index}`} className="rounded-2xl border border-[var(--ea-line)] overflow-hidden bg-[var(--ea-surface-3)]">
+                        <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--ea-line)] bg-[var(--ea-surface-2)]">
+                          <span className="text-xs ea-ink font-mono break-all">{file.file_path}</span>
+                          <span className="text-[10px] ea-faint font-mono">{file.content.length.toLocaleString()} chars</span>
                         </div>
-                        <pre className="p-4 max-h-80 overflow-auto text-[11px] leading-relaxed text-gray-200 font-mono whitespace-pre-wrap">
+                        <pre className="p-4 max-h-80 overflow-auto text-[11px] leading-relaxed ea-soft font-mono whitespace-pre-wrap">
                           {file.content || '// empty file'}
                         </pre>
                       </div>
@@ -416,19 +415,19 @@ export const CodeChangesPage: React.FC = () => {
                 )}
 
                 {selectedStep.actionType === 'open_pull_request' && (
-                  <div className="p-4 rounded-2xl bg-black/30 border border-white/[0.07] space-y-3">
-                    <div className="flex items-center gap-2 text-white font-bold text-sm">
+                  <div className="p-4 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] space-y-3">
+                    <div className="flex items-center gap-2 ea-ink font-bold text-sm">
                       <GitPullRequestArrow className="w-4 h-4 text-blue-300" />
                       Pull request plan
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
-                      <div><span className="text-gray-500">GitHub repo:</span> <span className="text-white">{selectedStep.actionParams.github_repo || '—'}</span></div>
-                      <div><span className="text-gray-500">Head:</span> <span className="text-white">{selectedStep.actionParams.branch_name || '—'}</span></div>
-                      <div><span className="text-gray-500">Base:</span> <span className="text-white">{selectedStep.actionParams.base || 'main'}</span></div>
-                      <div><span className="text-gray-500">Title:</span> <span className="text-white">{selectedStep.actionParams.title || '—'}</span></div>
+                      <div><span className="ea-faint">GitHub repo:</span> <span className="ea-ink">{selectedStep.actionParams.github_repo || '—'}</span></div>
+                      <div><span className="ea-faint">Head:</span> <span className="ea-ink">{selectedStep.actionParams.branch_name || '—'}</span></div>
+                      <div><span className="ea-faint">Base:</span> <span className="ea-ink">{selectedStep.actionParams.base || 'main'}</span></div>
+                      <div><span className="ea-faint">Title:</span> <span className="ea-ink">{selectedStep.actionParams.title || '—'}</span></div>
                     </div>
                     {selectedStep.actionParams.body && (
-                      <pre className="p-3 rounded-xl bg-black/40 border border-white/[0.06] text-[11px] text-gray-300 font-mono whitespace-pre-wrap max-h-48 overflow-auto">
+                      <pre className="p-3 rounded-xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-[11px] ea-soft font-mono whitespace-pre-wrap max-h-48 overflow-auto">
                         {selectedStep.actionParams.body}
                       </pre>
                     )}
@@ -436,7 +435,7 @@ export const CodeChangesPage: React.FC = () => {
                 )}
 
                 {selectedStep.status === 'waiting_approval' && (
-                  <div className="p-4 rounded-2xl bg-[#111116] border border-amber-500/30 space-y-3">
+                  <div className="p-4 rounded-2xl ea-surface border border-amber-500/30 space-y-3">
                     <div className="flex items-center gap-2 text-amber-300 font-bold text-sm">
                       <AlertTriangle className="w-4 h-4" />
                       Human approval required
@@ -445,7 +444,7 @@ export const CodeChangesPage: React.FC = () => {
                       value={note}
                       onChange={(event) => setNote(event.target.value)}
                       placeholder="Optional approval note"
-                      className="w-full min-h-[72px] rounded-xl bg-black/40 border border-white/10 p-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                      className="w-full min-h-[72px] rounded-xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] p-3 text-xs ea-ink placeholder-gray-500 focus:outline-none focus:border-cyan-500"
                     />
                     <div className="flex flex-col sm:flex-row gap-2">
                       <button
@@ -473,10 +472,10 @@ export const CodeChangesPage: React.FC = () => {
 
           <GlassCard className="space-y-3">
             <div className="flex items-center gap-2">
-              <Code2 className="w-4 h-4 text-gray-300" />
-              <h3 className="text-sm font-bold text-white">Raw action params</h3>
+              <Code2 className="w-4 h-4 ea-soft" />
+              <h3 className="text-sm font-bold ea-ink">Raw action params</h3>
             </div>
-            <pre className="p-4 rounded-2xl bg-black/40 border border-white/[0.06] text-[11px] text-gray-300 font-mono whitespace-pre-wrap max-h-72 overflow-auto">
+            <pre className="p-4 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] text-[11px] ea-soft font-mono whitespace-pre-wrap max-h-72 overflow-auto">
               {selectedStep ? JSON.stringify(selectedStep.actionParams, null, 2) : '{}'}
             </pre>
           </GlassCard>
