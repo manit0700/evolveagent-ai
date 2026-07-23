@@ -126,7 +126,7 @@ export const DevModeConsole: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
+    <div className="space-y-5 pb-8">
       {/* 1. System Health Bar (6 counters) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
@@ -501,7 +501,7 @@ export const DevModeConsole: React.FC = () => {
           </button>
           <button
             onClick={runMockWorkflowStep}
-            className="px-3 py-1.5 rounded-xl bg-[var(--ea-accent)] hover:brightness-110 text-[var(--ea-accent-ink)] text-xs font-medium flex items-center gap-1.5 transition-colors shadow-lg "
+            className="px-3 py-1.5 rounded-xl bg-[var(--ea-accent)] hover:brightness-110 text-[var(--ea-accent-ink)] text-xs font-medium flex items-center gap-1.5 transition-colors shadow-[var(--ea-shadow-sm)] "
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             <span>Step Into Next</span>

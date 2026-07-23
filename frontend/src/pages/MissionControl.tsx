@@ -57,7 +57,7 @@ export const MissionControl: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
+    <div className="space-y-5 pb-8">
       {/* 1. Active Mission Overview Header Card */}
       <div className="ea-hero relative">
         
@@ -71,7 +71,7 @@ export const MissionControl: React.FC = () => {
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Running
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold ea-ink tracking-tight">{mission.title}</h1>
+            <h1 className="text-2xl sm:text-3xl font-semibold ea-ink tracking-tight">{mission.title}</h1>
             <p className="text-xs sm:text-sm ea-soft leading-relaxed">{mission.description}</p>
           </div>
 
@@ -145,10 +145,10 @@ export const MissionControl: React.FC = () => {
       )}
 
       {/* 2. Next Best Action Recommendation Banner */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-900/30 via-sky-900/20 to-blue-900/30 border border-[var(--ea-line-strong)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+      <div className="p-4 rounded-2xl ea-surface-2 border border-[var(--ea-line)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[var(--ea-shadow-sm)]">
         <div className="flex items-start gap-3">
           <div className="p-2.5 rounded-xl bg-[var(--ea-accent-soft)] text-[var(--ea-accent)] shrink-0">
-            <Sparkles className="w-5 h-5 animate-spin" style={{ animationDuration: '8s' }} />
+            <Sparkles className="w-5 h-5 " style={{ animationDuration: '8s' }} />
           </div>
           <div>
             <div className="text-xs font-semibold text-[var(--ea-accent)] uppercase tracking-wide font-mono">Recommended Next Action</div>
@@ -159,7 +159,7 @@ export const MissionControl: React.FC = () => {
         </div>
         <button
           onClick={handleApproveNext}
-          className="px-5 py-2.5 rounded-xl bg-[var(--ea-accent)] hover:brightness-110 text-[var(--ea-accent-ink)] font-semibold text-xs transition-all shadow-lg  flex items-center justify-center gap-2 shrink-0 self-start sm:self-auto"
+          className="px-5 py-2.5 rounded-xl bg-[var(--ea-accent)] hover:brightness-110 text-[var(--ea-accent-ink)] font-semibold text-xs transition-all shadow-[var(--ea-shadow-sm)] flex items-center justify-center gap-2 shrink-0 self-start sm:self-auto"
         >
           <Check className="w-4 h-4 stroke-[3]" />
           <span>Approve Next Task</span>

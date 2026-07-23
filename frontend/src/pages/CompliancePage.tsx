@@ -70,7 +70,7 @@ export const CompliancePage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
+    <div className="space-y-5 pb-8">
       <div className="ea-hero">
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-3xl">
@@ -79,7 +79,7 @@ export const CompliancePage: React.FC = () => {
                 v190 Enterprise AI OS
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold ea-ink tracking-tight">Compliance</h1>
+            <h1 className="text-2xl sm:text-3xl font-semibold ea-ink tracking-tight">Compliance</h1>
             <p className="text-xs sm:text-sm ea-soft leading-relaxed">
               Real, immutable point-in-time audit bundles: governance events, sensitive-data findings, active policies, and contract reviews. Not legal advice — audit material for human review.
             </p>
@@ -157,26 +157,26 @@ export const CompliancePage: React.FC = () => {
               <GlassCard className="space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-lg font-extrabold ea-ink">{detail.title}</h2>
+                    <h2 className="text-lg font-semibold ea-ink">{detail.title}</h2>
                     <p className="text-[11px] ea-faint font-mono mt-0.5">Generated {detail.generatedAt ? detail.generatedAt.slice(0, 19).replace('T', ' ') : '—'}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div className="p-3 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)]">
                     <div className="text-[10px] uppercase font-mono tracking-wider ea-faint">Governance events</div>
-                    <div className="text-xl font-extrabold ea-ink">{detail.governanceEventCount.toLocaleString()}</div>
+                    <div className="text-xl font-semibold ea-ink">{detail.governanceEventCount.toLocaleString()}</div>
                   </div>
                   <div className="p-3 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)]">
                     <div className="text-[10px] uppercase font-mono tracking-wider ea-faint">Blocked actions</div>
-                    <div className="text-xl font-extrabold text-amber-400">{detail.blockedActionCount.toLocaleString()}</div>
+                    <div className="text-xl font-semibold text-amber-400">{detail.blockedActionCount.toLocaleString()}</div>
                   </div>
                   <div className="p-3 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)]">
                     <div className="text-[10px] uppercase font-mono tracking-wider ea-faint">Sensitive findings</div>
-                    <div className="text-xl font-extrabold ea-ink">{detail.sensitiveFindingsCount}</div>
+                    <div className="text-xl font-semibold ea-ink">{detail.sensitiveFindingsCount}</div>
                   </div>
                   <div className="p-3 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)]">
                     <div className="text-[10px] uppercase font-mono tracking-wider ea-faint">High-risk findings</div>
-                    <div className="text-xl font-extrabold text-rose-400">{detail.highRiskFindings}</div>
+                    <div className="text-xl font-semibold text-rose-400">{detail.highRiskFindings}</div>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1.5">

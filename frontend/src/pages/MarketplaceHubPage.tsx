@@ -141,7 +141,7 @@ export const MarketplaceHubPage: React.FC = () => {
   const kinds = useMemo(() => summary?.kinds || [], [summary]);
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
+    <div className="space-y-5 pb-8">
       <div className="ea-hero">
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-3xl">
@@ -150,7 +150,7 @@ export const MarketplaceHubPage: React.FC = () => {
                 v160 Agent Marketplace
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold ea-ink tracking-tight">Marketplace Hub</h1>
+            <h1 className="text-2xl sm:text-3xl font-semibold ea-ink tracking-tight">Marketplace Hub</h1>
             <p className="text-xs sm:text-sm ea-soft leading-relaxed">
               Browse, install, and rate local agent and workflow bundles. Installing creates a real agent profile or workflow definition — no external network calls.
             </p>
@@ -177,15 +177,15 @@ export const MarketplaceHubPage: React.FC = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <GlassCard className="space-y-1">
           <div className="text-[10px] uppercase font-mono tracking-wider ea-faint">Total listings</div>
-          <div className="text-2xl font-extrabold ea-ink">{summary?.totalListings ?? '—'}</div>
+          <div className="text-2xl font-semibold ea-ink">{summary?.totalListings ?? '—'}</div>
         </GlassCard>
         <GlassCard className="space-y-1">
           <div className="text-[10px] uppercase font-mono tracking-wider ea-faint">Total installs</div>
-          <div className="text-2xl font-extrabold ea-ink">{summary?.totalInstalls ?? '—'}</div>
+          <div className="text-2xl font-semibold ea-ink">{summary?.totalInstalls ?? '—'}</div>
         </GlassCard>
         <GlassCard className="space-y-1">
           <div className="text-[10px] uppercase font-mono tracking-wider ea-faint">Total ratings</div>
-          <div className="text-2xl font-extrabold ea-ink">{summary?.totalRatings ?? '—'}</div>
+          <div className="text-2xl font-semibold ea-ink">{summary?.totalRatings ?? '—'}</div>
         </GlassCard>
         <GlassCard className="space-y-1">
           <div className="text-[10px] uppercase font-mono tracking-wider ea-faint">Kinds</div>

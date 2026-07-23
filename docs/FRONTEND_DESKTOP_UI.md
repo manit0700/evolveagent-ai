@@ -23,29 +23,31 @@ At boot, `frontend/src/main.jsx` detects Tauri and sets:
 
 | | Web | Desktop |
 |---|---|---|
-| Feel | Light, calm, airy | Darker, denser command center |
-| Background | Soft slate gradient | Near-black graphite |
-| Density | Comfortable spacing | Tighter radius / gaps / sidebar |
+| Feel | Light, calm, airy productivity shell | Darker denser command center |
+| Background | Soft slate gradient | Flat near-black graphite |
+| Density | Comfortable spacing / larger radius | Tighter gaps, smaller radius, narrower sidebar |
 | Accent | Restrained teal | Cool sky on dark surfaces |
-| Shadows | Soft depth | Flat borders, less glow |
+| Shadows | Soft depth | Flat borders, no card glow |
+| Chrome | Browser tab + light top bar | Overlay title bar, drag region, traffic-light inset |
 
-Shared components (`GlassCard`, shell, badges, chat) read CSS variables, so they
-flip with the platform without a second component library.
+Shared components (`GlassCard`, shell, badges, chat, `ui/*`) read CSS variables,
+so they flip with the platform without a second component library.
 
-## Desktop framing polish
+## Desktop-specific code (not a second UI)
 
-`desktop/src-tauri/tauri.conf.json` uses an overlay title bar, slightly larger
-default window, and traffic-light offset so the native chrome feels less like a
-browser tab.
+| File | Role |
+|---|---|
+| `desktop/src-tauri/tauri.conf.json` | Window size, overlay title bar, traffic lights, CSP |
+| `desktop/src-tauri/src/lib.rs` | Minimal Tauri bootstrap (no elevated capabilities) |
+| `frontend/src/main.jsx` | Sets `data-platform="desktop"` when Tauri is present |
+| `frontend/src/styles/ea-theme.css` | Desktop token overrides + denser spacing + drag region |
 
 ## Future desktop-only divergence
 
-If product needs a true split later, prefer one of:
+Prefer, in order:
 
-1. **Token + density only** (current path) — keep one tree, diverge via CSS.
-2. **Feature flags** — `data-platform="desktop"` gates denser layouts or hidden
-   marketing chrome.
-3. **Separate shell package** — only if desktop needs native menus, multi-window,
-   or layouts that fight the web IA.
+1. **Token + density** (current) — one tree, CSS platform forks
+2. **Feature flags** — hide web-only marketing chrome when `data-platform="desktop"`
+3. **Separate shell package** — only for native menus / multi-window / OS integrations
 
 Do not fork page business logic unless a capability truly cannot be shared.

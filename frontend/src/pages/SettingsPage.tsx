@@ -326,7 +326,7 @@ export const SettingsPage: React.FC = () => {
                   key={th.id}
                   onClick={() => { setSelectedTheme(th.id); handleAction(`Applied theme: ${th.title}`); }}
                   className={`cursor-pointer p-4 rounded-2xl border transition-all ${
-                    selectedTheme === th.id ? th.color + ' font-semibold shadow-lg' : 'border-[var(--ea-line)] hover:border-[var(--ea-line-strong)] bg-[var(--ea-surface-2)]'
+                    selectedTheme === th.id ? th.color + ' font-semibold shadow-[var(--ea-shadow-sm)]' : 'border-[var(--ea-line)] hover:border-[var(--ea-line-strong)] bg-[var(--ea-surface-2)]'
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -398,7 +398,7 @@ export const SettingsPage: React.FC = () => {
           <div className="pt-3 border-t border-[var(--ea-line)]">
             <button
               onClick={() => handleAction('System diagnostics check passed!')}
-              className="w-full py-2.5 rounded-xl bg-[var(--ea-accent)] hover:brightness-110 text-[var(--ea-accent-ink)] font-sans font-semibold text-xs transition-colors shadow-lg"
+              className="w-full py-2.5 rounded-xl bg-[var(--ea-accent)] hover:brightness-110 text-[var(--ea-accent-ink)] font-sans font-semibold text-xs transition-colors shadow-[var(--ea-shadow-sm)]"
             >
               Run Full Diagnostic Suite
             </button>

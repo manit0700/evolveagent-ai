@@ -45,7 +45,7 @@ export const GovernancePage: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
+    <div className="space-y-5 pb-8">
       {/* 1. Governance Metrics (6 counters) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
@@ -75,7 +75,7 @@ export const GovernancePage: React.FC = () => {
               </span>
               <span className="text-xs font-mono ea-muted">Monitoring 4 active agent pipelines</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold ea-ink tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-semibold ea-ink tracking-tight">
               Safety & Compliance Control Plane
             </h1>
             <p className="text-xs sm:text-sm ea-soft leading-relaxed">

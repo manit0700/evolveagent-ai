@@ -86,7 +86,7 @@ export const CommandCenterPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
+    <div className="space-y-5 pb-8">
       <div className="ea-hero">
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-3xl">
@@ -95,7 +95,7 @@ export const CommandCenterPage: React.FC = () => {
                 {dashboard?.version || 'v200.0'} Capstone
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold ea-ink tracking-tight">Command Center</h1>
+            <h1 className="text-2xl sm:text-3xl font-semibold ea-ink tracking-tight">Command Center</h1>
             <p className="text-xs sm:text-sm ea-soft leading-relaxed">
               A live capability directory across every system this platform has built — which ones are wired to
               real data right now, and which are still dormant. {dashboard?.disclaimer}
@@ -114,15 +114,15 @@ export const CommandCenterPage: React.FC = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <GlassCard className="space-y-1">
           <div className="flex items-center gap-2 ea-muted"><Layers className="w-4 h-4" /><span className="text-[10px] uppercase font-mono tracking-wider">Systems active</span></div>
-          <div className="text-2xl font-extrabold ea-ink">{dashboard?.activeSystems ?? '—'}<span className="text-sm ea-faint">/{dashboard?.totalSystems ?? '—'}</span></div>
+          <div className="text-2xl font-semibold ea-ink">{dashboard?.activeSystems ?? '—'}<span className="text-sm ea-faint">/{dashboard?.totalSystems ?? '—'}</span></div>
         </GlassCard>
         <GlassCard className="space-y-1">
           <div className="flex items-center gap-2 ea-muted"><Gauge className="w-4 h-4" /><span className="text-[10px] uppercase font-mono tracking-wider">Coverage</span></div>
-          <div className="text-2xl font-extrabold ea-ink">{dashboard?.coveragePct ?? '—'}%</div>
+          <div className="text-2xl font-semibold ea-ink">{dashboard?.coveragePct ?? '—'}%</div>
         </GlassCard>
         <GlassCard className="space-y-1">
           <div className="flex items-center gap-2 ea-muted"><Sparkles className="w-4 h-4" /><span className="text-[10px] uppercase font-mono tracking-wider">Overall grade</span></div>
-          <div className={`inline-flex text-2xl font-extrabold px-2 rounded-lg border ${gradeTone(dashboard?.overallGrade || '')}`}>
+          <div className={`inline-flex text-2xl font-semibold px-2 rounded-lg border ${gradeTone(dashboard?.overallGrade || '')}`}>
             {dashboard?.overallGrade || '—'}
           </div>
         </GlassCard>

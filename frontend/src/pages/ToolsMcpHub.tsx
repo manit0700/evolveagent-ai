@@ -136,7 +136,7 @@ export const ToolsMcpHub: React.FC = () => {
   const highRiskCount = connectors.filter(c => c.riskLevel === 'high').length;
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
+    <div className="space-y-5 pb-8">
       {/* 1. Overview Metrics (6 counters) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
@@ -160,7 +160,7 @@ export const ToolsMcpHub: React.FC = () => {
         
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
           <div className="flex items-start gap-4 max-w-2xl">
-            <div className="w-16 h-16 rounded-2xl bg-[var(--ea-accent)] flex items-center justify-center ea-ink shrink-0 shadow-lg shadow-cyan-500/30">
+            <div className="w-16 h-16 rounded-2xl bg-[var(--ea-accent)] flex items-center justify-center ea-ink shrink-0 shadow-[var(--ea-shadow-sm)] ">
               {featuredTool.icon === 'Github' ? <Github className="w-8 h-8" /> :
                featuredTool.icon === 'FolderGit2' ? <FolderGit2 className="w-8 h-8" /> :
                featuredTool.icon === 'Database' ? <Database className="w-8 h-8" /> :
@@ -178,7 +178,7 @@ export const ToolsMcpHub: React.FC = () => {
                 <RiskBadge level={featuredTool.riskLevel} size="sm" />
               </div>
 
-              <h2 className="text-2xl font-extrabold ea-ink tracking-tight">{featuredTool.name}</h2>
+              <h2 className="text-2xl font-semibold ea-ink tracking-tight">{featuredTool.name}</h2>
               <p className="text-xs ea-soft leading-relaxed pt-1">{featuredTool.description}</p>
 
               {/* Permission Scopes */}

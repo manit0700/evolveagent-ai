@@ -125,7 +125,7 @@ export const ProjectBrain: React.FC = () => {
   const displayMemories = semanticResults?.length ? semanticMemories : filteredMemories;
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
+    <div className="space-y-5 pb-8">
       {/* 1. Workspace Search Hero Card */}
       <div className="ea-hero relative">
         
@@ -135,7 +135,7 @@ export const ProjectBrain: React.FC = () => {
             <span>Workspace Vector Memory & Knowledge Graph</span>
           </div>
 
-          <h1 className="text-2xl sm:text-4xl font-extrabold ea-ink tracking-tight">
+          <h1 className="text-2xl sm:text-4xl font-semibold ea-ink tracking-tight">
             Project Brain Knowledge Base
           </h1>
           <p className="mt-2 text-xs sm:text-sm ea-soft leading-relaxed">
@@ -328,7 +328,7 @@ export const ProjectBrain: React.FC = () => {
               
               {/* Central Hub Node */}
               <div className="relative z-10 flex flex-col items-center">
-                <div className="w-14 h-14 rounded-full bg-[var(--ea-accent)] flex items-center justify-center ea-ink shadow-xl shadow-cyan-500/30 border-2 border-white/20 animate-pulse">
+                <div className="w-14 h-14 rounded-full bg-[var(--ea-accent)] flex items-center justify-center ea-ink shadow-[var(--ea-shadow-sm)] border-2 border-white/20 animate-pulse">
                   <Brain className="w-7 h-7" />
                 </div>
                 <span className="mt-2 text-xs font-mono font-bold ea-ink bg-[var(--ea-surface-3)] px-2 py-0.5 rounded border border-[var(--ea-line)]">
@@ -479,7 +479,7 @@ export const ProjectBrain: React.FC = () => {
                 <button
                   type="submit"
                   disabled={addBusy}
-                  className="px-5 py-2 rounded-xl bg-[var(--ea-accent)] hover:brightness-110 text-[var(--ea-accent-ink)] font-semibold text-xs transition-colors shadow-lg"
+                  className="px-5 py-2 rounded-xl bg-[var(--ea-accent)] hover:brightness-110 text-[var(--ea-accent-ink)] font-semibold text-xs transition-colors shadow-[var(--ea-shadow-sm)]"
                 >
                   {addBusy ? 'Saving…' : 'Save & Index'}
                 </button>

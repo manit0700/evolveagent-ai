@@ -171,7 +171,7 @@ export const DepartmentsPage: React.FC = () => {
   const selectedDept = departments?.find((d) => d.departmentId === selectedId) || null;
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
+    <div className="space-y-5 pb-8">
       <div className="ea-hero">
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-3xl">
@@ -180,7 +180,7 @@ export const DepartmentsPage: React.FC = () => {
                 v300 Digital Departments
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold ea-ink tracking-tight">Departments</h1>
+            <h1 className="text-2xl sm:text-3xl font-semibold ea-ink tracking-tight">Departments</h1>
             <p className="text-xs sm:text-sm ea-soft leading-relaxed">
               Real, governed departments with goals, budgets, and measurable outcomes. Runs are planned, not
               auto-executed -- every workflow plan stays subject to the department's own permission level.
@@ -215,19 +215,19 @@ export const DepartmentsPage: React.FC = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <GlassCard className="space-y-1">
           <div className="text-[10px] uppercase font-mono tracking-wider ea-faint">Departments</div>
-          <div className="text-2xl font-extrabold ea-ink">{overview?.totalDepartments ?? '—'}</div>
+          <div className="text-2xl font-semibold ea-ink">{overview?.totalDepartments ?? '—'}</div>
         </GlassCard>
         <GlassCard className="space-y-1">
           <div className="text-[10px] uppercase font-mono tracking-wider ea-faint">Active</div>
-          <div className="text-2xl font-extrabold ea-ink">{overview?.activeDepartments ?? '—'}</div>
+          <div className="text-2xl font-semibold ea-ink">{overview?.activeDepartments ?? '—'}</div>
         </GlassCard>
         <GlassCard className="space-y-1">
           <div className="text-[10px] uppercase font-mono tracking-wider ea-faint">Runs Planned</div>
-          <div className="text-2xl font-extrabold ea-ink">{overview?.departmentRuns ?? '—'}</div>
+          <div className="text-2xl font-semibold ea-ink">{overview?.departmentRuns ?? '—'}</div>
         </GlassCard>
         <GlassCard className="space-y-1">
           <div className="text-[10px] uppercase font-mono tracking-wider ea-faint">Collaborations</div>
-          <div className="text-2xl font-extrabold ea-ink">{overview?.collaborationCount ?? '—'}</div>
+          <div className="text-2xl font-semibold ea-ink">{overview?.collaborationCount ?? '—'}</div>
         </GlassCard>
       </div>
 

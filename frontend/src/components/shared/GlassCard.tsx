@@ -19,8 +19,8 @@ export const GlassCard: React.FC<GlassCardProps> = ({
 }) => {
   const padClass =
     padding === 'none' ? 'p-0' :
-    padding === 'sm' ? 'p-3 sm:p-4' :
-    padding === 'lg' ? 'p-5 sm:p-7' :
+    padding === 'sm' ? 'p-3 sm:p-3.5' :
+    padding === 'lg' ? 'p-5 sm:p-6' :
     'p-4 sm:p-5';
 
   return (

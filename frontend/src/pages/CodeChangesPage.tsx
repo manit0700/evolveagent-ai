@@ -164,7 +164,7 @@ export const CodeChangesPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
+    <div className="space-y-5 pb-8">
       <div className="ea-hero">
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-3xl">
@@ -174,7 +174,7 @@ export const CodeChangesPage: React.FC = () => {
               </span>
               <RiskBadge level="high" size="sm" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold ea-ink tracking-tight">Code Changes</h1>
+            <h1 className="text-2xl sm:text-3xl font-semibold ea-ink tracking-tight">Code Changes</h1>
             <p className="text-xs sm:text-sm ea-soft leading-relaxed">
               Human approval gate for real local commits, branch pushes, and GitHub pull requests. Declined writes are shown as safe outcomes, not hidden errors.
             </p>
@@ -316,7 +316,7 @@ export const CodeChangesPage: React.FC = () => {
                         </a>
                       )}
                     </div>
-                    <h2 className="text-xl font-extrabold ea-ink">{selectedStep.name}</h2>
+                    <h2 className="text-xl font-semibold ea-ink">{selectedStep.name}</h2>
                     <p className="text-xs ea-muted font-mono">{selectedStep.actionType}</p>
                   </div>
                   <div className="text-right text-[11px] font-mono ea-faint">

@@ -45,9 +45,9 @@ export const ApprovalsPage: React.FC = () => {
   const rejectedToday = approvals.filter(a => a.status === 'rejected').length + 2;
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
+    <div className="space-y-5 pb-8">
       {/* 1. Overview Metrics & Batch Approval Action Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 rounded-3xl ea-surface border border-[var(--ea-line)] shadow-xl">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 rounded-3xl ea-surface border border-[var(--ea-line)] shadow-[var(--ea-shadow-sm)]">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 flex-1">
           {[
             { label: 'Pending Review', value: `${pendingCount}`, sub: 'Requires sign-off', color: 'text-amber-400' },
@@ -68,7 +68,7 @@ export const ApprovalsPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
           <button
             onClick={approveBatchLowRisk}
-            className="px-5 py-3 rounded-xl bg-[var(--ea-accent)] text-[var(--ea-accent-ink)] font-semibold text-xs transition-all shadow-lg  flex items-center justify-center gap-2"
+            className="px-5 py-3 rounded-xl bg-[var(--ea-accent)] text-[var(--ea-accent-ink)] font-semibold text-xs transition-all shadow-[var(--ea-shadow-sm)] flex items-center justify-center gap-2"
           >
             <Sparkles className="w-4 h-4" />
             <span>Approve Low-Risk Batch</span>
@@ -91,7 +91,7 @@ export const ApprovalsPage: React.FC = () => {
               </div>
 
               <div>
-                <h2 className="text-2xl font-extrabold ea-ink tracking-tight">{selectedItem.title}</h2>
+                <h2 className="text-2xl font-semibold ea-ink tracking-tight">{selectedItem.title}</h2>
                 <p className="text-xs sm:text-sm ea-soft mt-1">Requested by <strong className="ea-ink">{selectedItem.agentName}</strong></p>
               </div>
 
@@ -122,7 +122,7 @@ export const ApprovalsPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row lg:flex-col gap-2.5 shrink-0 bg-[var(--ea-surface-3)] p-4 rounded-2xl border border-[var(--ea-line)] w-full lg:w-64">
               <button
                 onClick={() => approveRequest(selectedItem.id)}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-black font-extrabold text-xs transition-all shadow-lg flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-xl bg-[var(--ea-success)] text-white font-semibold text-xs transition-all shadow-[var(--ea-shadow-sm)] flex items-center justify-center gap-2"
               >
                 <Check className="w-4 h-4 stroke-[3]" />
                 <span>Approve & Execute</span>
@@ -304,7 +304,7 @@ export const ApprovalsPage: React.FC = () => {
               <div className="mt-6 pt-4 border-t border-[var(--ea-line)] space-y-2">
                 <button
                   onClick={() => approveRequest(selectedItem.id)}
-                  className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-sans font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-lg"
+                  className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-sans font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-[var(--ea-shadow-sm)]"
                 >
                   <Check className="w-4 h-4 stroke-[3]" />
                   <span>Grant Permission</span>

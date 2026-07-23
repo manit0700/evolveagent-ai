@@ -125,7 +125,7 @@ export const ChiefOfStaffPage: React.FC = () => {
   const openFollowups = (followups || []).filter((f) => f.status === 'open');
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
+    <div className="space-y-5 pb-8">
       <div className="ea-hero">
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-3xl">
@@ -134,7 +134,7 @@ export const ChiefOfStaffPage: React.FC = () => {
                 v180 Personal Chief of Staff
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold ea-ink tracking-tight">Chief of Staff</h1>
+            <h1 className="text-2xl sm:text-3xl font-semibold ea-ink tracking-tight">Chief of Staff</h1>
             <p className="text-xs sm:text-sm ea-soft leading-relaxed">
               Real priority ranking across goals, tasks, leads, risks, approvals, follow-ups — and open GitHub
               PRs/issues when configured.
@@ -168,7 +168,7 @@ export const ChiefOfStaffPage: React.FC = () => {
           </div>
           <div className="p-3 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] space-y-1">
             <div className="text-[10px] uppercase tracking-wider font-mono ea-faint">Items folded into priorities</div>
-            <div className="text-xl font-extrabold ea-ink">{dashboard?.githubItemsCount ?? 0}</div>
+            <div className="text-xl font-semibold ea-ink">{dashboard?.githubItemsCount ?? 0}</div>
           </div>
         </div>
       </GlassCard>
@@ -176,19 +176,19 @@ export const ChiefOfStaffPage: React.FC = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <GlassCard className="space-y-1">
           <div className="text-[10px] uppercase font-mono tracking-wider ea-faint">Open follow-ups</div>
-          <div className="text-2xl font-extrabold ea-ink">{dashboard?.openFollowups ?? '—'}</div>
+          <div className="text-2xl font-semibold ea-ink">{dashboard?.openFollowups ?? '—'}</div>
         </GlassCard>
         <GlassCard className="space-y-1">
           <div className="text-[10px] uppercase font-mono tracking-wider ea-faint">Overdue</div>
-          <div className="text-2xl font-extrabold text-amber-400">{dashboard?.overdueFollowups ?? '—'}</div>
+          <div className="text-2xl font-semibold text-amber-400">{dashboard?.overdueFollowups ?? '—'}</div>
         </GlassCard>
         <GlassCard className="space-y-1">
           <div className="text-[10px] uppercase font-mono tracking-wider ea-faint">Blocked items</div>
-          <div className="text-2xl font-extrabold text-rose-400">{dashboard?.blockedItems ?? '—'}</div>
+          <div className="text-2xl font-semibold text-rose-400">{dashboard?.blockedItems ?? '—'}</div>
         </GlassCard>
         <GlassCard className="space-y-1">
           <div className="text-[10px] uppercase font-mono tracking-wider ea-faint">Open risks</div>
-          <div className="text-2xl font-extrabold ea-ink">{dashboard?.riskSummary.openRiskCount ?? '—'}</div>
+          <div className="text-2xl font-semibold ea-ink">{dashboard?.riskSummary.openRiskCount ?? '—'}</div>
         </GlassCard>
       </div>
 

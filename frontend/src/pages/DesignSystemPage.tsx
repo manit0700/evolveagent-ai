@@ -75,7 +75,7 @@ export const DesignSystemPage: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-8 animate-fadeIn pb-16">
+    <div className="space-y-6 pb-10">
       {/* Header Banner */}
       <div className="ea-hero">
         
@@ -84,7 +84,7 @@ export const DesignSystemPage: React.FC = () => {
             <Palette className="w-3.5 h-3.5" />
             <span>ADR #12 Design System Manifest</span>
           </div>
-          <h1 className="text-2xl sm:text-4xl font-extrabold ea-ink tracking-tight">
+          <h1 className="text-2xl sm:text-4xl font-semibold ea-ink tracking-tight">
             EvolveAgent AI Brand & UI Tokens
           </h1>
           <p className="mt-2 text-xs sm:text-sm ea-soft leading-relaxed">
@@ -102,7 +102,7 @@ export const DesignSystemPage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 font-mono text-xs">
           {colorTokens.map((col, idx) => (
             <div key={idx} className="p-4 rounded-2xl bg-[var(--ea-surface-3)] border border-[var(--ea-line)] space-y-3">
-              <div className={`h-16 w-full rounded-xl border ${col.border} ${col.tailwind} flex items-center justify-center shadow-lg`}>
+              <div className={`h-16 w-full rounded-xl border ${col.border} ${col.tailwind} flex items-center justify-center shadow-[var(--ea-shadow-sm)]`}>
                 <span className="font-bold ea-ink drop-shadow">{col.name.split('(')[0]}</span>
               </div>
               <div>

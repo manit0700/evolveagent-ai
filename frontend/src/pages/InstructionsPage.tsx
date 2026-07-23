@@ -60,7 +60,7 @@ export const InstructionsPage: React.FC = () => {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   return (
-    <div className="space-y-8 animate-fadeIn pb-16">
+    <div className="space-y-6 pb-10">
       {/* Header Banner */}
       <div className="ea-hero">
         <div className="relative">
@@ -68,7 +68,7 @@ export const InstructionsPage: React.FC = () => {
             <BookOpen className="w-3.5 h-3.5" />
             Start Here
           </div>
-          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight ea-ink mb-2">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight ea-ink mb-2">
             Welcome to EvolveAgent AI
           </h1>
           <p className="text-sm text-slate-300 leading-relaxed max-w-2xl">
