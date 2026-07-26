@@ -29,6 +29,80 @@ export const MissionControl: React.FC = () => {
   const loadRuns = () => fetchWorkflowRuns().then(setLiveRuns);
   useEffect(() => { loadRuns(); }, []);
 
+  const completedTasks = tasks.filter(t => t.status === 'completed').length;
+  const runningTasks = tasks.filter(t => t.status === 'running').length;
+  const waitingTasks = tasks.filter(t => t.status === 'waiting_approval').length;
+  const blockedTasks = tasks.filter(t => t.status === 'blocked' || t.status === 'failed').length;
+  const pendingApprovals = approvals.filter(a => a.status === 'pending').length;
+  const avgAgentConfidence = agents.length
+    ? Math.round(agents.reduce((total, agent) => total + (Number(agent.qualityScore) || 0), 0) / agents.length)
+    : 0;
+  const derivedProgress = tasks.length ? Math.round((completedTasks / tasks.length) * 100) : mission.progress;
+  const visibleProgress = tasks.length ? derivedProgress : mission.progress;
+  const nextTask = tasks.find(t => t.status === 'waiting_approval')
+    || tasks.find(t => t.status === 'running')
+    || tasks.find(t => t.status === 'planned')
+    || tasks.find(t => t.status !== 'completed');
+
+  const explainTaskStatus = (status: TaskStatus) => {
+    if (status === 'planned') {
+      return {
+        label: 'Ready to start',
+        nextAction: 'Start Task',
+        explanation: 'This task is planned and waiting for an agent to begin.',
+        tone: 'text-blue-300',
+      };
+    }
+    if (status === 'running') {
+      return {
+        label: 'Agent working',
+        nextAction: 'View Details',
+        explanation: 'An agent is already working on this task.',
+        tone: 'text-cyan-300',
+      };
+    }
+    if (status === 'waiting_approval') {
+      return {
+        label: 'Needs approval',
+        nextAction: 'Review Approval',
+        explanation: 'The task is paused until you approve or reject the requested action.',
+        tone: 'text-amber-300',
+      };
+    }
+    if (status === 'completed') {
+      return {
+        label: 'Done',
+        nextAction: 'View Result',
+        explanation: 'This task is complete and counted in mission progress.',
+        tone: 'text-emerald-300',
+      };
+    }
+    return {
+      label: 'Needs review',
+      nextAction: 'Review Blocker',
+      explanation: 'This task hit a blocker or failed and needs attention.',
+      tone: 'text-rose-300',
+    };
+  };
+
+  const runTaskAction = (taskStatus: TaskStatus, title: string) => {
+    const guide = explainTaskStatus(taskStatus);
+    if (taskStatus === 'waiting_approval') {
+      showToast(`Open Approvals to review "${title}".`, 'info');
+      return;
+    }
+    if (taskStatus === 'completed') {
+      showToast(`"${title}" is already complete.`, 'success');
+      return;
+    }
+    if (taskStatus === 'blocked' || taskStatus === 'failed') {
+      showToast(`"${title}" needs review before agents continue.`, 'warning');
+      return;
+    }
+    advanceWorkflowStep();
+    showToast(`${guide.nextAction}: "${title}" delegated to agents.`, 'success');
+  };
+
   const handleStartRun = async () => {
     setStarting(true);
     try {
@@ -49,16 +123,26 @@ export const MissionControl: React.FC = () => {
     showToast('Next recommended action approved & delegated to agents!', 'success');
   };
 
-  const columns: { id: TaskStatus; label: string; color: string }[] = [
-    { id: 'planned', label: 'Planned / Backlog', color: 'border-blue-500/30' },
-    { id: 'running', label: 'In Progress / Running', color: 'border-cyan-500/40' },
-    { id: 'waiting_approval', label: 'Waiting Approval', color: 'border-amber-500/40' },
-    { id: 'completed', label: 'Completed', color: 'border-emerald-500/40' }
+  const columns: { ids: TaskStatus[]; label: string; color: string }[] = [
+    { ids: ['planned'], label: 'Planned / Backlog', color: 'border-blue-500/30' },
+    { ids: ['running'], label: 'In Progress / Running', color: 'border-cyan-500/40' },
+    { ids: ['waiting_approval'], label: 'Waiting Approval', color: 'border-amber-500/40' },
+    { ids: ['blocked', 'failed'], label: 'Needs Review', color: 'border-rose-500/40' },
+    { ids: ['completed'], label: 'Completed', color: 'border-emerald-500/40' }
   ];
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
       {/* 1. Active Mission Overview Header Card */}
+      {tasks.length === 0 ? (
+        <GlassCard className="text-center py-12">
+          <Compass className="w-10 h-10 text-cyan-400 mx-auto" />
+          <h2 className="mt-4 text-xl font-extrabold text-white">No active mission yet</h2>
+          <p className="mt-2 text-sm text-gray-400 max-w-xl mx-auto">
+            Create a goal from Chat, for example: “Build an AI resume analyzer app.” Mission Control will show the phases, tasks, agents, approvals, and progress here.
+          </p>
+        </GlassCard>
+      ) : (
       <div className="relative rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-[#171524] via-[#14141c] to-[#121216] p-6 sm:p-8 shadow-2xl overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
         
@@ -99,15 +183,39 @@ export const MissionControl: React.FC = () => {
             <div className="w-full sm:w-44 space-y-1.5">
               <div className="flex items-center justify-between text-xs font-mono">
                 <span className="text-gray-400">Total Progress</span>
-                <span className="text-cyan-300 font-bold">{mission.progress}%</span>
+                <span className="text-cyan-300 font-bold">{visibleProgress}%</span>
               </div>
               <div className="w-full h-2 rounded-full bg-black/60 overflow-hidden p-0.5 border border-white/5">
-                <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${mission.progress}%` }} />
+                <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{ width: `${visibleProgress}%` }} />
+              </div>
+              <div className="text-[10px] text-gray-400 font-mono">
+                {completedTasks}/{tasks.length} tasks complete · {waitingTasks} waiting
               </div>
             </div>
           </div>
         </div>
       </div>
+      )}
+
+      {/* Live mission metrics */}
+      {tasks.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {[
+            { label: 'Progress', value: `${visibleProgress}%`, sub: `${completedTasks}/${tasks.length} complete`, color: 'text-cyan-300' },
+            { label: 'Running', value: `${runningTasks}`, sub: 'Agent active', color: 'text-emerald-400' },
+            { label: 'Waiting', value: `${waitingTasks}`, sub: 'Needs approval', color: 'text-amber-400' },
+            { label: 'Blocked', value: `${blockedTasks}`, sub: blockedTasks ? 'Review needed' : 'No blockers', color: blockedTasks ? 'text-rose-400' : 'text-emerald-400' },
+            { label: 'Approvals', value: `${pendingApprovals}`, sub: 'Pending review', color: pendingApprovals ? 'text-amber-400' : 'text-gray-400' },
+            { label: 'Agent Score', value: `${avgAgentConfidence}%`, sub: 'Avg quality', color: 'text-sky-300' },
+          ].map((item) => (
+            <div key={item.label} className="p-3 rounded-2xl bg-[#171717]/80 border border-white/[0.07] backdrop-blur-xl space-y-1">
+              <div className="text-[11px] font-mono text-gray-400 uppercase tracking-wider">{item.label}</div>
+              <div className={`text-2xl font-bold font-mono tracking-tight ${item.color}`}>{item.value}</div>
+              <div className="text-[10px] text-gray-500 font-mono truncate">{item.sub}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Live durable-workflow runs (real backend data) */}
       {liveRuns !== null && (
@@ -160,7 +268,9 @@ export const MissionControl: React.FC = () => {
           <div>
             <div className="text-xs font-semibold text-cyan-200 uppercase tracking-wide font-mono">Recommended Next Action</div>
             <p className="text-xs sm:text-sm text-white font-medium mt-0.5">
-              UI Design Agent recommends synthesizing the <span className="text-cyan-300 font-bold">Agents Overview grid</span> and verifying approval-safe permission profiles next.
+              {nextTask
+                ? <>Continue <span className="text-cyan-300 font-bold">{nextTask.title}</span> with {nextTask.assignedAgentName}.</>
+                : <>All visible tasks are complete. Review results and create the next mission from Chat.</>}
             </p>
           </div>
         </div>
@@ -199,7 +309,7 @@ export const MissionControl: React.FC = () => {
                 <div className="text-xs font-semibold truncate text-white">{phase.title}</div>
                 <div className="mt-2 flex items-center justify-between text-[10px] font-mono opacity-80">
                   <span>{phase.completedCount}/{phase.tasksCount} tasks</span>
-                  <span>{Math.round((phase.completedCount / phase.tasksCount) * 100)}%</span>
+                  <span>{phase.tasksCount ? Math.round((phase.completedCount / phase.tasksCount) * 100) : 0}%</span>
                 </div>
               </div>
             );
@@ -214,14 +324,14 @@ export const MissionControl: React.FC = () => {
             <CheckSquare className="w-4 h-4 text-cyan-400" />
             <span>Task Graph & Execution Pipeline</span>
           </h3>
-          <span className="text-xs text-gray-400 font-mono">Showing {tasks.length} atomic operations</span>
+          <span className="text-xs text-gray-400 font-mono">Showing {tasks.length} tasks · {completedTasks} done</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
           {columns.map(col => {
-            const colTasks = tasks.filter(t => t.status === col.id);
+            const colTasks = tasks.filter(t => col.ids.includes(t.status));
             return (
-              <div key={col.id} className={`p-4 rounded-2xl bg-[#141418] border ${col.color} flex flex-col min-h-[350px]`}>
+              <div key={col.label} className={`p-4 rounded-2xl bg-[#141418] border ${col.color} flex flex-col min-h-[350px]`}>
                 <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
                   <span className="text-xs font-bold text-white uppercase tracking-wider font-mono">{col.label}</span>
                   <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-white/10 text-gray-300">{colTasks.length}</span>
@@ -232,6 +342,9 @@ export const MissionControl: React.FC = () => {
                     <div className="py-8 text-center text-xs text-gray-500 font-mono">No tasks in this state</div>
                   ) : (
                     colTasks.map(t => (
+                      (() => {
+                        const guide = explainTaskStatus(t.status);
+                        return (
                       <div
                         key={t.id}
                         className="p-3 rounded-xl bg-[#1a1a20] border border-white/10 hover:border-white/20 transition-all space-y-2 shadow-md"
@@ -241,11 +354,32 @@ export const MissionControl: React.FC = () => {
                           <RiskBadge level={t.riskLevel} size="sm" />
                         </div>
                         <p className="text-[11px] text-gray-400 line-clamp-2">{t.description}</p>
+                        <div className="rounded-lg bg-black/30 border border-white/5 p-2">
+                          <div className={`text-[10px] font-mono uppercase ${guide.tone}`}>{guide.label}</div>
+                          <p className="mt-1 text-[11px] text-gray-300 leading-relaxed">{guide.explanation}</p>
+                        </div>
                         <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-gray-500">
                           <span className="text-cyan-300">{t.assignedAgentName}</span>
                           <span>{t.timestamp}</span>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => runTaskAction(t.status, t.title)}
+                          className={`w-full mt-2 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
+                            t.status === 'completed'
+                              ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+                              : t.status === 'waiting_approval'
+                                ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
+                                : t.status === 'blocked' || t.status === 'failed'
+                                  ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20'
+                                  : 'bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-200 border border-cyan-500/30'
+                          }`}
+                        >
+                          {guide.nextAction}
+                        </button>
                       </div>
+                        );
+                      })()
                     ))
                   )}
                 </div>
@@ -264,23 +398,23 @@ export const MissionControl: React.FC = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
           <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
             <div className="text-xs font-mono text-gray-400">Agent Confidence</div>
-            <div className="text-2xl font-bold font-mono text-cyan-300 mt-1">94%</div>
-            <div className="text-[10px] text-emerald-400 mt-1">High predictability</div>
+            <div className="text-2xl font-bold font-mono text-cyan-300 mt-1">{avgAgentConfidence}%</div>
+            <div className="text-[10px] text-emerald-400 mt-1">Average quality score</div>
           </div>
           <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
             <div className="text-xs font-mono text-gray-400">Blockers Detected</div>
-            <div className="text-2xl font-bold font-mono text-white mt-1">00</div>
-            <div className="text-[10px] text-gray-500 mt-1">Smooth execution</div>
+            <div className={`text-2xl font-bold font-mono mt-1 ${blockedTasks ? 'text-rose-300' : 'text-white'}`}>{blockedTasks}</div>
+            <div className="text-[10px] text-gray-500 mt-1">{blockedTasks ? 'Needs review' : 'No blockers'}</div>
           </div>
           <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
             <div className="text-xs font-mono text-gray-400">Pending Approvals</div>
-            <div className="text-2xl font-bold font-mono text-amber-400 mt-1">{approvals.filter(a => a.status === 'pending').length}</div>
-            <div className="text-[10px] text-amber-300/80 mt-1">Gating external writes</div>
+            <div className="text-2xl font-bold font-mono text-amber-400 mt-1">{pendingApprovals}</div>
+            <div className="text-[10px] text-amber-300/80 mt-1">Waiting for review</div>
           </div>
           <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-            <div className="text-xs font-mono text-gray-400">Sandboxing Mode</div>
+            <div className="text-xs font-mono text-gray-400">Mission State</div>
             <div className="text-2xl font-bold font-mono text-emerald-400 mt-1">Active</div>
-            <div className="text-[10px] text-gray-500 mt-1">Zero unplanned side effects</div>
+            <div className="text-[10px] text-gray-500 mt-1">{runningTasks} running · {waitingTasks} waiting</div>
           </div>
         </div>
       </GlassCard>
