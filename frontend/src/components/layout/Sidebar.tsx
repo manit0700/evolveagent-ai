@@ -225,7 +225,7 @@ export const Sidebar: React.FC<{ mobileOpen?: boolean; setMobileOpen?: (open: bo
 
             <div className="flex items-center justify-between text-[10px] font-mono text-gray-500 pt-1 border-t border-white/5">
               <span>Mode: {safetySettings.planningFirst ? 'Planning-First' : 'Direct'}</span>
-              <span className="text-cyan-400">Mock-Safe</span>
+              <span className="text-cyan-400">Approval-Safe</span>
             </div>
           </div>
         </div>

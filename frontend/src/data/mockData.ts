@@ -64,7 +64,7 @@ export const INITIAL_AGENTS: Agent[] = [
     id: 'agent-gov',
     name: 'Governance Agent',
     role: 'Safety Enforcement & Risk Judge',
-    description: 'Audits every tool invocation, enforces mock-safe sandboxing, and intercepts high-risk operations for user approval.',
+    description: 'Audits every tool invocation, enforces approval-safe governance, and intercepts high-risk operations for user approval.',
     avatar: '🛡️',
     status: 'active',
     qualityScore: 100,
@@ -111,7 +111,7 @@ export const INITIAL_AGENTS: Agent[] = [
     id: 'agent-judge',
     name: 'Judge Agent',
     role: 'Output Quality & Testing Critic',
-    description: 'Evaluates code against design system tokens, checks accessibility contrast, and runs simulated unit tests.',
+    description: 'Evaluates code against design system tokens, checks accessibility contrast, and prepares verification checks.',
     avatar: '⚖️',
     status: 'active',
     qualityScore: 97,
@@ -214,7 +214,7 @@ export const INITIAL_TASKS: Task[] = [
   },
   {
     id: 'task-107',
-    title: 'Run full security audit against Mock-Safe policies',
+    title: 'Run full security audit against approval-safe policies',
     description: 'Verify no real destructive shell execution occurs without explicit confirmation.',
     assignedAgentId: 'agent-gov',
     assignedAgentName: 'Governance Agent',
@@ -242,7 +242,7 @@ export const INITIAL_APPROVALS: ApprovalRequest[] = [
     costLimit: '$0.00 (Free Tier)',
     workspaceScope: '/projects/evolve-ai',
     governanceChecks: [
-      { label: 'Mock-Safe Sandboxing Verified', passed: true, detail: 'Action will run in read-only sandbox without altering external state.' },
+      { label: 'Approval-Safe Governance Verified', passed: true, detail: 'Action will run in read-only mode without altering external state.' },
       { label: 'Token Budget Compliance', passed: true, detail: 'Estimated context payload is 4.2k tokens (within 25k limit).' },
       { label: 'No Destructive Shell Commands', passed: true, detail: 'No bash or write operations requested in this batch.' },
       { label: 'External Network Call', passed: false, detail: 'Requires outbound API connection to api.github.com.' }
@@ -266,7 +266,7 @@ export const INITIAL_APPROVALS: ApprovalRequest[] = [
     governanceChecks: [
       { label: 'Git Backup Confirmed', passed: true, detail: 'Working tree is clean; undo checkpoint created automatically.' },
       { label: 'AST Syntax Validation', passed: true, detail: 'TypeScript syntax check passed with 0 compile errors.' },
-      { label: 'Mock-Safe Sandboxing Verified', passed: true, detail: 'Operation restricted to user workspace container.' }
+      { label: 'Approval-Safe Governance Verified', passed: true, detail: 'Operation restricted to user workspace container.' }
     ]
   },
   {
@@ -344,7 +344,7 @@ export const INITIAL_MEMORIES: MemoryItem[] = [
   },
   {
     id: 'mem-02',
-    title: 'Planning-First & Mock-Safe Execution Policy',
+    title: 'Planning-First & Approval-Safe Execution Policy',
     snippet: 'All external tool calls (GitHub, Slack, Shell, Filesystem) must execute in dry-run Planning-First mode by default. High-risk operations must enter the Approval Queue before side effects trigger.',
     type: 'Decision',
     relevance: 96,
@@ -496,7 +496,7 @@ export const INITIAL_GOVERNANCE_LOGS: GovernanceEvent[] = [
     action: 'component_generator --target=AgentsGrid',
     status: 'allowed',
     risk: 'low',
-    details: 'Passed Mock-Safe sandboxing. Validated against design tokens.'
+    details: 'Passed approval-safe governance. Validated against design tokens.'
   },
   {
     id: 'gov-1002',
@@ -534,7 +534,7 @@ export const INITIAL_GOVERNANCE_LOGS: GovernanceEvent[] = [
     type: 'tool_call',
     agentName: 'Memory Agent',
     action: 'vector_db_scanner --path=/src',
-    status: 'mock_executed',
+    status: 'preview_executed',
     risk: 'low',
     details: 'Executed in Read-Only indexer mode. 19 files parsed and embedded.'
   },
@@ -603,7 +603,7 @@ export const INITIAL_TRACE_STEPS: TraceStep[] = [
     id: 'tr-05',
     timestamp: '11:30:05 AM',
     agent: 'Governance Agent',
-    action: 'Validate tool calls against Mock-Safe sandboxing rules',
+    action: 'Validate tool calls against approval-safe governance rules',
     status: 'running',
     durationMs: 180,
     toolUsed: 'Permission Policy Engine',

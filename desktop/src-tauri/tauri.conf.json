@@ -5,8 +5,8 @@
   "identifier": "ai.evolveagent.desktop",
   "build": {
     "frontendDist": "../../frontend/dist",
-    "devUrl": "http://localhost:5173",
-    "beforeDevCommand": "npm --prefix ../frontend run dev",
+    "devUrl": "http://127.0.0.1:5173",
+    "beforeDevCommand": "node scripts/dev-with-backend.mjs",
     "beforeBuildCommand": "npm --prefix ../frontend run build"
   },
   "app": {

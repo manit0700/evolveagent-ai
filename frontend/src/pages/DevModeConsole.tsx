@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 
 export const DevModeConsole: React.FC = () => {
-  const { traceSteps, runMockWorkflowStep, governanceLogs, agents, connectors, approvals, showToast } = useApp();
+  const { traceSteps, advanceWorkflowStep, governanceLogs, agents, connectors, approvals, showToast } = useApp();
   const [isPaused, setIsPaused] = useState(false);
   const [selectedStep, setSelectedStep] = useState(traceSteps[traceSteps.length - 1]?.step || 1);
   const [logFilter, setLogFilter] = useState('');
@@ -500,7 +500,7 @@ export const DevModeConsole: React.FC = () => {
             <span>{isPaused ? 'Resume Trace' : 'Pause Execution'}</span>
           </button>
           <button
-            onClick={runMockWorkflowStep}
+            onClick={advanceWorkflowStep}
             className="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium flex items-center gap-1.5 transition-colors shadow-lg shadow-cyan-500/20"
           >
             <Play className="w-3.5 h-3.5 fill-current" />

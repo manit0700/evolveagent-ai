@@ -16,7 +16,7 @@ export type BadgeStatus =
   | 'approval-gated'
   | 'error'
   | 'allowed'
-  | 'mock_executed';
+  | 'preview_executed';
 
 interface StatusBadgeProps {
   status: BadgeStatus | string;
@@ -30,12 +30,13 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   showIcon = true
 }) => {
   const normalized = status.toLowerCase().replace('_', ' ');
+  const label = normalized;
   
   let bgClass = 'bg-gray-500/15 text-gray-300 border-gray-500/20';
   let dotClass = 'bg-gray-400';
   let Icon = Clock;
 
-  if (['active', 'completed', 'connected', 'allowed', 'mock executed'].includes(normalized)) {
+  if (['active', 'completed', 'connected', 'allowed', 'preview executed'].includes(label)) {
     bgClass = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
     dotClass = 'bg-emerald-400 animate-pulse';
     Icon = CheckCircle2;
@@ -66,7 +67,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       ) : (
         <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
       )}
-      <span className="capitalize">{normalized}</span>
+      <span className="capitalize">{label}</span>
     </span>
   );
 };

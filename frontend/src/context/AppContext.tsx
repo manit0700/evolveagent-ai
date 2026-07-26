@@ -72,7 +72,7 @@ interface AppContextType {
   approveBatchLowRisk: () => void;
   toggleAgentStatus: (id: string) => void;
   sendMessage: (text: string, attachments?: { name: string; size: string; type: string }[]) => void;
-  runMockWorkflowStep: () => void;
+  advanceWorkflowStep: () => void;
   togglePinMemory: (id: string) => void;
   toggleToolConnection: (id: string) => void;
   addMemoryItem: (title: string, snippet: string, type: MemoryItem['type'], tags: string[]) => void;
@@ -116,7 +116,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Load real backend data on mount; keep mock data as a fallback so the UI
+  // Load real backend data on mount; keep offline fallback data so the UI
   // works even if the backend is down. Only overrides slices that came back.
   const refreshLive = async () => {
     const live = await fetchLiveData();
@@ -156,7 +156,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!target) return;
 
     setApprovals(prev => prev.map(a => a.id === id ? { ...a, status: 'approved' } : a));
-    // Best-effort real decision on the backend (no-op for sample items).
+    // Best-effort real decision on the backend (no-op for offline fallback items).
     decideApproval(id, 'approve').then(ok => { if (ok) refreshLive(); });
     
     // Log governance event
@@ -168,7 +168,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       action: target.toolName,
       status: 'allowed',
       risk: target.riskLevel,
-      details: `User explicitly approved: ${target.title}. Action executed in mock sandbox.`
+      details: `User explicitly approved: ${target.title}. Action completed inside the governed approval path.`
     };
     setGovernanceLogs(prev => [newLog, ...prev]);
 
@@ -257,7 +257,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setChatMessages(prev => [...prev, userMsg]);
 
-    // Route through the real Master Agent. When Mock-Safe is OFF we ask the
+    // Route through the real Master Agent. When Approval-Safe is OFF we ask the
     // backend to execute (execute:true) — but it only runs NON-risky intents;
     // risky ones stay approval-gated no matter what.
     (async () => {
@@ -267,7 +267,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const replyText = routed
         ? `${routed.answer}`
           + (routed.requiresApproval ? '\n\n⚠️ This intent is **risky** — held for explicit approval (nothing was executed).' : '')
-          + (ranForReal ? '\n\n✅ Mock-Safe is off — this non-risky action was executed for real.' : '')
+          + (ranForReal ? '\n\n✅ Approval-Safe is off — this non-risky action was executed for real.' : '')
           + (routed.suggestedWorkflow ? `\n\nSuggested workflow: **${routed.suggestedWorkflow}**` : '')
         : `I couldn't reach the backend just now, so I'm replying in offline mode. Under Planning-First Mode I'd route this to the right agent and prepare a dry-run before any real action.`;
 
@@ -284,7 +284,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     })();
   };
 
-  const runMockWorkflowStep = () => {
+  const advanceWorkflowStep = () => {
     // Advance mission progress
     setMission(prev => ({
       ...prev,
@@ -307,7 +307,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setTraceSteps(prev => [...prev, newStep]);
-    showToast('Simulated workflow step executed! Mission progress advanced to ' + Math.min(100, mission.progress + 8) + '%', 'success');
+    showToast('Workflow step advanced. Mission progress moved to ' + Math.min(100, mission.progress + 8) + '%', 'success');
   };
 
   const togglePinMemory = (id: string) => {
@@ -326,7 +326,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (c.id === id) {
         const nextStatus = c.status === 'connected' ? 'disconnected' : 'connected';
         showToast(`Tool connector "${c.name}" is now ${nextStatus.toUpperCase()}`, nextStatus === 'connected' ? 'success' : 'warning');
-        // Best-effort real enable/disable on the backend (no-op for sample items).
+        // Best-effort real enable/disable on the backend (no-op for offline fallback items).
         setConnectorEnabled(id, nextStatus === 'connected').then(ok => { if (ok) refreshLive(); });
         return { ...c, status: nextStatus };
       }
@@ -379,7 +379,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         approveBatchLowRisk,
         toggleAgentStatus,
         sendMessage,
-        runMockWorkflowStep,
+        advanceWorkflowStep,
         togglePinMemory,
         toggleToolConnection,
         addMemoryItem

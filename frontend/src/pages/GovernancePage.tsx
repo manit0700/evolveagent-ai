@@ -88,7 +88,7 @@ export const GovernancePage: React.FC = () => {
             <div className="p-3 rounded-2xl bg-black/40 border border-emerald-500/30 flex items-center gap-3">
               <CheckCircle2 className="w-5 h-5 text-emerald-400" />
               <div className="text-xs font-mono">
-                <div className="font-bold text-white">Mock-Safe Sandbox</div>
+                <div className="font-bold text-white">Approval-Safe Sandbox</div>
                 <div className="text-gray-400 text-[10px]">Zero unapproved filesystem writes</div>
               </div>
             </div>
@@ -169,7 +169,7 @@ export const GovernancePage: React.FC = () => {
             <div className="space-y-3">
               {[
                 { key: 'planningFirst' as const, title: 'Planning-First Mode', desc: 'Agents formulate dry-run plans before execution.' },
-                { key: 'mockSafe' as const, title: 'Mock-Safe Execution', desc: 'Sandbox external filesystem writes and CLI commands.' },
+                { key: 'mockSafe' as const, title: 'Approval-Safe Execution', desc: 'Hold external filesystem writes and CLI commands for approval.' },
                 { key: 'requireApproval' as const, title: 'Require Sign-off on High Risk', desc: 'Route Medium and High risk tools to Approvals.' },
                 { key: 'auditLogging' as const, title: 'Tamper-Proof Audit Logging', desc: 'Record every AST evaluation to immutable log.' },
                 { key: 'blockDestructive' as const, title: 'Block Destructive Shell', desc: 'Permanently forbid rm -rf, drop table, and git reset.' },

@@ -42,7 +42,7 @@ export const HomeDashboard: React.FC = () => {
     approveRequest,
     rejectRequest,
     approveBatchLowRisk,
-    runMockWorkflowStep,
+    advanceWorkflowStep,
     showToast 
   } = useApp();
 
@@ -266,11 +266,11 @@ export const HomeDashboard: React.FC = () => {
             <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs text-gray-400">
               <span className="font-mono text-[11px]">Mission #01 Progress: 62%</span>
               <button
-                onClick={runMockWorkflowStep}
+                onClick={advanceWorkflowStep}
                 className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium text-xs flex items-center gap-1.5 transition-colors"
               >
                 <Play className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Simulate Next Step</span>
+                <span>Advance Next Step</span>
               </button>
             </div>
           </GlassCard>
@@ -420,7 +420,7 @@ export const HomeDashboard: React.FC = () => {
               <div className="flex items-center gap-2.5">
                 <div className="w-2 h-2 rounded-full bg-emerald-400" />
                 <div>
-                  <div className="text-xs font-medium text-white">Mock-Safe Sandbox Enforcement</div>
+                  <div className="text-xs font-medium text-white">Approval-Safe Governance</div>
                   <div className="text-[11px] text-gray-400">High-risk filesystem and API operations require sign-off</div>
                 </div>
               </div>

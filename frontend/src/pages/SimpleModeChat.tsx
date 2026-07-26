@@ -44,13 +44,13 @@ export const SimpleModeChat: React.FC = () => {
     setAttachments([]);
   };
 
-  const handleAttachMock = () => {
-    const mockFiles = [
+  const handleAttachExample = () => {
+    const exampleFiles = [
       { name: 'App.tsx', size: '12 KB', type: 'TypeScript Component' },
       { name: 'tailwind.config.ts', size: '4 KB', type: 'Config' },
       { name: 'ADR-12-design-tokens.md', size: '18 KB', type: 'Markdown Memory' }
     ];
-    const nextFile = mockFiles[attachments.length % mockFiles.length];
+    const nextFile = exampleFiles[attachments.length % exampleFiles.length];
     setAttachments(prev => [...prev, nextFile]);
     showToast(`Attached ${nextFile.name} (${nextFile.size}) to chat context`, 'info');
   };
@@ -83,7 +83,7 @@ export const SimpleModeChat: React.FC = () => {
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-semibold text-white">Master Orchestrator & Specialized Agents</h3>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  Mock-Safe Mode
+                  Approval-Safe Mode
                 </span>
               </div>
               <p className="text-[11px] text-gray-400 font-mono">Routing across {activeAgents.length} active agents • Planning-First Active</p>
@@ -183,7 +183,7 @@ export const SimpleModeChat: React.FC = () => {
               {/* Attachment Button */}
               <button
                 type="button"
-                onClick={handleAttachMock}
+                onClick={handleAttachExample}
                 title="Attach workspace file or code snippet"
                 className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
               >

@@ -111,10 +111,10 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
           </button>
         </div>
 
-        {/* Live/Mock data indicator — reflects real backend connection */}
+        {/* Live/offline data indicator — reflects real backend connection */}
         <button
-          onClick={() => { refreshLive(); showToast(liveConnected ? 'Refreshed live data from backend' : 'Backend offline — showing sample data', liveConnected ? 'success' : 'warning'); }}
-          title={liveConnected ? 'Connected to the local backend — click to refresh' : 'Backend offline (showing sample data) — click to retry'}
+          onClick={() => { refreshLive(); showToast(liveConnected ? 'Refreshed live data from backend' : 'Backend offline — showing offline fallback data', liveConnected ? 'success' : 'warning'); }}
+          title={liveConnected ? 'Connected to the local backend — click to refresh' : 'Backend offline (showing offline fallback data) — click to retry'}
           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-mono transition-colors shrink-0 ${
             liveConnected
               ? 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 text-emerald-300'
@@ -122,15 +122,15 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
           }`}
         >
           <span className={`w-2 h-2 rounded-full ${liveConnected ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500'}`} />
-          <span className="hidden md:inline">{liveConnected ? 'Live Data' : 'Sample Data'}</span>
+          <span className="hidden md:inline">{liveConnected ? 'Live Data' : 'Offline Data'}</span>
         </button>
 
-        {/* Safety-mode badge — reflects Mock-Safe and toggles it on click */}
+        {/* Safety-mode badge — reflects approval-safe execution and toggles it on click */}
         <button
           onClick={() => toggleSafetySetting('mockSafe')}
           title={safetySettings.mockSafe
-            ? 'Mock-Safe ON: risky actions are simulated & held for approval. Click to allow real (non-risky) execution.'
-            : 'Real Actions ON: non-risky intents execute for real; risky ones are still approval-gated by the backend. Click to re-enable Mock-Safe.'}
+            ? 'Approval-Safe ON: risky actions are held for approval. Click to allow real non-risky execution.'
+            : 'Real Actions ON: non-risky intents execute for real; risky ones are still approval-gated by the backend. Click to re-enable Approval-Safe.'}
           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-mono transition-colors shrink-0 ${
             safetySettings.mockSafe
               ? 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 text-emerald-300'
@@ -140,7 +140,7 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
           {safetySettings.mockSafe
             ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             : <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />}
-          <span className="hidden md:inline">{safetySettings.mockSafe ? 'Mock-Safe' : 'Real Actions'}</span>
+          <span className="hidden md:inline">{safetySettings.mockSafe ? 'Approval-Safe' : 'Real Actions'}</span>
         </button>
       </div>
     </header>

@@ -26,7 +26,7 @@ export const CommandModal: React.FC = () => {
     agents, 
     memories, 
     approvals,
-    runMockWorkflowStep,
+    advanceWorkflowStep,
     approveBatchLowRisk,
     showToast
   } = useApp();
@@ -58,7 +58,7 @@ export const CommandModal: React.FC = () => {
     { title: 'Review my repo & suggest UI architecture', icon: Sparkles, action: () => navigateTo('chat'), tag: 'Agent Workflow' },
     { title: 'Plan workflow for Mission #01', icon: CheckSquare, action: () => navigateTo('mission-control'), tag: 'Mission Chief' },
     { title: 'Approve pending low-risk tool batch', icon: ShieldAlert, action: () => executeAction(approveBatchLowRisk, ''), tag: 'Governance' },
-    { title: 'Simulate next workflow trace step', icon: Play, action: () => executeAction(runMockWorkflowStep, ''), tag: 'Dev Console' },
+    { title: 'Advance next workflow trace step', icon: Play, action: () => executeAction(advanceWorkflowStep, ''), tag: 'Dev Console' },
     { title: 'Search Project Brain memories for tokens', icon: Brain, action: () => navigateTo('project-brain'), tag: 'Knowledge' },
     { title: 'Inspect UI Design Agent live tokens', icon: Bot, action: () => navigateTo('agents'), tag: 'Agent Profile' },
   ];
@@ -197,7 +197,7 @@ export const CommandModal: React.FC = () => {
           </div>
           <div className="flex items-center gap-1.5 text-emerald-400">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Mock-Safe Environment</span>
+            <span>Approval-Safe Environment</span>
           </div>
         </div>
       </div>

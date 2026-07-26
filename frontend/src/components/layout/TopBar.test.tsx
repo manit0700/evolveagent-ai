@@ -5,7 +5,7 @@ import { AppProvider } from '../../context/AppContext';
 import { TopBar } from './TopBar';
 
 // Render TopBar inside the real AppProvider, with all backend fetches failing so
-// the UI falls back to sample data (liveConnected = false).
+// the UI falls back to offline data (liveConnected = false).
 function renderTopBar() {
   return render(
     <AppProvider>
@@ -16,25 +16,25 @@ function renderTopBar() {
 
 beforeEach(() => {
   localStorage.clear();
-  // Every fetch fails -> offline/sample mode.
+  // Every fetch fails -> offline mode.
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) })) as any);
 });
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe('TopBar', () => {
-  it('shows Sample Data when the backend is offline', async () => {
+  it('shows Offline Data when the backend is offline', async () => {
     renderTopBar();
-    await waitFor(() => expect(screen.getByText('Sample Data')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Offline Data')).toBeInTheDocument());
   });
 
-  it('defaults to Mock-Safe and toggles to Real Actions on click', async () => {
+  it('defaults to Approval-Safe and toggles to Real Actions on click', async () => {
     const user = userEvent.setup();
     renderTopBar();
     // Default safety mode
-    expect(screen.getByText('Mock-Safe')).toBeInTheDocument();
+    expect(screen.getByText('Approval-Safe')).toBeInTheDocument();
     // Clicking the badge flips it to Real Actions
-    await user.click(screen.getByText('Mock-Safe'));
+    await user.click(screen.getByText('Approval-Safe'));
     await waitFor(() => expect(screen.getByText('Real Actions')).toBeInTheDocument());
     // And the choice persists to localStorage
     expect(JSON.parse(localStorage.getItem('evolveagent-safety') || '{}').mockSafe).toBe(false);

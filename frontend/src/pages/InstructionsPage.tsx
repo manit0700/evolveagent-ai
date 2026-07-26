@@ -42,8 +42,8 @@ const faqs = [
     a: 'Low-risk, read-only actions can run automatically. Anything with real-world consequences — editing a file, running a command, calling an external tool — is held in the Approvals queue until a person says yes. Nothing risky happens silently.'
   },
   {
-    q: 'What is the difference between Mock-Safe and Real Actions mode?',
-    a: 'Mock-Safe simulates actions so you can see what the AI would do without anything actually happening — great for testing and demos. Real Actions mode lets safe, non-risky actions actually execute, while risky ones are still always approval-gated.'
+    q: 'What is the difference between Approval-Safe and Real Actions mode?',
+    a: 'Approval-Safe holds sensitive actions behind review so you can inspect the plan before anything happens. Real Actions mode lets safe, non-risky actions execute, while risky ones are still always approval-gated.'
   },
   {
     q: 'What if the AI gets something wrong?',

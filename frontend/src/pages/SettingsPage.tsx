@@ -147,7 +147,7 @@ export const SettingsPage: React.FC = () => {
               <div>
                 <label className="text-gray-400 block mb-1">Default Operating Mode</label>
                 <select className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2 text-cyan-300 focus:outline-none">
-                  <option>Planning-First & Mock-Safe</option>
+                  <option>Planning-First & Approval-Safe</option>
                   <option>High-Trust Autonomous</option>
                   <option>Read-Only Inspector</option>
                 </select>
@@ -223,13 +223,13 @@ export const SettingsPage: React.FC = () => {
               <span className="text-sm font-bold text-white flex items-center gap-2">
                 <Shield className="w-4 h-4 text-blue-400" /> Safety Defaults & Global Sandbox Rules
               </span>
-              <span className="text-xs font-mono text-emerald-400">Mock-Safe</span>
+              <span className="text-xs font-mono text-emerald-400">Approval-Safe</span>
             </div>
 
             <div className="mt-4 space-y-3">
               {[
                 { key: 'planningFirst' as const, title: 'Planning-First Execution Default', desc: 'Agents output structured execution plans before invoking external tool calls.' },
-                { key: 'mockSafe' as const, title: 'Mock-Safe Filesystem Sandbox', desc: 'Restrict file writing to simulated in-memory buffer until approved.' },
+                { key: 'mockSafe' as const, title: 'Approval-Safe Filesystem Guard', desc: 'Hold file writes in a governed buffer until approved.' },
                 { key: 'requireApproval' as const, title: 'Require Sign-off on High-Risk Actions', desc: 'Route Medium and High risk actions directly to Approvals queue.' },
                 { key: 'auditLogging' as const, title: 'Log Every Agent & Tool Action', desc: 'Maintain immutable JSON audit log of all AST evaluations and MCP payloads.' },
               ].map((item) => {
@@ -370,7 +370,7 @@ export const SettingsPage: React.FC = () => {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-gray-400">Governance Status:</span>
-              <strong className="text-emerald-400">Active (Mock-Safe)</strong>
+              <strong className="text-emerald-400">Active (Approval-Safe)</strong>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-gray-400">System Health Score:</span>
@@ -385,7 +385,7 @@ export const SettingsPage: React.FC = () => {
               { label: 'Set app name in metadata.json', done: true },
               { label: 'Configure Tailwind dark graphite tokens', done: true },
               { label: 'Connect GitHub & Filesystem MCP tools', done: true },
-              { label: 'Enable Planning-First & Mock-Safe modes', done: true },
+              { label: 'Enable Planning-First & Approval-Safe modes', done: true },
               { label: 'Review Project Brain ADR memory index', done: true },
             ].map((chk, i) => (
               <div key={i} className="flex items-center gap-2 text-xs">

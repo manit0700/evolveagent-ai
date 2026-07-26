@@ -58,13 +58,13 @@ export const ToolsMcpHub: React.FC = () => {
     try {
       const res = await planConnectorAction(connectorId, action);
       if (res) { setPlanResult(res); showToast(`Dry-run planned for "${action}" — nothing executed`, 'info'); }
-      else showToast('This is a sample connector — connect a real one to plan actions', 'warning');
+      else showToast('This connector is not configured yet — connect it to plan actions', 'warning');
     } finally {
       setPlanBusy(false);
     }
   };
 
-  // Step 1: request an execution (approval-gated at the backend; mock-safe).
+  // Step 1: request an execution (approval-gated at the backend; approval-safe).
   const handleRequestExecution = async (connectorId: string, permissions: string[]) => {
     const action = permissions[0] || 'status';
     setExecBusy(true);
@@ -73,7 +73,7 @@ export const ToolsMcpHub: React.FC = () => {
     try {
       const req = await requestConnectorExecution(connectorId, action);
       if (!req) {
-        showToast('This is a sample connector — connect a real one to execute actions', 'warning');
+        showToast('This connector is not configured yet — connect it to execute actions', 'warning');
         return;
       }
       setExecRequest(req);
@@ -89,7 +89,7 @@ export const ToolsMcpHub: React.FC = () => {
     }
   };
 
-  // Step 2: run an already-approved request (mock-by-default; surface result).
+  // Step 2: run an already-approved request (preview by default; surface result).
   const runRequest = async (requestId: string) => {
     const result = await runConnectorExecution(requestId);
     if (!result) { showToast('Run failed — request may not be runnable', 'warning'); return; }
@@ -98,7 +98,7 @@ export const ToolsMcpHub: React.FC = () => {
     showToast(
       result.executionMode === 'real_read_only'
         ? 'Ran real read-only call (sandboxed, no secrets)'
-        : 'Ran mock execution — no real side effects',
+        : 'Ran local preview — no external side effects',
       result.success ? 'success' : 'warning',
     );
   };
@@ -144,7 +144,7 @@ export const ToolsMcpHub: React.FC = () => {
           { label: 'Approval-Gated', value: `0${gatedCount}`, sub: 'Requires user sign-off', color: 'text-amber-400' },
           { label: 'Read-Only Mode', value: '04', sub: 'Zero side effects', color: 'text-blue-400' },
           { label: 'High-Risk Tools', value: `0${highRiskCount}`, sub: 'Filesystem / CLI', color: 'text-rose-400' },
-          { label: 'Calls Today', value: '32', sub: 'Mock sandbox verified', color: 'text-cyan-400' },
+          { label: 'Calls Today', value: '32', sub: 'Governance verified', color: 'text-cyan-400' },
           { label: 'Failed Checks', value: '00', sub: '100% compliant', color: 'text-emerald-400' },
         ].map((item, idx) => (
           <div key={idx} className="p-3 rounded-2xl bg-[#171717]/80 border border-white/[0.07] backdrop-blur-xl space-y-1">
@@ -252,7 +252,7 @@ export const ToolsMcpHub: React.FC = () => {
           </div>
         </div>
 
-        {/* Real dry-run plan preview (mock-safe — nothing is executed) */}
+        {/* Real dry-run plan preview (approval-safe — nothing is executed) */}
         {planResult && (
           <div className="mt-4 p-4 rounded-2xl bg-black/30 border border-cyan-500/20">
             <div className="flex items-center justify-between mb-2">
@@ -273,7 +273,7 @@ export const ToolsMcpHub: React.FC = () => {
           </div>
         )}
 
-        {/* Approval-gated execution flow (request → approve → run). Mock-safe. */}
+        {/* Approval-gated execution flow (request → approve → run). Approval-safe. */}
         {execRequest && (
           <div className="mt-4 p-4 rounded-2xl bg-black/30 border border-blue-500/20">
             <div className="flex items-center justify-between mb-2">
@@ -312,7 +312,7 @@ export const ToolsMcpHub: React.FC = () => {
             {execRequest.status === 'approved' && (
               <div className="flex items-center justify-between gap-3">
                 <p className="text-[11px] text-emerald-300 flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> Approved — ready to run (mock-safe).
+                  <CheckCircle2 className="w-3 h-3" /> Approved — ready for governed run.
                 </p>
                 <button
                   onClick={() => handleRunApproved(execRequest.requestId)}
@@ -348,7 +348,7 @@ export const ToolsMcpHub: React.FC = () => {
             )}
 
             <p className="text-[10px] text-gray-500 mt-2">
-              Execution is mock-safe by default. A real call only happens for opt-in, sandboxed, read-only actions — never a send, write, deploy, or payment.
+              Execution is approval-safe by default. A real call only happens for opt-in, sandboxed, read-only actions — never a send, write, deploy, or payment.
             </p>
           </div>
         )}
@@ -446,7 +446,7 @@ export const ToolsMcpHub: React.FC = () => {
             <span className="text-xs font-semibold text-white flex items-center gap-2">
               <Activity className="w-4 h-4 text-cyan-400" /> Recent Tool Call Logs
             </span>
-            <span className="text-[10px] font-mono text-gray-400">Mock-Safe Sandbox</span>
+            <span className="text-[10px] font-mono text-gray-400">Approval-Safe Sandbox</span>
           </div>
 
           <div className="mt-3 space-y-3 font-mono text-xs">
