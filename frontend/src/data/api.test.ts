@@ -17,6 +17,8 @@ import {
   fetchGitHubWriteStatus,
   addMemoryV2,
   searchMemoryV2,
+  fetchMemoryV2Summary,
+  fetchRetrievalSummary,
   routeMessage,
   startDurableRun,
   fetchModelServingDashboard,
@@ -121,6 +123,17 @@ describe('fetchMissionData', () => {
     expect(data?.mission.phases).toHaveLength(2);
     expect(data?.tasks[0]).toMatchObject({ id: 't1', status: 'running', assignedAgentName: 'Backend Agent', phase: 'Backend' });
     expect(data?.tasks[1]).toMatchObject({ id: 't2', status: 'completed', riskLevel: 'low' });
+  });
+});
+
+describe('Project Brain summaries', () => {
+  it('maps Memory v2 and retrieval summaries for live metrics', async () => {
+    stubFetch({
+      '/api/memory-v2/summary': { available: true, mode: 'pgvector', embedder: 'openai', dimensions: 1536, items: 12, note: 'ok' },
+      '/api/retrieval/summary': { document_count: 7, chunk_count: 44, query_count: 3, note: 'local-first' },
+    });
+    await expect(fetchMemoryV2Summary()).resolves.toMatchObject({ available: true, mode: 'pgvector', items: 12 });
+    await expect(fetchRetrievalSummary()).resolves.toMatchObject({ documentCount: 7, chunkCount: 44, queryCount: 3 });
   });
 });
 
