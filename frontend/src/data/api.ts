@@ -421,6 +421,22 @@ export interface MemoryV2SearchResponse {
   count: number;
 }
 
+export interface MemoryV2Summary {
+  available: boolean;
+  mode: string;
+  embedder: string;
+  dimensions: number;
+  items: number;
+  note: string;
+}
+
+export interface RetrievalSummary {
+  documentCount: number;
+  chunkCount: number;
+  queryCount: number;
+  note: string;
+}
+
 export async function addMemoryV2(
   text: string,
   kind: string,
@@ -460,6 +476,30 @@ export async function searchMemoryV2(query: string, limit = 8): Promise<MemoryV2
         metadata,
       };
     }),
+  };
+}
+
+export async function fetchMemoryV2Summary(): Promise<MemoryV2Summary | null> {
+  const data = await getJson<any>('/api/memory-v2/summary');
+  if (!data) return null;
+  return {
+    available: Boolean(data.available),
+    mode: data.mode || data.memory_v2_mode || 'keyword',
+    embedder: data.embedder || 'local',
+    dimensions: Number(data.dimensions ?? 0),
+    items: Number(data.items ?? data.memory_v2_items ?? 0),
+    note: data.note || '',
+  };
+}
+
+export async function fetchRetrievalSummary(): Promise<RetrievalSummary | null> {
+  const data = await getJson<any>('/api/retrieval/summary');
+  if (!data) return null;
+  return {
+    documentCount: Number(data.document_count ?? data.documents ?? 0),
+    chunkCount: Number(data.chunk_count ?? data.chunks ?? 0),
+    queryCount: Number(data.query_count ?? data.queries ?? 0),
+    note: data.note || '',
   };
 }
 

@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { addMemoryV2, searchMemoryV2, MemoryV2SearchResult } from '../data/api';
+import {
+  addMemoryV2,
+  fetchMemoryV2Summary,
+  fetchRetrievalSummary,
+  MemoryV2SearchResult,
+  MemoryV2Summary,
+  RetrievalSummary,
+  searchMemoryV2,
+} from '../data/api';
 import { GlassCard } from '../components/shared/GlassCard';
 import { 
   Brain, 
@@ -34,6 +42,8 @@ export const ProjectBrain: React.FC = () => {
   const [semanticMode, setSemanticMode] = useState<string>('keyword');
   const [semanticBusy, setSemanticBusy] = useState(false);
   const [addBusy, setAddBusy] = useState(false);
+  const [memorySummary, setMemorySummary] = useState<MemoryV2Summary | null>(null);
+  const [retrievalSummary, setRetrievalSummary] = useState<RetrievalSummary | null>(null);
 
   // New memory form state
   const [newTitle, setNewTitle] = useState('');
@@ -42,6 +52,14 @@ export const ProjectBrain: React.FC = () => {
   const [newTags, setNewTags] = useState('Architecture, Tokens');
 
   const filterChips = ['all', 'Decision', 'Memory', 'Chat Memory', 'File Index', 'Goal'];
+  const decisionCount = memories.filter(m => m.type === 'Decision').length;
+  const sourceCount = new Set(memories.map(m => m.source).filter(Boolean)).size;
+  const pinnedCount = memories.filter(m => m.pinned).length;
+  const avgRelevance = memories.length
+    ? Math.round(memories.reduce((total, memory) => total + (Number(memory.relevance) || 0), 0) / memories.length)
+    : 0;
+  const activeMemoryMode = memorySummary?.mode || semanticMode || 'keyword';
+  const liveMemoryConnected = Boolean(memorySummary?.available);
 
   const filteredMemories = memories.filter(m => {
     const matchesChip = activeChip === 'all' ? true : m.type.toLowerCase() === activeChip.toLowerCase();
@@ -50,6 +68,11 @@ export const ProjectBrain: React.FC = () => {
                          m.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesChip && matchesQuery;
   });
+
+  useEffect(() => {
+    fetchMemoryV2Summary().then(setMemorySummary);
+    fetchRetrievalSummary().then(setRetrievalSummary);
+  }, []);
 
   useEffect(() => {
     const query = searchQuery.trim();
@@ -91,6 +114,8 @@ export const ProjectBrain: React.FC = () => {
     setAddBusy(false);
     if (saved?.ok) {
       showToast(`Saved "${newTitle}" to Memory v2 (${saved.mode || 'live'}).`, 'success');
+      const summary = await fetchMemoryV2Summary();
+      if (summary) setMemorySummary(summary);
       if (searchQuery.trim()) {
         const response = await searchMemoryV2(searchQuery, 8);
         if (response?.results?.length) {
@@ -123,6 +148,8 @@ export const ProjectBrain: React.FC = () => {
     };
   });
   const displayMemories = semanticResults?.length ? semanticMemories : filteredMemories;
+  const graphHub = displayMemories[0] || memories[0];
+  const graphNodes = (displayMemories.length ? displayMemories : memories).slice(0, 4);
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
@@ -167,7 +194,11 @@ export const ProjectBrain: React.FC = () => {
                 ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                 : 'bg-white/[0.04] text-gray-400 border-white/10'
             }`}>
-              {semanticResults?.length ? `Memory v2: ${semanticMode}` : 'Local fallback ready'}
+              {semanticResults?.length
+                ? `Memory v2: ${semanticMode}`
+                : liveMemoryConnected
+                  ? `Memory v2: ${activeMemoryMode}`
+                  : 'Local fallback ready'}
             </span>
             {semanticBusy && <span className="text-cyan-300">Searching semantic memory…</span>}
           </div>
@@ -195,12 +226,12 @@ export const ProjectBrain: React.FC = () => {
       {/* 2. Memory Health Metrics (6 counters) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: 'Index Quality', value: '98%', sub: 'High relevance', color: 'text-emerald-400' },
-          { label: 'Indexed Sources', value: '128', sub: 'ADRs & docs', color: 'text-cyan-400' },
-          { label: 'Active Memories', value: `${memories.length}`, sub: 'Vector store', color: 'text-white' },
-          { label: 'Files Indexed', value: '19', sub: 'in /src tree', color: 'text-blue-400' },
-          { label: 'Decisions Saved', value: '31', sub: 'ADR records', color: 'text-amber-400' },
-          { label: 'Last Sync', value: '2m ago', sub: 'Auto-vectorized', color: 'text-emerald-400' },
+          { label: 'Index Quality', value: `${avgRelevance}%`, sub: memories.length ? 'Avg relevance' : 'No memories yet', color: memories.length ? 'text-emerald-400' : 'text-gray-400' },
+          { label: 'Indexed Sources', value: `${sourceCount}`, sub: 'Unique sources', color: 'text-cyan-400' },
+          { label: 'Active Memories', value: `${memorySummary?.items ?? memories.length}`, sub: `Memory v2 · ${activeMemoryMode}`, color: 'text-white' },
+          { label: 'Indexed Docs', value: `${retrievalSummary?.documentCount ?? 0}`, sub: `${retrievalSummary?.chunkCount ?? 0} chunks`, color: 'text-blue-400' },
+          { label: 'Decisions Saved', value: `${decisionCount}`, sub: 'ADR records', color: 'text-amber-400' },
+          { label: 'Pinned Context', value: `${pinnedCount}`, sub: liveMemoryConnected ? `${memorySummary?.embedder || 'local'} embedder` : 'Local state', color: liveMemoryConnected ? 'text-emerald-400' : 'text-gray-400' },
         ].map((item, idx) => (
           <div key={idx} className="p-3 rounded-2xl bg-[#171717]/80 border border-white/[0.07] backdrop-blur-xl space-y-1">
             <div className="text-[11px] font-mono text-gray-400 uppercase tracking-wider">{item.label}</div>
@@ -319,7 +350,9 @@ export const ProjectBrain: React.FC = () => {
               <span className="text-xs font-semibold text-white flex items-center gap-2">
                 <Share2 className="w-4 h-4 text-blue-400" /> Knowledge Graph Visualizer
               </span>
-              <span className="text-[10px] font-mono text-emerald-400 animate-pulse">● LIVE</span>
+              <span className={`text-[10px] font-mono ${liveMemoryConnected ? 'text-emerald-400 animate-pulse' : 'text-gray-400'}`}>
+                ● {liveMemoryConnected ? 'LIVE' : 'LOCAL'}
+              </span>
             </div>
 
             {/* Interactive Graph Simulation Area */}
@@ -333,28 +366,28 @@ export const ProjectBrain: React.FC = () => {
                   <Brain className="w-7 h-7" />
                 </div>
                 <span className="mt-2 text-xs font-mono font-bold text-white bg-black/60 px-2 py-0.5 rounded border border-white/10">
-                  ADR #12 (Core Hub)
+                  {graphHub ? graphHub.title.slice(0, 24) : 'Project Brain'}{graphHub && graphHub.title.length > 24 ? '…' : ''}
                 </span>
 
                 {/* Satellite nodes */}
                 <div className="absolute -top-16 -left-20 flex flex-col items-center">
                   <div className="w-8 h-8 rounded-full bg-cyan-900/80 border border-cyan-400/50 flex items-center justify-center text-xs">🎨</div>
-                  <span className="text-[9px] font-mono text-gray-400 mt-1">Tokens</span>
+                  <span className="text-[9px] font-mono text-gray-400 mt-1">{graphNodes[0]?.type || 'Memory'}</span>
                 </div>
 
                 <div className="absolute -top-16 -right-20 flex flex-col items-center">
                   <div className="w-8 h-8 rounded-full bg-blue-900/80 border border-blue-400/50 flex items-center justify-center text-xs">🛡️</div>
-                  <span className="text-[9px] font-mono text-gray-400 mt-1">Safety</span>
+                  <span className="text-[9px] font-mono text-gray-400 mt-1">{graphNodes[1]?.type || 'Decision'}</span>
                 </div>
 
                 <div className="absolute -bottom-16 -left-20 flex flex-col items-center">
                   <div className="w-8 h-8 rounded-full bg-emerald-900/80 border border-emerald-400/50 flex items-center justify-center text-xs">⚡</div>
-                  <span className="text-[9px] font-mono text-gray-400 mt-1">Vite Sync</span>
+                  <span className="text-[9px] font-mono text-gray-400 mt-1">{graphNodes[2]?.type || 'File Index'}</span>
                 </div>
 
                 <div className="absolute -bottom-16 -right-20 flex flex-col items-center">
                   <div className="w-8 h-8 rounded-full bg-amber-900/80 border border-amber-400/50 flex items-center justify-center text-xs">🤖</div>
-                  <span className="text-[9px] font-mono text-gray-400 mt-1">Orchestrator</span>
+                  <span className="text-[9px] font-mono text-gray-400 mt-1">{graphNodes[3]?.type || 'Goal'}</span>
                 </div>
 
                 {/* SVG connecting lines */}
@@ -368,7 +401,7 @@ export const ProjectBrain: React.FC = () => {
             </div>
 
             <p className="mt-3 text-[11px] text-gray-400 font-mono text-center">
-              128 vectors clustered around ADR #12 design decisions.
+              {memorySummary?.items ?? memories.length} memories · {retrievalSummary?.chunkCount ?? 0} retrieval chunks · {activeMemoryMode} mode.
             </p>
           </GlassCard>
 
@@ -378,22 +411,22 @@ export const ProjectBrain: React.FC = () => {
             <div className="space-y-2.5 text-xs font-mono">
               <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-between">
                 <div>
-                  <div className="font-bold text-rose-300">Hot Memory (In-RAM)</div>
-                  <div className="text-[10px] text-gray-400">Active chat context & top 10 ADRs</div>
+                  <div className="font-bold text-rose-300">Hot Memory</div>
+                  <div className="text-[10px] text-gray-400">{memories.filter(m => m.tier === 'hot').length} high-priority items</div>
                 </div>
                 <span className="text-rose-400 font-semibold">&lt; 5ms</span>
               </div>
               <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
                 <div>
-                  <div className="font-bold text-amber-300">Warm Memory (Vector DB)</div>
-                  <div className="text-[10px] text-gray-400">Indexed /src files & closed issues</div>
+                  <div className="font-bold text-amber-300">Warm Memory</div>
+                  <div className="text-[10px] text-gray-400">{memories.filter(m => m.tier === 'warm').length} searchable context items</div>
                 </div>
                 <span className="text-amber-400 font-semibold">~35ms</span>
               </div>
               <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-between">
                 <div>
                   <div className="font-bold text-blue-300">Archived Memory</div>
-                  <div className="text-[10px] text-gray-400">Historic decisions older than 30 days</div>
+                  <div className="text-[10px] text-gray-400">{memories.filter(m => m.tier === 'archived').length} lower-priority records</div>
                 </div>
                 <span className="text-blue-400 font-semibold">~120ms</span>
               </div>
