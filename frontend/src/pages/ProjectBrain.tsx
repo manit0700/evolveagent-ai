@@ -208,6 +208,19 @@ export const ProjectBrain: React.FC = () => {
             All architectural decisions, chat session logs, and file indexing vectors are embedded here. Agents automatically query Project Brain before planning code modifications.
           </p>
 
+          <div className="mt-4 flex flex-col sm:flex-row gap-2">
+            <button
+              onClick={() => setIsAddingModalOpen(true)}
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-cyan-500/20"
+            >
+              <Plus className="w-4 h-4" />
+              Add Memory
+            </button>
+            <div className="rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-xs text-gray-400 leading-relaxed">
+              Save product goals, preferences, safety rules, project facts, or UI direction so EvolveAgent can use them later.
+            </div>
+          </div>
+
           {/* Search bar */}
           <div className="mt-6 relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400" />
@@ -223,7 +236,7 @@ export const ProjectBrain: React.FC = () => {
               className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs flex items-center gap-1 transition-all"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Remember This</span>
+              <span className="hidden sm:inline">Add Memory</span>
             </button>
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-mono text-gray-400">
