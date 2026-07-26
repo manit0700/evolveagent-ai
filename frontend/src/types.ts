@@ -155,6 +155,13 @@ export interface ChatMessage {
   attachments?: { name: string; size: string; type: string }[];
 }
 
+export interface ChatRunStatus {
+  active: boolean;
+  phase: 'idle' | 'routing' | 'slow' | 'offline';
+  message: string;
+  startedAt?: number;
+}
+
 export interface SystemMetric {
   label: string;
   value: string | number;
