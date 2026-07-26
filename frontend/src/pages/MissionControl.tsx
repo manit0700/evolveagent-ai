@@ -110,7 +110,7 @@ export const MissionControl: React.FC = () => {
       </div>
 
       {/* Live durable-workflow runs (real backend data) */}
-      {liveRuns && liveRuns.length > 0 && (
+      {liveRuns !== null && (
         <GlassCard>
           <div className="flex items-center justify-between pb-3 border-b border-white/10">
             <span className="text-sm font-bold text-white flex items-center gap-2">
@@ -124,8 +124,9 @@ export const MissionControl: React.FC = () => {
               {starting ? 'Starting…' : '▶ Start real run'}
             </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3">
-            {liveRuns.map(run => {
+          {liveRuns.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3">
+              {liveRuns.map(run => {
               const pct = run.total ? Math.round((run.done / run.total) * 100) : 0;
               const tone = run.status === 'completed' ? 'text-emerald-300' : run.status === 'waiting_approval' ? 'text-amber-300' : run.status === 'cancelled' ? 'text-gray-400' : 'text-cyan-300';
               return (
@@ -140,8 +141,13 @@ export const MissionControl: React.FC = () => {
                   <div className="text-[10px] text-gray-500 font-mono mt-1">{run.done}/{run.total} steps</div>
                 </div>
               );
-            })}
-          </div>
+              })}
+            </div>
+          ) : (
+            <div className="pt-3 text-xs text-gray-400">
+              No live workflow runs yet. Start a governed run to create a real checkpointed workflow.
+            </div>
+          )}
         </GlassCard>
       )}
 

@@ -43,6 +43,7 @@ export const HomeDashboard: React.FC = () => {
     rejectRequest,
     approveBatchLowRisk,
     advanceWorkflowStep,
+    sendMessage,
     showToast 
   } = useApp();
 
@@ -56,8 +57,11 @@ export const HomeDashboard: React.FC = () => {
   const handlePromptSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!quickPrompt.trim()) return;
-    showToast(`Initiating AI workflow for prompt: "${quickPrompt}"...`, 'success');
+    const prompt = quickPrompt.trim();
     setActivePage('chat');
+    sendMessage(prompt);
+    setQuickPrompt('');
+    showToast('Sent mission prompt to the live agent chat.', 'success');
   };
 
   return (

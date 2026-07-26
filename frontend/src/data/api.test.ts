@@ -3,6 +3,7 @@ import {
   fetchAgents,
   fetchGovernance,
   fetchSystemMetrics,
+  fetchMissionData,
   fetchConnectors,
   fetchApprovals,
   fetchSystemHealth,
@@ -39,7 +40,9 @@ import {
 function stubFetch(routes: Record<string, any>) {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     const path = url.replace(/^https?:\/\/[^/]+/, '');
-    const match = Object.keys(routes).find((k) => path.startsWith(k));
+    const match = Object.keys(routes)
+      .sort((a, b) => b.length - a.length)
+      .find((k) => path.startsWith(k));
     if (match === undefined) return { ok: false, status: 404, json: async () => ({}) };
     return { ok: true, status: 200, json: async () => routes[match] };
   }) as any);
@@ -94,6 +97,30 @@ describe('fetchSystemMetrics', () => {
     const labels = m!.map((x) => x.label);
     expect(labels).toContain('Workflow Runs');
     expect(m!.find((x) => x.label === 'Learned Items')!.value).toBe('03'); // <10 zero-padded
+  });
+});
+
+describe('fetchMissionData', () => {
+  it('maps live goals and task graphs into Mission Control mission/tasks', async () => {
+    stubFetch({
+      '/api/goals': [
+        { goal_id: 'g1', title: 'Build resume analyzer', description: 'ATS app', status: 'active', progress_percent: 25, risk_level: 'medium', updated_at: '2026-07-26T10:00:00Z' },
+      ],
+      '/api/goals/g1': {
+        goal: { goal_id: 'g1', title: 'Build resume analyzer', description: 'ATS app', status: 'active', progress_percent: 25, risk_level: 'medium' },
+        task_graph: {
+          tasks: [
+            { task_id: 't1', title: 'Design API', description: 'FastAPI routes', phase: 'Backend', status: 'running', priority: 'medium', recommended_agent: 'Backend Agent', updated_at: '2026-07-26T10:01:00Z' },
+            { task_id: 't2', title: 'Build UI', description: 'React screen', phase: 'Frontend', status: 'done', priority: 'low', recommended_agent: 'Frontend Agent', updated_at: '2026-07-26T10:02:00Z' },
+          ],
+        },
+      },
+    });
+    const data = await fetchMissionData();
+    expect(data?.mission).toMatchObject({ id: 'g1', title: 'Build resume analyzer', progress: 25, status: 'active' });
+    expect(data?.mission.phases).toHaveLength(2);
+    expect(data?.tasks[0]).toMatchObject({ id: 't1', status: 'running', assignedAgentName: 'Backend Agent', phase: 'Backend' });
+    expect(data?.tasks[1]).toMatchObject({ id: 't2', status: 'completed', riskLevel: 'low' });
   });
 });
 

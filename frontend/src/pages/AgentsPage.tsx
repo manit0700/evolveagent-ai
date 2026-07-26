@@ -34,6 +34,13 @@ export const AgentsPage: React.FC = () => {
   const filteredAgents = filterLevel === 'all' 
     ? agents 
     : agents.filter(a => a.permissionLevel === filterLevel);
+  const activeCount = agents.filter(a => a.status === 'active' || a.status === 'running').length;
+  const waitingCount = agents.filter(a => a.status === 'waiting').length;
+  const blockedCount = agents.filter(a => a.status === 'blocked').length;
+  const customAgentCount = Math.max(0, agents.length - 7);
+  const avgQuality = agents.length
+    ? Math.round(agents.reduce((total, agent) => total + (Number(agent.qualityScore) || 0), 0) / agents.length)
+    : 0;
 
   const permissionProfiles: { level: PermissionLevel; label: string; desc: string; color: string }[] = [
     { level: 'read-only', label: 'Read-Only', desc: 'Can only query Project Brain & read workspace files. No side effects.', color: 'border-blue-500/30 bg-blue-500/5 text-blue-300' },
@@ -47,12 +54,12 @@ export const AgentsPage: React.FC = () => {
       {/* 1. Overview Metrics (6 counters) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: 'Total Agents', value: `${agents.length}`, sub: '7 system + 3 custom', color: 'text-white' },
-          { label: 'Active Now', value: `${agents.filter(a => a.status === 'active' || a.status === 'running').length}`, sub: 'Executing tasks', color: 'text-emerald-400' },
-          { label: 'Waiting Approval', value: `${agents.filter(a => a.status === 'waiting').length}`, sub: 'Gating writes', color: 'text-amber-400' },
-          { label: 'Custom Agents', value: '03', sub: 'Workspace templates', color: 'text-cyan-400' },
-          { label: 'Avg Quality Score', value: '96%', sub: 'A+ Compliance', color: 'text-sky-400' },
-          { label: 'Blocked / Error', value: '00', sub: 'Zero failures', color: 'text-emerald-400' },
+          { label: 'Total Agents', value: `${agents.length}`, sub: 'Loaded from registry', color: 'text-white' },
+          { label: 'Active Now', value: `${activeCount}`, sub: 'Executing tasks', color: 'text-emerald-400' },
+          { label: 'Waiting Approval', value: `${waitingCount}`, sub: 'Gating writes', color: 'text-amber-400' },
+          { label: 'Custom Agents', value: `${customAgentCount}`, sub: 'Beyond core agents', color: 'text-cyan-400' },
+          { label: 'Avg Quality Score', value: `${avgQuality}%`, sub: 'Registry average', color: 'text-sky-400' },
+          { label: 'Blocked / Error', value: `${blockedCount}`, sub: blockedCount ? 'Needs review' : 'None blocked', color: blockedCount ? 'text-rose-400' : 'text-emerald-400' },
         ].map((item, idx) => (
           <div key={idx} className="p-3 rounded-2xl bg-[#171717]/80 border border-white/[0.07] backdrop-blur-xl space-y-1">
             <div className="text-[11px] font-mono text-gray-400 uppercase tracking-wider">{item.label}</div>

@@ -8,6 +8,8 @@
 
 import {
   Agent,
+  Mission,
+  Task,
   GovernanceEvent,
   SystemMetric,
   RiskLevel,
@@ -218,6 +220,23 @@ function riskFromLevel(level: string): RiskLevel {
 
 const clip = (s: any, n: number) => String(s ?? '').slice(0, n);
 
+function mapTaskStatus(status: string): Task['status'] {
+  const value = String(status || '').toLowerCase();
+  if (value === 'done' || value === 'completed') return 'completed';
+  if (value === 'running' || value === 'in_progress') return 'running';
+  if (value === 'needs_approval' || value === 'waiting_approval') return 'waiting_approval';
+  if (value === 'blocked') return 'blocked';
+  if (value === 'failed' || value === 'error') return 'failed';
+  return 'planned';
+}
+
+function mapGoalStatus(status: string): Mission['status'] {
+  const value = String(status || '').toLowerCase();
+  if (value === 'completed' || value === 'done') return 'completed';
+  if (value === 'paused' || value === 'archived') return 'paused';
+  return 'active';
+}
+
 // ---- Agents (Agent Studio) --------------------------------------------------
 export async function fetchAgents(): Promise<Agent[] | null> {
   const data = await getJson<{ agents: any[] }>('/api/agent-studio/agents');
@@ -279,6 +298,89 @@ export async function fetchSystemMetrics(): Promise<SystemMetric[] | null> {
     value: typeof v === 'number' && v < 10 ? `0${v}` : v,
     subtitle: 'live',
   }));
+}
+
+// ---- Mission Control goals -------------------------------------------------
+export async function fetchMissionData(): Promise<{ mission: Mission; tasks: Task[] } | null> {
+  const goals = await getJson<any[]>('/api/goals');
+  if (!Array.isArray(goals) || goals.length === 0) return null;
+
+  const sortedGoals = [...goals].sort((a, b) => String(b.updated_at || b.created_at || '').localeCompare(String(a.updated_at || a.created_at || '')));
+  let selectedGoal = sortedGoals.find((g) => String(g.status || '').toLowerCase() === 'active') || sortedGoals[0];
+  let detail = selectedGoal?.goal_id ? await getJson<any>(`/api/goals/${encodeURIComponent(selectedGoal.goal_id)}`) : null;
+
+  if (!Array.isArray(detail?.task_graph?.tasks) || detail.task_graph.tasks.length === 0) {
+    for (const goal of sortedGoals.slice(0, 12)) {
+      const candidate = goal?.goal_id ? await getJson<any>(`/api/goals/${encodeURIComponent(goal.goal_id)}`) : null;
+      if (Array.isArray(candidate?.task_graph?.tasks) && candidate.task_graph.tasks.length > 0) {
+        selectedGoal = goal;
+        detail = candidate;
+        break;
+      }
+    }
+  }
+
+  const goal = detail?.goal || selectedGoal;
+  const rawTasks = Array.isArray(detail?.task_graph?.tasks) ? detail.task_graph.tasks : [];
+  const tasks: Task[] = rawTasks.map((task: any, index: number): Task => ({
+    id: task.task_id || `goal-task-${index}`,
+    title: clip(task.title || 'Goal task', 100),
+    description: clip(task.description || task.last_result_summary || '', 220),
+    assignedAgentId: '',
+    assignedAgentName: task.recommended_agent || (Array.isArray(goal.recommended_agents) ? goal.recommended_agents[0] : '') || 'Mission Control',
+    status: mapTaskStatus(task.status),
+    riskLevel: riskFromLevel(task.risk_level || task.priority || goal.risk_level),
+    phase: task.phase || 'Planning',
+    timestamp: clip(task.updated_at || task.created_at || goal.updated_at || goal.created_at, 10) || '—',
+    toolCall: task.automation_supported ? 'agent_workflow' : undefined,
+  }));
+
+  const phaseMap = new Map<string, { id: string; title: string; tasksCount: number; completedCount: number; hasRunning: boolean }>();
+  tasks.forEach((task) => {
+    const title = task.phase || 'Planning';
+    const current = phaseMap.get(title) || {
+      id: `phase-${phaseMap.size + 1}`,
+      title,
+      tasksCount: 0,
+      completedCount: 0,
+      hasRunning: false,
+    };
+    current.tasksCount += 1;
+    if (task.status === 'completed') current.completedCount += 1;
+    if (task.status === 'running' || task.status === 'waiting_approval') current.hasRunning = true;
+    phaseMap.set(title, current);
+  });
+
+  const phases = Array.from(phaseMap.values()).map((phase) => ({
+    id: phase.id,
+    title: phase.title,
+    status: phase.completedCount === phase.tasksCount
+      ? 'completed' as const
+      : phase.hasRunning || phase.completedCount > 0
+        ? 'in_progress' as const
+        : 'pending' as const,
+    tasksCount: phase.tasksCount,
+    completedCount: phase.completedCount,
+  }));
+
+  return {
+    mission: {
+      id: goal.goal_id || 'live-goal',
+      title: goal.title || 'Mission Control Goal',
+      description: goal.description || 'Live goal loaded from Mission Control.',
+      progress: Number(goal.progress_percent ?? (tasks.length ? Math.round((tasks.filter((t) => t.status === 'completed').length / tasks.length) * 100) : 0)),
+      status: mapGoalStatus(goal.status),
+      assignedAgents: [],
+      phases: phases.length ? phases : [{
+        id: 'phase-1',
+        title: 'Planning',
+        status: 'pending',
+        tasksCount: 1,
+        completedCount: 0,
+      }],
+    },
+    tasks,
+  };
 }
 
 // ---- Project Brain memories (task memory) ----------------------------------
@@ -672,22 +774,34 @@ export async function fetchStorageStatus(): Promise<StorageStatus | null> {
 
 export async function fetchLiveData(): Promise<{
   agents: Agent[] | null;
+  mission: Mission | null;
+  tasks: Task[] | null;
   governanceLogs: GovernanceEvent[] | null;
   systemMetrics: SystemMetric[] | null;
   memories: MemoryItem[] | null;
   connectors: ToolConnector[] | null;
   approvals: ApprovalRequest[] | null;
 } | null> {
-  const [agents, governanceLogs, systemMetrics, memories, connectors, approvals] = await Promise.all([
+  const [agents, missionData, governanceLogs, systemMetrics, memories, connectors, approvals] = await Promise.all([
     fetchAgents(),
+    fetchMissionData(),
     fetchGovernance(),
     fetchSystemMetrics(),
     fetchMemories(),
     fetchConnectors(),
     fetchApprovals(),
   ]);
-  if (!agents && !governanceLogs && !systemMetrics && !memories && !connectors && !approvals) return null;
-  return { agents, governanceLogs, systemMetrics, memories, connectors, approvals };
+  if (!agents && !missionData && !governanceLogs && !systemMetrics && !memories && !connectors && !approvals) return null;
+  return {
+    agents,
+    mission: missionData?.mission || null,
+    tasks: missionData?.tasks || null,
+    governanceLogs,
+    systemMetrics,
+    memories,
+    connectors,
+    approvals,
+  };
 }
 
 // ---- v200 Command Center (unified capability directory) -------------------
