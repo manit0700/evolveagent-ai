@@ -100,7 +100,7 @@ export const ProjectBrain: React.FC = () => {
       }
     } else {
       addMemoryItem(newTitle, newSnippet, newType, tagArray);
-      showToast(`Backend offline. Saved "${newTitle}" to local Project Brain state.`, 'warning');
+      showToast(`Backend unavailable. Saved "${newTitle}" to local Project Brain state.`, 'warning');
     }
     setNewTitle('');
     setNewSnippet('');
@@ -167,7 +167,7 @@ export const ProjectBrain: React.FC = () => {
                 ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                 : 'bg-white/[0.04] text-gray-400 border-white/10'
             }`}>
-              {semanticResults?.length ? `Memory v2: ${semanticMode}` : 'Offline fallback ready'}
+              {semanticResults?.length ? `Memory v2: ${semanticMode}` : 'Local fallback ready'}
             </span>
             {semanticBusy && <span className="text-cyan-300">Searching semantic memory…</span>}
           </div>
