@@ -43,6 +43,25 @@ async function postJson<T>(path: string, body: any): Promise<T | null> {
   }
 }
 
+async function postJsonWithTimeout<T>(path: string, body: any, timeoutMs = 90000): Promise<T | null> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
 // ---- Actions ---------------------------------------------------------------
 /** Route a chat message through the Master Agent. Returns the reply + metadata.
  *  `execute` is only honored by the backend for NON-risky intents; risky actions
@@ -53,8 +72,22 @@ export async function routeMessage(
 ): Promise<
   { answer: string; requiresApproval: boolean; blockedExecution: boolean; intent: string; suggestedWorkflow: string | null } | null
 > {
-  const d = await postJson<any>('/api/master-agent/route', { text, execute });
-  if (!d) return null;
+  const d = await postJsonWithTimeout<any>('/api/master-agent/route', { text, execute });
+  if (!d) {
+    const fallback = await postJsonWithTimeout<any>('/api/run', {
+      user_input: text,
+      task_type: 'auto',
+      deep_mode: false,
+    });
+    if (!fallback) return null;
+    return {
+      answer: fallback.final_output || fallback.answer || 'Routed your request.',
+      requiresApproval: Boolean(fallback.requires_approval),
+      blockedExecution: Boolean(fallback.blocked_execution),
+      intent: fallback.task_type || '',
+      suggestedWorkflow: fallback.suggested_workflow || null,
+    };
+  }
   return {
     answer: d.answer || d.route_explanation || 'Routed your request.',
     requiresApproval: Boolean(d.requires_approval),

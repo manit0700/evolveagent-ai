@@ -18,11 +18,14 @@ import {
   FileCode, 
   Wrench,
   Clock,
-  ChevronRight
+  ChevronRight,
+  Loader2,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 
 export const SimpleModeChat: React.FC = () => {
-  const { chatMessages, sendMessage, mission, agents, connectors, memories, setActivePage, showToast } = useApp();
+  const { chatMessages, chatRunStatus, sendMessage, mission, agents, connectors, memories, setActivePage, showToast, liveConnected, refreshLive } = useApp();
   const [inputText, setInputText] = useState('');
   const [selectedDb, setSelectedDb] = useState('Workspace Memory + Postgres');
   const [attachments, setAttachments] = useState<{ name: string; size: string; type: string }[]>([]);
@@ -92,6 +95,19 @@ export const SimpleModeChat: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
+              onClick={refreshLive}
+              title={liveConnected ? 'Backend connected. Click to refresh live data.' : 'Backend offline. Click to retry connection.'}
+              className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono transition-colors ${
+                liveConnected
+                  ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300'
+                  : 'bg-amber-500/10 border-amber-500/25 text-amber-300'
+              }`}
+            >
+              {liveConnected ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+              {liveConnected ? 'Backend Live' : 'Retry Backend'}
+            </button>
+            <button
               onClick={() => setActivePage('dev-console')}
               className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 hover:text-white transition-colors font-mono hidden sm:block"
             >
@@ -153,6 +169,36 @@ export const SimpleModeChat: React.FC = () => {
               </div>
             );
           })}
+          {chatRunStatus.active && (
+            <div className="flex items-start gap-3 sm:gap-4 animate-fadeIn">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#1e1e26] border border-cyan-500/20 text-cyan-300 shadow-md flex items-center justify-center shrink-0">
+                <Loader2 className="w-5 h-5 animate-spin" />
+              </div>
+              <div className="max-w-2xl space-y-2">
+                <div className="flex items-center gap-2 px-1">
+                  <span className="text-xs font-semibold text-gray-300">Master Orchestrator</span>
+                  <span className="text-[10px] font-mono text-cyan-400">
+                    {chatRunStatus.phase === 'slow' ? 'still working' : 'routing'}
+                  </span>
+                </div>
+                <div className={`p-4 rounded-2xl text-sm leading-relaxed rounded-tl-none border shadow-md ${
+                  chatRunStatus.phase === 'slow'
+                    ? 'bg-amber-500/10 border-amber-500/25 text-amber-100'
+                    : 'bg-cyan-500/10 border-cyan-500/20 text-cyan-100'
+                }`}>
+                  <div className="flex items-start gap-3">
+                    <Loader2 className="w-4 h-4 mt-0.5 animate-spin shrink-0" />
+                    <div>
+                      <p className="font-medium">{chatRunStatus.message}</p>
+                      <p className="mt-1 text-xs opacity-75">
+                        Keep this page open. The reply will appear here automatically when the backend returns.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           <div ref={messagesEndRef} />
         </div>
 
@@ -209,8 +255,9 @@ export const SimpleModeChat: React.FC = () => {
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
+                disabled={chatRunStatus.active}
                 placeholder="Instruct agents, ask questions, or describe what to build next..."
-                className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 focus:outline-none px-2 py-1.5"
+                className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 focus:outline-none px-2 py-1.5 disabled:opacity-60"
               />
 
               {/* Mic Button */}
@@ -231,10 +278,10 @@ export const SimpleModeChat: React.FC = () => {
             {/* Send Button */}
             <button
               type="submit"
-              disabled={!inputText.trim() && attachments.length === 0}
+              disabled={chatRunStatus.active || (!inputText.trim() && attachments.length === 0)}
               className="p-3.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center shrink-0"
             >
-              <Send className="w-5 h-5" />
+              {chatRunStatus.active ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
             </button>
           </form>
 

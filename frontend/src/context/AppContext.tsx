@@ -10,6 +10,7 @@ import {
   GovernanceEvent,
   TraceStep,
   ChatMessage,
+  ChatRunStatus,
   SystemMetric,
   RiskLevel
 } from '../types';
@@ -56,6 +57,7 @@ interface AppContextType {
   governanceLogs: GovernanceEvent[];
   traceSteps: TraceStep[];
   chatMessages: ChatMessage[];
+  chatRunStatus: ChatRunStatus;
   systemMetrics: SystemMetric[];
   isCommandModalOpen: boolean;
   setIsCommandModalOpen: (open: boolean) => void;
@@ -91,6 +93,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [governanceLogs, setGovernanceLogs] = useState<GovernanceEvent[]>(INITIAL_GOVERNANCE_LOGS);
   const [traceSteps, setTraceSteps] = useState<TraceStep[]>(INITIAL_TRACE_STEPS);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_CHAT_MESSAGES);
+  const [chatRunStatus, setChatRunStatus] = useState<ChatRunStatus>({
+    active: false,
+    phase: 'idle',
+    message: '',
+  });
   const [systemMetrics, setSystemMetrics] = useState<SystemMetric[]>(SYSTEM_METRICS);
   const [isCommandModalOpen, setIsCommandModalOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'warning' } | null>(null);
@@ -256,12 +263,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setChatMessages(prev => [...prev, userMsg]);
+    setChatRunStatus({
+      active: true,
+      phase: 'routing',
+      message: 'Routing through Master Orchestrator and specialist agents...',
+      startedAt: Date.now(),
+    });
 
     // Route through the real Master Agent. When Approval-Safe is OFF we ask the
     // backend to execute (execute:true) — but it only runs NON-risky intents;
     // risky ones stay approval-gated no matter what.
     (async () => {
+      const slowTimer = window.setTimeout(() => {
+        setChatRunStatus(prev => prev.active ? {
+          ...prev,
+          phase: 'slow',
+          message: 'Agents are still working. Real provider calls can take 30-90 seconds.',
+        } : prev);
+      }, 12000);
+
       const routed = await routeMessage(text, !safetySettings.mockSafe);
+      window.clearTimeout(slowTimer);
       const isDeploy = text.toLowerCase().includes('deploy') || text.toLowerCase().includes('run');
       const ranForReal = routed && !safetySettings.mockSafe && !routed.requiresApproval && !routed.blockedExecution;
       const replyText = routed
@@ -281,6 +303,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isWorkingCard: isDeploy && Boolean(routed?.requiresApproval)
       };
       setChatMessages(prev => [...prev, agentMsg]);
+      setChatRunStatus({
+        active: false,
+        phase: routed ? 'idle' : 'offline',
+        message: routed ? '' : 'Backend route timed out or was unreachable.',
+      });
     })();
   };
 
@@ -365,6 +392,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         governanceLogs,
         traceSteps,
         chatMessages,
+        chatRunStatus,
         systemMetrics,
         isCommandModalOpen,
         setIsCommandModalOpen,
