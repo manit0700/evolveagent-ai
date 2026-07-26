@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { fetchProviderStatus, ProviderStatus } from '../data/api';
+import {
+  fetchProviderStatus,
+  fetchStorageStatus,
+  fetchSystemHealth,
+  ProviderStatus,
+  StorageStatus,
+  SystemHealth,
+} from '../data/api';
 import { GlassCard } from '../components/shared/GlassCard';
 import { 
   Settings, 
@@ -35,7 +42,37 @@ export const SettingsPage: React.FC = () => {
   const [selectedTheme, setSelectedTheme] = useState<'dark-graphite' | 'charcoal-blue' | 'cosmic-purple'>('dark-graphite');
 
   const [providers, setProviders] = useState<ProviderStatus | null>(null);
-  useEffect(() => { fetchProviderStatus().then(setProviders); }, []);
+  const [storageStatus, setStorageStatus] = useState<StorageStatus | null>(null);
+  const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
+  useEffect(() => {
+    fetchProviderStatus().then(setProviders);
+    fetchStorageStatus().then(setStorageStatus);
+    fetchSystemHealth().then(setSystemHealth);
+  }, []);
+
+  const providerLabel = providers
+    ? `${providers.readyProviders}/${providers.totalProviders} ready`
+    : 'Unavailable';
+  const storageLabel = storageStatus
+    ? `${storageStatus.backend.toUpperCase()} · ${storageStatus.collections} collections`
+    : 'Unavailable';
+  const documentLabel = storageStatus
+    ? `${storageStatus.totalDocuments.toLocaleString()} records`
+    : 'Unavailable';
+  const backendLabel = systemHealth?.online ? 'FastAPI online' : 'Backend unavailable';
+  const governanceLabel = systemHealth
+    ? `${systemHealth.totalEvents.toLocaleString()} events · ${systemHealth.blocked} blocked`
+    : 'Unavailable';
+  const readinessScore = systemHealth
+    ? Math.max(0, Math.min(100, 100 - Math.min(40, systemHealth.blocked * 2)))
+    : null;
+  const readinessTone = readinessScore === null
+    ? 'text-gray-400'
+    : readinessScore >= 90
+      ? 'text-emerald-400'
+      : readinessScore >= 75
+        ? 'text-amber-300'
+        : 'text-rose-300';
 
   const handleAction = (msg: string) => {
     showToast(msg, 'success');
@@ -348,48 +385,58 @@ export const SettingsPage: React.FC = () => {
             <span className="font-bold text-white flex items-center gap-2">
               <Terminal className="w-4 h-4 text-cyan-400" /> System Summary
             </span>
-            <span className="text-emerald-400 font-mono">● LIVE</span>
+            <span className={`font-mono ${systemHealth?.online ? 'text-emerald-400' : 'text-gray-400'}`}>
+              ● {systemHealth?.online ? 'LIVE' : 'CHECKING'}
+            </span>
           </div>
 
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">OS Version:</span>
-              <strong className="text-white">vNext 2.4.0</strong>
+              <span className="text-gray-400">Platform:</span>
+              <strong className="text-white">EvolveAgent OS</strong>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">Frontend Stack:</span>
+              <span className="text-gray-400">Frontend:</span>
               <strong className="text-cyan-300">React 19 + Vite + Tailwind v4</strong>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">Backend Engine:</span>
-              <strong className="text-blue-300">Express / FastAPI Proxy</strong>
+              <span className="text-gray-400">Backend:</span>
+              <strong className={systemHealth?.online ? 'text-blue-300' : 'text-gray-400'}>{backendLabel}</strong>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">Storage Adapter:</span>
-              <strong className="text-gray-200">Local JSON + Vector DB</strong>
+              <span className="text-gray-400">Storage:</span>
+              <strong className="text-gray-200">{storageLabel}</strong>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">Governance Status:</span>
-              <strong className="text-emerald-400">Active (Approval-Safe)</strong>
+              <span className="text-gray-400">Stored Records:</span>
+              <strong className="text-gray-200">{documentLabel}</strong>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">System Health Score:</span>
-              <strong className="text-emerald-400">98% A+ Compliance</strong>
+              <span className="text-gray-400">Providers:</span>
+              <strong className={providers?.readyProviders ? 'text-emerald-400' : 'text-gray-400'}>{providerLabel}</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-400">Governance:</span>
+              <strong className="text-emerald-400">{governanceLabel}</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-400">Readiness:</span>
+              <strong className={readinessTone}>{readinessScore === null ? 'Unavailable' : `${readinessScore}%`}</strong>
             </div>
           </div>
 
           {/* Setup Checklist visual card */}
           <div className="pt-3 border-t border-white/10 space-y-2 font-sans">
-            <span className="text-[11px] font-mono text-gray-400 uppercase block">Recommended Setup Checklist</span>
+            <span className="text-[11px] font-mono text-gray-400 uppercase block">Live Readiness Checklist</span>
             {[
-              { label: 'Set app name in metadata.json', done: true },
-              { label: 'Configure Tailwind dark graphite tokens', done: true },
-              { label: 'Connect GitHub & Filesystem MCP tools', done: true },
-              { label: 'Enable Planning-First & Approval-Safe modes', done: true },
-              { label: 'Review Project Brain ADR memory index', done: true },
+              { label: 'Backend health endpoint online', done: Boolean(systemHealth?.online) },
+              { label: 'Storage status endpoint responding', done: Boolean(storageStatus) },
+              { label: 'Postgres ready', done: Boolean(storageStatus?.postgresReady) },
+              { label: 'Redis ready', done: Boolean(storageStatus?.redisReady) },
+              { label: 'At least one provider configured', done: Boolean(providers?.readyProviders) },
             ].map((chk, i) => (
               <div key={i} className="flex items-center gap-2 text-xs">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <CheckCircle2 className={`w-3.5 h-3.5 shrink-0 ${chk.done ? 'text-emerald-400' : 'text-gray-500'}`} />
                 <span className="text-gray-300 truncate">{chk.label}</span>
               </div>
             ))}
@@ -397,10 +444,15 @@ export const SettingsPage: React.FC = () => {
 
           <div className="pt-3 border-t border-white/10">
             <button
-              onClick={() => handleAction('System diagnostics check passed!')}
+              onClick={() => {
+                fetchProviderStatus().then(setProviders);
+                fetchStorageStatus().then(setStorageStatus);
+                fetchSystemHealth().then(setSystemHealth);
+                handleAction('Refreshed live system status');
+              }}
               className="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-sans font-semibold text-xs transition-colors shadow-lg"
             >
-              Run Full Diagnostic Suite
+              Refresh Live Status
             </button>
           </div>
         </GlassCard>
