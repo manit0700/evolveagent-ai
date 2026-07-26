@@ -49,7 +49,38 @@ export const ProjectBrain: React.FC = () => {
   const [newTitle, setNewTitle] = useState('');
   const [newSnippet, setNewSnippet] = useState('');
   const [newType, setNewType] = useState<MemoryItem['type']>('Decision');
-  const [newTags, setNewTags] = useState('Architecture, Tokens');
+  const [newTags, setNewTags] = useState('product, memory');
+
+  const memoryExamples = [
+    {
+      label: 'Product Goal',
+      title: 'EvolveAgent product goal',
+      type: 'Goal' as MemoryItem['type'],
+      snippet: 'EvolveAgent should coordinate agents, memory, tools, approvals, verification, and integrations to complete real work safely.',
+      tags: 'product, vision, evolveagent',
+    },
+    {
+      label: 'My Preference',
+      title: 'User prefers direct answers',
+      type: 'Memory' as MemoryItem['type'],
+      snippet: 'User prefers short, clear, action-focused answers with commands, next steps, and less theory.',
+      tags: 'preference, communication',
+    },
+    {
+      label: 'Safety Rule',
+      title: 'External actions require approval',
+      type: 'Decision' as MemoryItem['type'],
+      snippet: 'EvolveAgent must ask for approval before sending emails, pushing code, running paid jobs, or changing external tools.',
+      tags: 'safety, governance, approvals',
+    },
+    {
+      label: 'UI Direction',
+      title: 'EvolveAgent UI style',
+      type: 'Memory' as MemoryItem['type'],
+      snippet: 'The UI should feel futuristic, premium, clean, dark, glass-style, trustworthy, and easy for nontechnical users.',
+      tags: 'ui, design, product',
+    },
+  ];
 
   const filterChips = ['all', 'Decision', 'Memory', 'Chat Memory', 'File Index', 'Goal'];
   const decisionCount = memories.filter(m => m.type === 'Decision').length;
@@ -132,6 +163,13 @@ export const ProjectBrain: React.FC = () => {
     setIsAddingModalOpen(false);
   };
 
+  const fillMemoryExample = (example: typeof memoryExamples[number]) => {
+    setNewTitle(example.title);
+    setNewType(example.type);
+    setNewSnippet(example.snippet);
+    setNewTags(example.tags);
+  };
+
   const semanticMemories: MemoryItem[] = (semanticResults || []).map(result => {
     const normalizedSimilarity = result.similarity <= 1 ? Math.round(result.similarity * 100) : Math.round(result.similarity);
     return {
@@ -185,7 +223,7 @@ export const ProjectBrain: React.FC = () => {
               className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs flex items-center gap-1 transition-all"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Add Memory</span>
+              <span className="hidden sm:inline">Remember This</span>
             </button>
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-mono text-gray-400">
@@ -438,68 +476,99 @@ export const ProjectBrain: React.FC = () => {
       {/* Add Memory Modal */}
       {isAddingModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="w-full max-w-lg rounded-3xl border border-cyan-500/40 bg-[#17171d] p-6 shadow-2xl relative">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border border-cyan-500/40 bg-[#17171d] p-6 shadow-2xl relative">
             <button
               onClick={() => setIsAddingModalOpen(false)}
               className="absolute top-5 right-5 p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white"
+              aria-label="Close add memory"
             >
               <X className="w-5 h-5" />
             </button>
 
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <Plus className="w-5 h-5 text-cyan-400" />
-              <span>Add Manual Memory to Project Brain</span>
+              <span>Teach Project Brain Something</span>
             </h3>
-            <p className="text-xs text-gray-400 mt-1">Inject custom architectural guidelines or user decisions directly into the vector index.</p>
+            <p className="text-sm text-gray-300 mt-2 leading-relaxed">
+              Add facts, preferences, decisions, safety rules, or project goals you want EvolveAgent to remember later.
+            </p>
+
+            <div className="mt-4 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-3">
+              <div className="text-xs font-semibold text-cyan-200 flex items-center gap-2">
+                <Sparkles className="w-3.5 h-3.5" />
+                Quick examples
+              </div>
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {memoryExamples.map((example) => (
+                  <button
+                    key={example.label}
+                    type="button"
+                    onClick={() => fillMemoryExample(example)}
+                    className="text-left rounded-xl border border-white/10 bg-black/25 hover:bg-white/[0.06] p-3 transition-colors"
+                  >
+                    <div className="text-xs font-bold text-white">{example.label}</div>
+                    <div className="mt-1 text-[11px] text-gray-400 line-clamp-2">{example.title}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <form onSubmit={handleCreateSubmit} className="mt-4 space-y-3 font-mono text-xs">
               <div>
-                <label className="block text-gray-400 mb-1">Title / Decision Record</label>
+                <label className="block text-gray-300 mb-1 font-semibold">What should EvolveAgent call this?</label>
                 <input
                   type="text"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="E.g., ADR #13: Tailwind v4 Color Palettes"
+                  placeholder="Example: EvolveAgent product goal"
                   className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500 font-sans"
                   required
                 />
+                <p className="mt-1 text-[11px] text-gray-500 font-sans">Use a short name you can search for later.</p>
               </div>
 
               <div>
-                <label className="block text-gray-400 mb-1">Type</label>
+                <label className="block text-gray-300 mb-1 font-semibold">What kind of memory is it?</label>
                 <select
                   value={newType}
                   onChange={(e) => setNewType(e.target.value as any)}
                   className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500"
                 >
-                  <option value="Decision">Decision (ADR)</option>
-                  <option value="Memory">General Memory</option>
-                  <option value="Chat Memory">Chat Memory</option>
-                  <option value="Goal">Strategic Goal</option>
-                  <option value="File Index">File Index</option>
+                  <option value="Goal">Goal - something we are trying to achieve</option>
+                  <option value="Decision">Decision - a rule or choice we made</option>
+                  <option value="Memory">Memory - useful fact or preference</option>
+                  <option value="Chat Memory">Chat Memory - something from a conversation</option>
+                  <option value="File Index">File Index - note about a file or document</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-gray-400 mb-1">Content Snippet / Rule</label>
+                <label className="block text-gray-300 mb-1 font-semibold">What should it remember?</label>
                 <textarea
-                  rows={3}
+                  rows={5}
                   value={newSnippet}
                   onChange={(e) => setNewSnippet(e.target.value)}
-                  placeholder="E.g., Always use #171717 for glass card backgrounds with border-white/[0.07]..."
+                  placeholder="Example: EvolveAgent should always ask before sending emails, pushing code, or running paid jobs."
                   className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500 font-sans"
                   required
                 />
+                <p className="mt-1 text-[11px] text-gray-500 font-sans">Write it like a clear note to your future AI assistant.</p>
               </div>
 
               <div>
-                <label className="block text-gray-400 mb-1">Tags (comma separated)</label>
+                <label className="block text-gray-300 mb-1 font-semibold">Tags</label>
                 <input
                   type="text"
                   value={newTags}
                   onChange={(e) => setNewTags(e.target.value)}
+                  placeholder="product, safety, ui"
                   className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500"
                 />
+                <p className="mt-1 text-[11px] text-gray-500 font-sans">Separate tags with commas. Tags make it easier to search later.</p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-3 text-[11px] text-gray-400 font-sans leading-relaxed">
+                Good memories are specific. Add: product goals, your preferences, important decisions, safety rules, project facts, UI direction, or repeated workflow rules.
               </div>
 
               <div className="pt-3 flex items-center justify-end gap-2 font-sans">
@@ -515,7 +584,7 @@ export const ProjectBrain: React.FC = () => {
                   disabled={addBusy}
                   className="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition-colors shadow-lg"
                 >
-                  {addBusy ? 'Saving…' : 'Save & Index'}
+                  {addBusy ? 'Saving…' : 'Save to Project Brain'}
                 </button>
               </div>
             </form>
