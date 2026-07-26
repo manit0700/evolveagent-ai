@@ -42,12 +42,71 @@ export const AgentsPage: React.FC = () => {
     ? Math.round(agents.reduce((total, agent) => total + (Number(agent.qualityScore) || 0), 0) / agents.length)
     : 0;
 
+  const agentGuide = (name: string, role: string) => {
+    const key = `${name} ${role}`.toLowerCase();
+    if (key.includes('master') || key.includes('orchestrator')) {
+      return {
+        what: 'Reads your request, chooses the right agents, coordinates the workflow, and returns the final answer.',
+        useFor: 'Big goals, multi-step tasks, app planning, automation planning, and deciding what should happen next.',
+        safety: 'Can delegate work, but risky tool actions still go through governance and approvals.',
+      };
+    }
+    if (key.includes('ui') || key.includes('design')) {
+      return {
+        what: 'Designs screens, layouts, components, visual polish, and user-friendly product flows.',
+        useFor: 'Dashboard polish, buttons, forms, empty states, mobile layout, and making the app easier to understand.',
+        safety: 'Plans UI changes first. Real code/file changes require the approved implementation path.',
+      };
+    }
+    if (key.includes('memory') || key.includes('brain')) {
+      return {
+        what: 'Stores important facts, decisions, preferences, project notes, and searches them later.',
+        useFor: 'Remembering product goals, user preferences, safety rules, project decisions, and useful context.',
+        safety: 'Memory is scoped and searchable. Sensitive data should be reviewed before saving.',
+      };
+    }
+    if (key.includes('governance') || key.includes('safety')) {
+      return {
+        what: 'Checks risk, permissions, secrets, policy rules, and whether an action needs approval.',
+        useFor: 'External tools, file edits, shell commands, paid jobs, sensitive data, and audit logs.',
+        safety: 'Blocks or pauses risky actions. It should never bypass approval rules.',
+      };
+    }
+    if (key.includes('implementation') || key.includes('code')) {
+      return {
+        what: 'Turns approved plans into code changes, patches, tests, and build-ready implementation work.',
+        useFor: 'Frontend fixes, backend changes, API wiring, bug fixes, and codebase automation.',
+        safety: 'Must use safe file/change workflows. Destructive or risky edits require approval.',
+      };
+    }
+    if (key.includes('research')) {
+      return {
+        what: 'Finds, compares, and summarizes information, then turns it into useful recommendations.',
+        useFor: 'Docs research, source comparison, technical decisions, citations, and product research.',
+        safety: 'Research output should cite evidence when possible and flag uncertainty.',
+      };
+    }
+    if (key.includes('judge') || key.includes('quality')) {
+      return {
+        what: 'Reviews answers, code, UI, and plans for quality, mistakes, missing steps, and weak reasoning.',
+        useFor: 'Final checks, test planning, accessibility review, risk review, and confidence scoring.',
+        safety: 'It reviews and scores work. It should not execute risky actions by itself.',
+      };
+    }
+    return {
+      what: 'Handles a specialized part of the workflow and reports results back to the orchestrator.',
+      useFor: 'Scoped tasks that match its role, tools, and permission profile.',
+      safety: 'Permissions control what it can read, plan, or execute.',
+    };
+  };
+
   const permissionProfiles: { level: PermissionLevel; label: string; desc: string; color: string }[] = [
     { level: 'read-only', label: 'Read-Only', desc: 'Can only query Project Brain & read workspace files. No side effects.', color: 'border-blue-500/30 bg-blue-500/5 text-blue-300' },
     { level: 'planning-only', label: 'Planning-Only', desc: 'Can formulate code modifications and dry-run AST checks without writing.', color: 'border-cyan-500/30 bg-cyan-500/5 text-cyan-300' },
     { level: 'approval-gated', label: 'Approval-Gated', desc: 'High-risk operations (filesystem writes, shell CLI, API calls) enter Approvals queue.', color: 'border-amber-500/30 bg-amber-500/5 text-amber-300' },
     { level: 'high-trust', label: 'High-Trust', desc: 'Reserved for Master Orchestrator to delegate tasks across worker sandboxes.', color: 'border-emerald-500/30 bg-emerald-500/5 text-emerald-300' },
   ];
+  const featuredGuide = agentGuide(featuredAgent.name, featuredAgent.role);
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
@@ -89,6 +148,18 @@ export const AgentsPage: React.FC = () => {
               <h2 className="text-2xl font-extrabold text-white tracking-tight">{featuredAgent.name}</h2>
               <p className="text-xs sm:text-sm text-cyan-300 font-mono">{featuredAgent.role}</p>
               <p className="text-xs text-gray-300 leading-relaxed pt-1">{featuredAgent.description}</p>
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {[
+                  { label: 'What it does', value: featuredGuide.what },
+                  { label: 'Use it for', value: featuredGuide.useFor },
+                  { label: 'Safety boundary', value: featuredGuide.safety },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-xl border border-white/10 bg-black/25 p-3">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-cyan-300">{item.label}</div>
+                    <p className="mt-1 text-[11px] text-gray-300 leading-relaxed">{item.value}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -169,6 +240,7 @@ export const AgentsPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredAgents.map((agent) => {
             const isSelected = agent.id === selectedAgentId;
+            const guide = agentGuide(agent.name, agent.role);
             return (
               <div
                 key={agent.id}
@@ -194,6 +266,16 @@ export const AgentsPage: React.FC = () => {
                   </div>
 
                   <p className="mt-3 text-xs text-gray-400 line-clamp-2 leading-relaxed">{agent.description}</p>
+                  <div className="mt-3 rounded-xl bg-black/25 border border-white/5 p-3 space-y-2">
+                    <div>
+                      <div className="text-[10px] font-mono uppercase text-cyan-300">What it does</div>
+                      <p className="text-[11px] text-gray-300 leading-relaxed">{guide.what}</p>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-mono uppercase text-gray-400">Use it for</div>
+                      <p className="text-[11px] text-gray-400 leading-relaxed">{guide.useFor}</p>
+                    </div>
+                  </div>
 
                   <div className="mt-4 pt-3 border-t border-white/5 space-y-2 text-xs font-mono">
                     <div className="flex items-center justify-between text-gray-400">
@@ -207,6 +289,10 @@ export const AgentsPage: React.FC = () => {
                     <div className="flex items-center justify-between text-gray-400">
                       <span>Quality Score:</span>
                       <span className="text-emerald-400 font-bold">{agent.qualityScore}%</span>
+                    </div>
+                    <div className="pt-2 border-t border-white/5">
+                      <span className="text-gray-400">Safety:</span>
+                      <p className="mt-1 text-[11px] text-gray-300 leading-relaxed font-sans">{guide.safety}</p>
                     </div>
                   </div>
                 </div>
