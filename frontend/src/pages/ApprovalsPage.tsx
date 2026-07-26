@@ -41,8 +41,28 @@ export const ApprovalsPage: React.FC = () => {
   });
 
   const pendingCount = approvals.filter(a => a.status === 'pending').length;
-  const approvedToday = approvals.filter(a => a.status === 'approved').length + 14;
-  const rejectedToday = approvals.filter(a => a.status === 'rejected').length + 2;
+  const approvedCount = approvals.filter(a => a.status === 'approved').length;
+  const rejectedCount = approvals.filter(a => a.status === 'rejected').length;
+  const blockedCount = governanceLogs.filter(log => log.status === 'blocked').length;
+  const highRiskCount = approvals.filter(a => a.riskLevel === 'high').length;
+  const mediumHighPending = approvals.filter(a => a.status === 'pending' && a.riskLevel !== 'low').length;
+
+  const explainApproval = (item: ApprovalRequest) => {
+    const action = item.plannedAction || item.intent || item.title;
+    const why = item.riskLevel === 'high'
+      ? 'This is high risk, so EvolveAgent needs your explicit permission before it can continue.'
+      : item.riskLevel === 'medium'
+        ? 'This may affect files, tools, data, or cost, so it is paused for review.'
+        : 'This is low risk, but it is still shown so you can stay in control.';
+    return {
+      request: action,
+      why,
+      approve: `The agent can continue with: ${action}`,
+      reject: 'Nothing runs. The agent must replan without this action.',
+    };
+  };
+
+  const selectedExplanation = selectedItem ? explainApproval(selectedItem) : null;
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
@@ -51,11 +71,11 @@ export const ApprovalsPage: React.FC = () => {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 flex-1">
           {[
             { label: 'Pending Review', value: `${pendingCount}`, sub: 'Requires sign-off', color: 'text-amber-400' },
-            { label: 'Approved Today', value: `${approvedToday}`, sub: 'Governed sandbox', color: 'text-emerald-400' },
-            { label: 'Rejected Today', value: `${rejectedToday}`, sub: 'Safety blocks', color: 'text-rose-400' },
-            { label: 'Blocked Actions', value: '02', sub: 'Destructive shell', color: 'text-rose-400' },
-            { label: 'Avg Review Time', value: '42s', sub: 'Fast governance', color: 'text-cyan-400' },
-            { label: 'High-Risk Tools', value: '01', sub: 'Filesystem write', color: 'text-amber-400' },
+            { label: 'Approved', value: `${approvedCount}`, sub: 'Allowed by user', color: 'text-emerald-400' },
+            { label: 'Rejected', value: `${rejectedCount}`, sub: 'Stopped by user', color: 'text-rose-400' },
+            { label: 'Blocked Actions', value: `${blockedCount}`, sub: 'Stopped by policy', color: 'text-rose-400' },
+            { label: 'Needs Care', value: `${mediumHighPending}`, sub: 'Medium/high pending', color: 'text-cyan-400' },
+            { label: 'High Risk', value: `${highRiskCount}`, sub: 'Extra review', color: 'text-amber-400' },
           ].map((m, idx) => (
             <div key={idx} className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 space-y-0.5">
               <div className="text-[10px] font-mono text-gray-400 uppercase tracking-wider">{m.label}</div>
@@ -85,7 +105,7 @@ export const ApprovalsPage: React.FC = () => {
             <div className="space-y-4 flex-1">
               <div className="flex items-center gap-3">
                 <span className="text-xs font-mono px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase font-semibold">
-                  Priority Sign-Off Required
+                  Needs Your Review
                 </span>
                 <RiskBadge level={selectedItem.riskLevel} />
                 <span className="text-xs font-mono text-gray-400">{selectedItem.timestamp}</span>
@@ -96,15 +116,26 @@ export const ApprovalsPage: React.FC = () => {
                 <p className="text-xs sm:text-sm text-gray-300 mt-1">Requested by <strong className="text-white">{selectedItem.agentName}</strong></p>
               </div>
 
-              {/* Intent & Planned Action Box */}
+              {/* Plain-language approval explanation */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-2xl bg-black/40 border border-white/10 font-mono text-xs">
                 <div>
-                  <span className="text-gray-500 text-[10px] uppercase block mb-1">Agent Intent & Purpose</span>
-                  <p className="text-gray-200">{selectedItem.intent}</p>
+                  <span className="text-gray-500 text-[10px] uppercase block mb-1">What is being requested?</span>
+                  <p className="text-gray-200">{selectedExplanation?.request}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500 text-[10px] uppercase block mb-1">Exact Planned Tool Action</span>
-                  <p className="text-amber-300 font-semibold">{selectedItem.plannedAction}</p>
+                  <span className="text-gray-500 text-[10px] uppercase block mb-1">Why approval is needed</span>
+                  <p className="text-amber-300 font-semibold">{selectedExplanation?.why}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3">
+                  <div className="text-[10px] font-mono uppercase text-emerald-300">If you approve</div>
+                  <p className="mt-1 text-xs text-gray-200 leading-relaxed">{selectedExplanation?.approve}</p>
+                </div>
+                <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-3">
+                  <div className="text-[10px] font-mono uppercase text-rose-300">If you reject</div>
+                  <p className="mt-1 text-xs text-gray-200 leading-relaxed">{selectedExplanation?.reject}</p>
                 </div>
               </div>
 
@@ -126,21 +157,21 @@ export const ApprovalsPage: React.FC = () => {
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-black font-extrabold text-xs transition-all shadow-lg flex items-center justify-center gap-2"
               >
                 <Check className="w-4 h-4 stroke-[3]" />
-                <span>Approve & Execute</span>
+                <span>Approve This Action</span>
               </button>
               <button
                 onClick={() => rejectRequest(selectedItem.id)}
                 className="w-full py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-semibold text-xs transition-all flex items-center justify-center gap-2"
               >
                 <X className="w-4 h-4" />
-                <span>Reject Request</span>
+                <span>Reject / Replan</span>
               </button>
               <button
                 onClick={() => showToast('Opened scope modification modal...', 'info')}
                 className="w-full py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-medium text-xs transition-all flex items-center justify-center gap-2"
               >
                 <Edit3 className="w-3.5 h-3.5" />
-                <span>Edit Scope / Restrict</span>
+                <span>Limit Scope</span>
               </button>
             </div>
           </div>
@@ -189,6 +220,7 @@ export const ApprovalsPage: React.FC = () => {
             </div>
 
             {/* Table */}
+            {filteredApprovals.length > 0 ? (
             <div className="mt-4 overflow-x-auto font-mono text-xs">
               <table className="w-full text-left">
                 <thead>
@@ -244,6 +276,15 @@ export const ApprovalsPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
+            ) : (
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center">
+                <ShieldCheck className="w-8 h-8 text-emerald-400 mx-auto" />
+                <h4 className="mt-3 text-sm font-bold text-white">No actions need review</h4>
+                <p className="mt-1 text-xs text-gray-400">
+                  EvolveAgent will pause here when an agent wants to do something that needs your permission.
+                </p>
+              </div>
+            )}
           </GlassCard>
         </div>
 
@@ -252,7 +293,7 @@ export const ApprovalsPage: React.FC = () => {
           <GlassCard className="h-full flex flex-col justify-between font-mono">
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                <span className="text-xs font-sans font-semibold text-white">Governance Risk Explanation</span>
+                <span className="text-xs font-sans font-semibold text-white">Approval Explanation</span>
                 <span className="text-[10px] text-cyan-400">{selectedItem.id}</span>
               </div>
 
@@ -261,15 +302,15 @@ export const ApprovalsPage: React.FC = () => {
                 <h4 className="text-sm font-sans font-bold text-white">{selectedItem.title}</h4>
                 <div className="p-2.5 rounded-xl bg-black/50 border border-white/10 space-y-1.5 text-xs">
                   <div className="flex items-center justify-between text-gray-400">
-                    <span>MCP Tool Name:</span>
+                    <span>Tool:</span>
                     <strong className="text-cyan-300">{selectedItem.toolName}</strong>
                   </div>
                   <div className="flex items-center justify-between text-gray-400">
-                    <span>Workspace Scope:</span>
+                    <span>Workspace:</span>
                     <strong className="text-white truncate max-w-[150px]">{selectedItem.workspaceScope}</strong>
                   </div>
                   <div className="flex items-center justify-between text-gray-400">
-                    <span>Estimated Cost:</span>
+                    <span>Cost Limit:</span>
                     <strong className="text-emerald-400">{selectedItem.costLimit || '$0.00'}</strong>
                   </div>
                 </div>
@@ -277,7 +318,7 @@ export const ApprovalsPage: React.FC = () => {
 
               {/* Governance Automated Checks */}
               <div className="space-y-2">
-                <span className="text-[10px] text-gray-500 uppercase block">Automated Governance Checks</span>
+                <span className="text-[10px] text-gray-500 uppercase block">Safety checks</span>
                 <div className="space-y-2">
                   {selectedItem.governanceChecks.map((chk, i) => (
                     <div key={i} className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 space-y-1">
@@ -308,13 +349,13 @@ export const ApprovalsPage: React.FC = () => {
                   className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-sans font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-lg"
                 >
                   <Check className="w-4 h-4 stroke-[3]" />
-                  <span>Grant Permission</span>
+                  <span>Approve This Action</span>
                 </button>
                 <button
                   onClick={() => rejectRequest(selectedItem.id)}
                   className="w-full py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-sans font-semibold text-xs transition-all"
                 >
-                  Reject Request
+                  Reject / Replan
                 </button>
               </div>
             ) : (
