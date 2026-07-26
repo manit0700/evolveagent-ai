@@ -51,7 +51,7 @@ export const ApprovalsPage: React.FC = () => {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 flex-1">
           {[
             { label: 'Pending Review', value: `${pendingCount}`, sub: 'Requires sign-off', color: 'text-amber-400' },
-            { label: 'Approved Today', value: `${approvedToday}`, sub: 'Mock sandbox', color: 'text-emerald-400' },
+            { label: 'Approved Today', value: `${approvedToday}`, sub: 'Governed sandbox', color: 'text-emerald-400' },
             { label: 'Rejected Today', value: `${rejectedToday}`, sub: 'Safety blocks', color: 'text-rose-400' },
             { label: 'Blocked Actions', value: '02', sub: 'Destructive shell', color: 'text-rose-400' },
             { label: 'Avg Review Time', value: '42s', sub: 'Fast governance', color: 'text-cyan-400' },

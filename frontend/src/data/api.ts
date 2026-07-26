@@ -3,7 +3,7 @@
  *
  * Reads live data from the EvolveAgent FastAPI backend and maps it into the UI
  * types. Everything is best-effort: any failure returns null so the caller can
- * keep the mock data (the UI never breaks if the backend is down).
+ * keep offline fallback data available (the UI never breaks if the backend is down).
  */
 
 import {
@@ -64,7 +64,7 @@ export async function routeMessage(
   };
 }
 
-/** Dry-run (plan) a connector action — real preview, NO execution. Mock-safe. */
+/** Dry-run (plan) a connector action — real preview, NO execution. Approval-safe. */
 export async function planConnectorAction(
   connectorId: string,
   actionName: string,
@@ -83,7 +83,7 @@ export async function planConnectorAction(
   };
 }
 
-// ---- MCP execute → approve → run (approval-gated, mock-safe) ----------------
+// ---- MCP execute → approve → run (approval-gated, approval-safe) -------------
 export interface McpExecutionRequest {
   requestId: string;
   status: string; // pending_approval | approved | executed | blocked | rejected
@@ -95,7 +95,7 @@ export interface McpExecutionRequest {
 
 export interface McpExecutionResult {
   status: string;
-  executionMode: string; // mock | real_read_only
+  executionMode: string; // preview | real_read_only
   success: boolean;
   realCallMade: boolean;
   secretsUsed: boolean;
@@ -105,7 +105,7 @@ export interface McpExecutionResult {
 
 /** Request a real execution of a connector action. Returns a request_id.
  *  Risky/approval-gated actions come back as `pending_approval` and never auto-run.
- *  Returns null for sample/mock connectors (backend 404s). */
+ *  Returns null for offline fallback connectors (backend 404s). */
 export async function requestConnectorExecution(
   connectorId: string,
   actionName: string,
@@ -136,7 +136,7 @@ export async function approveConnectorExecution(requestId: string): Promise<McpE
   };
 }
 
-/** Run an approved execution request. Mock-by-default; a real read-only call
+/** Run an approved execution request. Preview-by-default; a real read-only call
  *  only happens when the backend adapter's opt-in is set. Surfaces the result. */
 export async function runConnectorExecution(requestId: string): Promise<McpExecutionResult | null> {
   const d = await postJson<any>(`/api/mcp/executions/${requestId}/run`, {});
@@ -144,7 +144,7 @@ export async function runConnectorExecution(requestId: string): Promise<McpExecu
   const result = d.result || {};
   return {
     status: d.status || 'executed',
-    executionMode: result.execution_mode || 'mock',
+    executionMode: result.execution_mode === 'mock' ? 'preview' : result.execution_mode || 'preview',
     success: Boolean(result.success),
     realCallMade: Boolean(result.real_call_made),
     secretsUsed: Boolean(result.secrets_used),
@@ -153,13 +153,13 @@ export async function runConnectorExecution(requestId: string): Promise<McpExecu
   };
 }
 
-/** Enable/disable a real MCP connector. Best-effort; false if it 404s (sample item). */
+/** Enable/disable a real MCP connector. Best-effort; false if it 404s (fallback item). */
 export async function setConnectorEnabled(connectorId: string, enabled: boolean): Promise<boolean> {
   const d = await postJson<any>(`/api/mcp/connectors/${connectorId}/${enabled ? 'enable' : 'disable'}`, {});
   return d !== null;
 }
 
-/** Approve or reject a REAL backend approval. Best-effort; null if it 404s (mock item). */
+/** Approve or reject a REAL backend approval. Best-effort; null if it 404s (fallback item). */
 export async function decideApproval(
   approvalId: string,
   decision: 'approve' | 'reject',
@@ -228,7 +228,7 @@ export async function fetchGovernance(): Promise<GovernanceEvent[] | null> {
       type,
       agentName: e.agent_name || 'Governance',
       action: e.action_type || e.tool_used || 'event',
-      status: e.blocked ? 'blocked' : e.approved ? 'allowed' : 'mock_executed',
+      status: e.blocked ? 'blocked' : e.approved ? 'allowed' : 'preview_executed',
       risk: riskFromScore(e.risk_score || 0),
       details: e.reason || '',
     };
@@ -381,7 +381,7 @@ export async function fetchApprovals(): Promise<ApprovalRequest[] | null> {
     workspaceScope: a.workspace_id || 'default',
     governanceChecks: [
       { label: 'Approval-gated', passed: true, detail: 'Held for explicit human approval' },
-      { label: 'Mock-safe', passed: true, detail: 'No real external mutation without approval' },
+      { label: 'Approval-safe', passed: true, detail: 'No real external mutation without approval' },
     ],
   }));
 }

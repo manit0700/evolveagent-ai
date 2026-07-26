@@ -126,7 +126,7 @@ export interface GovernanceEvent {
   type: 'tool_call' | 'permission_check' | 'safety_block' | 'approval_granted' | 'audit_log';
   agentName: string;
   action: string;
-  status: 'allowed' | 'blocked' | 'pending_review' | 'mock_executed';
+  status: 'allowed' | 'blocked' | 'pending_review' | 'preview_executed';
   risk: RiskLevel;
   details: string;
 }

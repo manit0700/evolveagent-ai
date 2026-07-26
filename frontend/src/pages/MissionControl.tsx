@@ -23,7 +23,7 @@ import {
 import { TaskStatus } from '../types';
 
 export const MissionControl: React.FC = () => {
-  const { mission, tasks, agents, approvals, runMockWorkflowStep, showToast } = useApp();
+  const { mission, tasks, agents, approvals, advanceWorkflowStep, showToast } = useApp();
   const [liveRuns, setLiveRuns] = useState<LiveWorkflowRun[] | null>(null);
   const [starting, setStarting] = useState(false);
   const loadRuns = () => fetchWorkflowRuns().then(setLiveRuns);
@@ -45,7 +45,7 @@ export const MissionControl: React.FC = () => {
   };
 
   const handleApproveNext = () => {
-    runMockWorkflowStep();
+    advanceWorkflowStep();
     showToast('Next recommended action approved & delegated to agents!', 'success');
   };
 
@@ -154,7 +154,7 @@ export const MissionControl: React.FC = () => {
           <div>
             <div className="text-xs font-semibold text-cyan-200 uppercase tracking-wide font-mono">Recommended Next Action</div>
             <p className="text-xs sm:text-sm text-white font-medium mt-0.5">
-              UI Design Agent recommends synthesizing the <span className="text-cyan-300 font-bold">Agents Overview grid</span> and verifying Mock-Safe permission profiles next.
+              UI Design Agent recommends synthesizing the <span className="text-cyan-300 font-bold">Agents Overview grid</span> and verifying approval-safe permission profiles next.
             </p>
           </div>
         </div>

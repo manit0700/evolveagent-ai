@@ -10,7 +10,8 @@ before; this is just a native shell around it.
 
 - **Is:** a thin, locked-down native window that loads the same React frontend
   (`frontend/dist` in release, the Vite dev server in development) and talks to
-  your local backend at `http://127.0.0.1:8000`.
+  your local backend at `http://127.0.0.1:8000`. In desktop dev mode, the launcher
+  starts FastAPI for you if that backend is not already running.
 - **Isn't:** a new backend, a second copy of the UI, or anything with elevated
   privileges. It registers **no** shell, filesystem, or arbitrary-network
   capabilities (see `src-tauri/capabilities/default.json`). This keeps it aligned
@@ -34,16 +35,31 @@ npm run tauri icon ../assets/logo.png                    # generate app icons (a
 
 ## Run it
 
-Make sure the backend is running (`uvicorn app.main:app` on :8000), then:
-
 ```bash
 cd desktop
-npm run dev      # launches the native window; hot-reloads from the Vite dev server
+npm run dev      # starts backend if needed, then launches the native window
 npm run build    # produces EvolveAgent.app + a .dmg in src-tauri/target/release/bundle/
 ```
 
-`npm run dev`/`build` automatically start the frontend dev/build for you (see
-`beforeDevCommand` / `beforeBuildCommand` in `src-tauri/tauri.conf.json`).
+`npm run dev` runs `scripts/dev-with-backend.mjs` through Tauri's
+`beforeDevCommand`: it checks `http://127.0.0.1:8000/health`, starts
+`uvicorn app.main:app --reload --port 8000` from `backend/` when needed, then
+starts the frontend dev server with `VITE_API_BASE` pointed at that backend.
+`npm run build` still produces a frontend bundle only; a packaged app expects a
+local backend to be running unless a future release adds a signed backend
+sidecar.
+
+If startup fails, run the backend directly once to see the Python error:
+
+```bash
+cd ../backend
+source venv/bin/activate
+python -m uvicorn app.main:app --reload --port 8000
+```
+
+If port `5173` is already in use, stop the old Vite process before rerunning
+`npm run dev`; the desktop launcher uses a strict frontend port so Tauri always
+opens the expected URL.
 
 ## Security posture
 
@@ -63,6 +79,8 @@ npm run build    # produces EvolveAgent.app + a .dmg in src-tauri/target/release
 ```
 desktop/
 ├── package.json              # Tauri tooling (isolated from frontend/)
+├── scripts/
+│   └── dev-with-backend.mjs   # starts/checks FastAPI, then starts Vite for Tauri dev
 └── src-tauri/
     ├── tauri.conf.json       # window, CSP, bundle config; points at ../../frontend/dist
     ├── Cargo.toml

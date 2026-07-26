@@ -177,7 +177,7 @@ export const LiveWorkingCard: React.FC = () => {
               <span className="text-base">🛡️</span>
               <div>
                 <div className="text-xs font-medium text-white">Governance Agent</div>
-                <div className="text-[11px] text-gray-400">Auditing tool calls for Mock-Safe sandboxing</div>
+                <div className="text-[11px] text-gray-400">Auditing tool calls through approval-safe governance</div>
               </div>
             </div>
             <span className="flex items-center gap-1 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
