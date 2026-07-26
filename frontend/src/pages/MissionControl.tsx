@@ -37,7 +37,7 @@ export const MissionControl: React.FC = () => {
         { name: 'Summarize progress' },
         { name: 'Notify on completion', action_type: 'notify', action_params: { message: 'Mission Control workflow complete' } },
       ]);
-      showToast(ok ? 'Started a real durable workflow — the notify step is held for approval.' : 'Backend offline — could not start a real run.', ok ? 'success' : 'warning');
+      showToast(ok ? 'Started a real durable workflow — the notify step is held for approval.' : 'Backend unavailable — could not start a live run.', ok ? 'success' : 'warning');
       if (ok) await loadRuns();
     } finally {
       setStarting(false);

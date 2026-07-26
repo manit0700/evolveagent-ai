@@ -123,7 +123,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Load real backend data on mount; keep offline fallback data so the UI
+  // Load real backend data on mount; keep local fallback data so the UI
   // works even if the backend is down. Only overrides slices that came back.
   const refreshLive = async () => {
     const live = await fetchLiveData();
@@ -163,7 +163,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!target) return;
 
     setApprovals(prev => prev.map(a => a.id === id ? { ...a, status: 'approved' } : a));
-    // Best-effort real decision on the backend (no-op for offline fallback items).
+    // Best-effort real decision on the backend (no-op for local fallback items).
     decideApproval(id, 'approve').then(ok => { if (ok) refreshLive(); });
     
     // Log governance event
@@ -291,7 +291,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           + (routed.requiresApproval ? '\n\n⚠️ This intent is **risky** — held for explicit approval (nothing was executed).' : '')
           + (ranForReal ? '\n\n✅ Approval-Safe is off — this non-risky action was executed for real.' : '')
           + (routed.suggestedWorkflow ? `\n\nSuggested workflow: **${routed.suggestedWorkflow}**` : '')
-        : `I couldn't reach the backend just now, so I'm replying in offline mode. Under Planning-First Mode I'd route this to the right agent and prepare a dry-run before any real action.`;
+        : `I couldn't reach the backend just now, so I'm using local fallback context. In live mode, I route this through the Master Orchestrator and prepare an approval-safe plan before any real action.`;
 
       const agentMsg: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
@@ -306,7 +306,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setChatRunStatus({
         active: false,
         phase: routed ? 'idle' : 'offline',
-        message: routed ? '' : 'Backend route timed out or was unreachable.',
+        message: routed ? '' : 'Backend route timed out or was unavailable.',
       });
     })();
   };
@@ -353,7 +353,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (c.id === id) {
         const nextStatus = c.status === 'connected' ? 'disconnected' : 'connected';
         showToast(`Tool connector "${c.name}" is now ${nextStatus.toUpperCase()}`, nextStatus === 'connected' ? 'success' : 'warning');
-        // Best-effort real enable/disable on the backend (no-op for offline fallback items).
+        // Best-effort real enable/disable on the backend (no-op for local fallback items).
         setConnectorEnabled(id, nextStatus === 'connected').then(ok => { if (ok) refreshLive(); });
         return { ...c, status: nextStatus };
       }

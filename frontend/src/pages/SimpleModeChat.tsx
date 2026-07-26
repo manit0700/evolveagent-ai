@@ -97,7 +97,7 @@ export const SimpleModeChat: React.FC = () => {
             <button
               type="button"
               onClick={refreshLive}
-              title={liveConnected ? 'Backend connected. Click to refresh live data.' : 'Backend offline. Click to retry connection.'}
+              title={liveConnected ? 'Backend connected. Click to refresh live data.' : 'Backend unavailable. Click to retry connection.'}
               className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono transition-colors ${
                 liveConnected
                   ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300'

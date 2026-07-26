@@ -5,7 +5,7 @@ import { AppProvider } from '../../context/AppContext';
 import { TopBar } from './TopBar';
 
 // Render TopBar inside the real AppProvider, with all backend fetches failing so
-// the UI falls back to offline data (liveConnected = false).
+// the UI falls back to local data (liveConnected = false).
 function renderTopBar() {
   return render(
     <AppProvider>
@@ -16,16 +16,16 @@ function renderTopBar() {
 
 beforeEach(() => {
   localStorage.clear();
-  // Every fetch fails -> offline mode.
+  // Every fetch fails -> local fallback mode.
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) })) as any);
 });
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe('TopBar', () => {
-  it('shows Offline Data when the backend is offline', async () => {
+  it('shows Local Data when the backend is unavailable', async () => {
     renderTopBar();
-    await waitFor(() => expect(screen.getByText('Offline Data')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Local Data')).toBeInTheDocument());
   });
 
   it('defaults to Approval-Safe and toggles to Real Actions on click', async () => {

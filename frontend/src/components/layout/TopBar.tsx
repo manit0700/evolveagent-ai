@@ -111,10 +111,10 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
           </button>
         </div>
 
-        {/* Live/offline data indicator — reflects real backend connection */}
+        {/* Live/local data indicator — reflects real backend connection */}
         <button
-          onClick={() => { refreshLive(); showToast(liveConnected ? 'Refreshed live data from backend' : 'Backend offline — showing offline fallback data', liveConnected ? 'success' : 'warning'); }}
-          title={liveConnected ? 'Connected to the local backend — click to refresh' : 'Backend offline (showing offline fallback data) — click to retry'}
+          onClick={() => { refreshLive(); showToast(liveConnected ? 'Refreshed live data from backend' : 'Backend unavailable — showing local fallback data', liveConnected ? 'success' : 'warning'); }}
+          title={liveConnected ? 'Connected to the local backend — click to refresh' : 'Backend unavailable (showing local fallback data) — click to retry'}
           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-mono transition-colors shrink-0 ${
             liveConnected
               ? 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 text-emerald-300'
@@ -122,7 +122,7 @@ export const TopBar: React.FC<{ setMobileOpen: (open: boolean) => void }> = ({ s
           }`}
         >
           <span className={`w-2 h-2 rounded-full ${liveConnected ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500'}`} />
-          <span className="hidden md:inline">{liveConnected ? 'Live Data' : 'Offline Data'}</span>
+          <span className="hidden md:inline">{liveConnected ? 'Live Data' : 'Local Data'}</span>
         </button>
 
         {/* Safety-mode badge — reflects approval-safe execution and toggles it on click */}

@@ -199,7 +199,7 @@ export const DevModeConsole: React.FC = () => {
             },
             {
               label: 'Postgres',
-              value: storageStatus?.postgresReady ? 'Ready' : 'Offline',
+              value: storageStatus?.postgresReady ? 'Ready' : 'Not Ready',
               sub: `Configured: ${storageStatus?.configuredBackend || 'json'}`,
               color: storageStatus?.postgresReady ? 'text-emerald-300' : 'text-amber-300',
             },
