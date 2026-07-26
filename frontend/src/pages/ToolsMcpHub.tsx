@@ -127,6 +127,7 @@ export const ToolsMcpHub: React.FC = () => {
 
   const featuredTool = connectors.find(c => c.id === selectedConnectorId) || connectors[0];
 
+  const categories = ['all', ...Array.from(new Set(connectors.map(c => c.category)))];
   const filteredConnectors = selectedCategory === 'all'
     ? connectors
     : connectors.filter(c => c.category === selectedCategory);
@@ -134,18 +135,45 @@ export const ToolsMcpHub: React.FC = () => {
   const connectedCount = connectors.filter(c => c.status === 'connected' || c.status === 'approval-gated').length;
   const gatedCount = connectors.filter(c => c.status === 'approval-gated').length;
   const highRiskCount = connectors.filter(c => c.riskLevel === 'high').length;
+  const readOnlyCount = connectors.filter(c => c.permissions.some(p => /read|list|get|view|status/i.test(p))).length;
+  const toolCallCount = connectors.reduce((total, c) => total + (Number(c.callsToday) || 0), 0)
+    || governanceLogs.filter(log => log.type === 'tool_call' || log.action.toLowerCase().includes('tool')).length;
+  const failedCheckCount = connectors.filter(c => c.status === 'error' || !c.dryCheckPassed).length
+    + governanceLogs.filter(log => log.status === 'blocked').length;
+
+  const countLabel = (count: number) => count < 10 ? `0${count}` : `${count}`;
+
+  const statusHelp = (tool: ToolConnector) => {
+    if (tool.status === 'connected') return 'Enabled and available to agents.';
+    if (tool.status === 'approval-gated') return 'Enabled, but risky actions pause for approval.';
+    if (tool.status === 'error') return 'Needs setup or failed its latest safety check.';
+    return 'Disabled until you enable it.';
+  };
+
+  const capabilitySummary = (tool: ToolConnector) => {
+    const actions = tool.permissions.length ? tool.permissions.slice(0, 3).join(', ') : 'status checks';
+    if (tool.riskLevel === 'high') return `Can prepare ${actions}. High-risk actions need approval before anything runs.`;
+    if (tool.status === 'disconnected') return `Can support ${actions} after setup.`;
+    return `Can safely use ${actions} within its permission scope.`;
+  };
+
+  const actionButtonLabel = (tool: ToolConnector) => {
+    if (tool.status === 'connected' || tool.status === 'approval-gated') return 'Disable';
+    if (tool.status === 'error') return 'Retry setup';
+    return 'Enable';
+  };
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
       {/* 1. Overview Metrics (6 counters) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: 'Connected Tools', value: `0${connectedCount}`, sub: 'Active in session', color: 'text-white' },
-          { label: 'Approval-Gated', value: `0${gatedCount}`, sub: 'Requires user sign-off', color: 'text-amber-400' },
-          { label: 'Read-Only Mode', value: '04', sub: 'Zero side effects', color: 'text-blue-400' },
-          { label: 'High-Risk Tools', value: `0${highRiskCount}`, sub: 'Filesystem / CLI', color: 'text-rose-400' },
-          { label: 'Calls Today', value: '32', sub: 'Governance verified', color: 'text-cyan-400' },
-          { label: 'Failed Checks', value: '00', sub: '100% compliant', color: 'text-emerald-400' },
+          { label: 'Enabled Tools', value: countLabel(connectedCount), sub: 'Available to agents', color: 'text-white' },
+          { label: 'Need Approval', value: countLabel(gatedCount), sub: 'Pauses before action', color: 'text-amber-400' },
+          { label: 'Read-Only Tools', value: countLabel(readOnlyCount), sub: 'View/list/get actions', color: 'text-blue-400' },
+          { label: 'High-Risk Tools', value: countLabel(highRiskCount), sub: 'Extra guardrails', color: 'text-rose-400' },
+          { label: 'Tool Events', value: countLabel(toolCallCount), sub: 'From governance log', color: 'text-cyan-400' },
+          { label: 'Needs Attention', value: countLabel(failedCheckCount), sub: failedCheckCount ? 'Review setup/checks' : 'No blocked checks', color: failedCheckCount ? 'text-amber-300' : 'text-emerald-400' },
         ].map((item, idx) => (
           <div key={idx} className="p-3 rounded-2xl bg-[#171717]/80 border border-white/[0.07] backdrop-blur-xl space-y-1">
             <div className="text-[11px] font-mono text-gray-400 uppercase tracking-wider">{item.label}</div>
@@ -173,7 +201,7 @@ export const ToolsMcpHub: React.FC = () => {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 uppercase font-semibold">
-                  {featuredTool.category} Connector Spotlight
+                  {featuredTool.category} Tool
                 </span>
                 <StatusBadge status={featuredTool.status} size="sm" />
                 <RiskBadge level={featuredTool.riskLevel} size="sm" />
@@ -181,6 +209,7 @@ export const ToolsMcpHub: React.FC = () => {
 
               <h2 className="text-2xl font-extrabold text-white tracking-tight">{featuredTool.name}</h2>
               <p className="text-xs text-gray-300 leading-relaxed pt-1">{featuredTool.description}</p>
+              <p className="text-xs text-cyan-200 leading-relaxed pt-1">{capabilitySummary(featuredTool)}</p>
 
               {/* Permission Scopes */}
               <div className="flex flex-wrap items-center gap-1.5 pt-2">
@@ -200,12 +229,12 @@ export const ToolsMcpHub: React.FC = () => {
               <div className="flex items-center justify-between gap-4">
                 <span className="text-gray-400">Dry Check:</span>
                 <span className="text-emerald-400 font-bold flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Passed
+                  <CheckCircle2 className="w-3.5 h-3.5" /> {featuredTool.dryCheckPassed ? 'Passed' : 'Needs review'}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-gray-400">Active Agents:</span>
-                <span className="text-white font-semibold">{featuredTool.activeAgentsCount} agents</span>
+                <span className="text-gray-400">Status:</span>
+                <span className="text-white font-semibold">{statusHelp(featuredTool)}</span>
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-gray-400">Calls Today:</span>
@@ -223,7 +252,7 @@ export const ToolsMcpHub: React.FC = () => {
                 }`}
               >
                 <Power className="w-3.5 h-3.5" />
-                <span>{featuredTool.status === 'connected' || featuredTool.status === 'approval-gated' ? 'Disconnect Tool' : 'Connect MCP Tool'}</span>
+                <span>{actionButtonLabel(featuredTool)} Tool</span>
               </button>
               <button
                 onClick={() => handlePreviewAction(featuredTool.id, featuredTool.permissions)}
@@ -242,11 +271,11 @@ export const ToolsMcpHub: React.FC = () => {
                 <span>{execBusy ? 'Working…' : `Execute action: ${featuredTool.permissions[0] || 'status'}`}</span>
               </button>
               <button
-                onClick={() => showToast(`Opening OAuth scope settings for ${featuredTool.name}...`, 'info')}
+                onClick={() => showToast(`${featuredTool.name}: ${statusHelp(featuredTool)} Secrets are never shown in the UI.`, 'info')}
                 className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 text-xs font-medium transition-colors flex items-center justify-center gap-2"
               >
                 <Settings className="w-3.5 h-3.5 text-gray-400" />
-                <span>Configure OAuth / Sandboxing</span>
+                <span>View Setup Guidance</span>
               </button>
             </div>
           </div>
@@ -364,7 +393,7 @@ export const ToolsMcpHub: React.FC = () => {
           
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
             <span className="text-xs text-gray-400 font-mono mr-1">Category:</span>
-            {['all', 'MCP', 'API', 'Local CLI', 'Database'].map((cat) => (
+            {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
@@ -414,6 +443,7 @@ export const ToolsMcpHub: React.FC = () => {
                   </div>
 
                   <p className="mt-3 text-xs text-gray-400 line-clamp-2 leading-relaxed">{tool.description}</p>
+                  <p className="mt-2 text-[11px] text-cyan-200 line-clamp-2 leading-relaxed">{capabilitySummary(tool)}</p>
 
                   <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between text-xs font-mono">
                     <span className="text-gray-400">Risk Profile:</span>
@@ -429,7 +459,7 @@ export const ToolsMcpHub: React.FC = () => {
                       isConn ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-emerald-600 text-black font-bold'
                     }`}
                   >
-                    {isConn ? 'Disconnect' : 'Connect Tool'}
+                    {actionButtonLabel(tool)}
                   </button>
                 </div>
               </div>
@@ -463,6 +493,11 @@ export const ToolsMcpHub: React.FC = () => {
                 <StatusBadge status={log.status} size="sm" showIcon={false} />
               </div>
             ))}
+            {!governanceLogs.length && (
+              <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 text-gray-400">
+                No tool activity yet. Preview or execute a connector action to create a governance log entry.
+              </div>
+            )}
           </div>
         </GlassCard>
 
@@ -472,7 +507,7 @@ export const ToolsMcpHub: React.FC = () => {
             <span className="text-xs font-semibold text-white flex items-center gap-2">
               <Shield className="w-4 h-4 text-blue-400" /> Global Tool Permission Modes
             </span>
-            <span className="text-[10px] font-mono text-emerald-400">● 100% SECURE</span>
+            <span className="text-[10px] font-mono text-emerald-400">● POLICIES ACTIVE</span>
           </div>
 
           <div className="mt-3 space-y-3 text-xs">
