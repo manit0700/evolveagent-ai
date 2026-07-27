@@ -156,7 +156,7 @@ export const SettingsPage: React.FC = () => {
               ))}
               {!providers.providers.length && (
                 <div className="sm:col-span-2 p-3 rounded-xl bg-white/[0.02] border border-white/5 text-xs text-gray-400">
-                  No provider key-check rows are available. The app can still use mock/fallback mode until real providers are configured.
+                  No provider key-check rows are available. The app can still use safe fallback mode until real providers are configured.
                 </div>
               )}
             </div>
