@@ -4,6 +4,8 @@ import {
   fetchGovernance,
   fetchSystemMetrics,
   fetchMissionData,
+  updateMissionTaskStatus,
+  runMissionTask,
   fetchConnectors,
   fetchApprovals,
   fetchSystemHealth,
@@ -123,6 +125,47 @@ describe('fetchMissionData', () => {
     expect(data?.mission.phases).toHaveLength(2);
     expect(data?.tasks[0]).toMatchObject({ id: 't1', status: 'running', assignedAgentName: 'Backend Agent', phase: 'Backend' });
     expect(data?.tasks[1]).toMatchObject({ id: 't2', status: 'completed', riskLevel: 'low' });
+  });
+
+  it('updates a live Mission Control task status', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        task_id: 't1',
+        title: 'Design API',
+        description: 'FastAPI routes',
+        phase: 'Backend',
+        status: 'done',
+        priority: 'low',
+        recommended_agent: 'Backend Agent',
+        updated_at: '2026-07-26T10:01:00Z',
+      }),
+    }));
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    const task = await updateMissionTaskStatus('g1', 't1', 'completed');
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/goals/g1/tasks/t1');
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'PATCH' });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ status: 'done' });
+    expect(task).toMatchObject({ id: 't1', status: 'completed', assignedAgentName: 'Backend Agent' });
+  });
+
+  it('runs a live Mission Control task through the backend agent workflow', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        final_output: 'Task completed through Master Agent.',
+        requires_approval: true,
+      }),
+    }));
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    const result = await runMissionTask('g1', 't1');
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/goals/g1/tasks/t1/run');
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'POST' });
+    expect(result).toMatchObject({ finalOutput: 'Task completed through Master Agent.', requiresApproval: true });
   });
 });
 
