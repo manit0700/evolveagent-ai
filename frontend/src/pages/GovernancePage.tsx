@@ -28,6 +28,16 @@ import {
 export const GovernancePage: React.FC = () => {
   const { governanceLogs, safetySettings, toggleSafetySetting, approvals, showToast } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
+  const pendingApprovals = approvals.filter(a => a.status === 'pending').length;
+  const blockedActions = governanceLogs.filter(log => log.status === 'blocked' || log.type === 'safety_block').length;
+  const allowedActions = governanceLogs.filter(log => log.status === 'allowed' || log.status === 'preview_executed').length;
+  const highRiskEvents = governanceLogs.filter(log => log.risk === 'high').length;
+  const approvalRate = governanceLogs.length
+    ? Math.round((allowedActions / governanceLogs.length) * 100)
+    : 0;
+  const governanceScore = governanceLogs.length
+    ? Math.max(0, Math.min(100, 100 - Math.min(35, blockedActions * 3) - Math.min(15, pendingApprovals * 2)))
+    : null;
 
   const policyMatrix = [
     { action: 'Read workspace memory & vectors', scope: 'Project Brain', risk: 'low' as const, status: 'allowed', autoApprove: true },
@@ -49,12 +59,12 @@ export const GovernancePage: React.FC = () => {
       {/* 1. Governance Metrics (6 counters) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: 'Governance Score', value: '98%', sub: 'Grade A+ Secure', color: 'text-emerald-400' },
-          { label: 'Actions Logged', value: '1,284', sub: 'Tamper-proof audit', color: 'text-white' },
-          { label: 'Pending Reviews', value: `${approvals.filter(a => a.status === 'pending').length}`, sub: 'In Approvals queue', color: 'text-amber-400' },
-          { label: 'Blocked Actions', value: '12', sub: 'Destructive shell', color: 'text-rose-400' },
-          { label: 'Approval Rate', value: '86%', sub: 'Safe execution', color: 'text-cyan-400' },
-          { label: 'Safety Incidents', value: '00', sub: 'Zero leaks', color: 'text-emerald-400' },
+          { label: 'Governance Score', value: governanceScore === null ? '—' : `${governanceScore}%`, sub: governanceLogs.length ? 'Live audit score' : 'Waiting for backend', color: governanceScore === null ? 'text-gray-400' : governanceScore >= 85 ? 'text-emerald-400' : 'text-amber-400' },
+          { label: 'Actions Logged', value: `${governanceLogs.length}`, sub: 'Recent audit events', color: 'text-white' },
+          { label: 'Pending Reviews', value: `${pendingApprovals}`, sub: 'In Approvals queue', color: pendingApprovals ? 'text-amber-400' : 'text-emerald-400' },
+          { label: 'Blocked Actions', value: `${blockedActions}`, sub: blockedActions ? 'Needs review' : 'None in recent log', color: blockedActions ? 'text-rose-400' : 'text-emerald-400' },
+          { label: 'Allowed Rate', value: governanceLogs.length ? `${approvalRate}%` : '—', sub: 'Recent allowed actions', color: 'text-cyan-400' },
+          { label: 'High-Risk Events', value: `${highRiskEvents}`, sub: highRiskEvents ? 'Review policies' : 'None in recent log', color: highRiskEvents ? 'text-amber-400' : 'text-emerald-400' },
         ].map((item, idx) => (
           <div key={idx} className="p-3 rounded-2xl bg-[#171717]/80 border border-white/[0.07] backdrop-blur-xl space-y-1">
             <div className="text-[11px] font-mono text-gray-400 uppercase tracking-wider">{item.label}</div>
@@ -74,7 +84,7 @@ export const GovernancePage: React.FC = () => {
               <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold uppercase tracking-wider">
                 ● Governance Policy Active
               </span>
-              <span className="text-xs font-mono text-gray-400">Monitoring 4 active agent pipelines</span>
+              <span className="text-xs font-mono text-gray-400">Monitoring {governanceLogs.length} recent audit event{governanceLogs.length === 1 ? '' : 's'}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               Safety & Compliance Control Plane
@@ -89,14 +99,14 @@ export const GovernancePage: React.FC = () => {
               <CheckCircle2 className="w-5 h-5 text-emerald-400" />
               <div className="text-xs font-mono">
                 <div className="font-bold text-white">Approval-Safe Sandbox</div>
-                <div className="text-gray-400 text-[10px]">Zero unapproved filesystem writes</div>
+                <div className="text-gray-400 text-[10px]">{blockedActions} blocked action{blockedActions === 1 ? '' : 's'} in recent log</div>
               </div>
             </div>
             <div className="p-3 rounded-2xl bg-black/40 border border-cyan-500/30 flex items-center gap-3">
               <Shield className="w-5 h-5 text-cyan-400" />
               <div className="text-xs font-mono">
                 <div className="font-bold text-white">Audit Logged</div>
-                <div className="text-gray-400 text-[10px]">100% telemetry coverage</div>
+                <div className="text-gray-400 text-[10px]">{governanceLogs.length || 'No'} backend event{governanceLogs.length === 1 ? '' : 's'} loaded</div>
               </div>
             </div>
           </div>
@@ -227,7 +237,7 @@ export const GovernancePage: React.FC = () => {
             <Activity className="w-4 h-4 text-cyan-400" />
             <span>Recent Audit Log Events ({governanceLogs.length})</span>
           </h3>
-          <span className="text-xs font-mono text-gray-400">100% compliance recorded</span>
+          <span className="text-xs font-mono text-gray-400">{governanceLogs.length ? 'Live backend events' : 'No events loaded yet'}</span>
         </div>
 
         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 font-mono text-xs">
@@ -245,6 +255,11 @@ export const GovernancePage: React.FC = () => {
               </div>
             </div>
           ))}
+          {!governanceLogs.length && (
+            <div className="col-span-full p-4 rounded-xl bg-white/[0.02] border border-white/5 text-xs text-gray-400">
+              No governance events are loaded yet. Run a chat, approval, tool preview, or integration action to generate live audit events.
+            </div>
+          )}
         </div>
       </GlassCard>
     </div>

@@ -125,7 +125,21 @@ export const ToolsMcpHub: React.FC = () => {
     }
   };
 
-  const featuredTool = connectors.find(c => c.id === selectedConnectorId) || connectors[0];
+  const fallbackConnector: ToolConnector = {
+    id: 'connector-unavailable',
+    name: 'No live connectors loaded',
+    category: 'MCP',
+    status: 'disconnected',
+    riskLevel: 'low',
+    description: 'The backend MCP connector registry did not return tools yet. Start the backend or refresh live data to inspect real connectors.',
+    icon: 'Monitor',
+    permissions: ['status'],
+    dryCheckPassed: false,
+    activeAgentsCount: 0,
+    callsToday: 0,
+    lastUsed: '—',
+  };
+  const featuredTool = connectors.find(c => c.id === selectedConnectorId) || connectors[0] || fallbackConnector;
 
   const categories = ['all', ...Array.from(new Set(connectors.map(c => c.category)))];
   const filteredConnectors = selectedCategory === 'all'
@@ -165,6 +179,21 @@ export const ToolsMcpHub: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
+      {/* 1. Overview Metrics (6 counters) */}
+      {!connectors.length && (
+        <GlassCard className="border-amber-500/20 bg-amber-500/5">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-300 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-bold text-white">No live connectors loaded</h3>
+              <p className="text-xs text-gray-400 mt-1">
+                Tool cards will appear after the MCP connector registry responds. The execution buttons remain approval-safe and will not perform external writes automatically.
+              </p>
+            </div>
+          </div>
+        </GlassCard>
+      )}
+
       {/* 1. Overview Metrics (6 counters) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
@@ -465,6 +494,11 @@ export const ToolsMcpHub: React.FC = () => {
               </div>
             );
           })}
+          {!filteredConnectors.length && (
+            <div className="md:col-span-2 lg:col-span-3 p-5 rounded-2xl bg-white/[0.02] border border-white/[0.07] text-sm text-gray-400">
+              No connectors match this category. Choose another category or refresh live backend data.
+            </div>
+          )}
         </div>
       </div>
 

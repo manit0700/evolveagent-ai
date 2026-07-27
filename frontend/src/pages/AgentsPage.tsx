@@ -22,14 +22,29 @@ import {
   ArrowRight,
   Plus
 } from 'lucide-react';
-import { PermissionLevel } from '../types';
+import { Agent, PermissionLevel } from '../types';
 
 export const AgentsPage: React.FC = () => {
   const { agents, toggleAgentStatus, showToast } = useApp();
   const [selectedAgentId, setSelectedAgentId] = useState<string>('agent-ui');
   const [filterLevel, setFilterLevel] = useState<string>('all');
 
-  const featuredAgent = agents.find(a => a.id === selectedAgentId) || agents[1] || agents[0];
+  const fallbackAgent: Agent = {
+    id: 'agent-unavailable',
+    name: 'No live agents loaded',
+    role: 'Backend agent registry unavailable',
+    description: 'The page is waiting for live agent data from the backend. Start the backend or refresh live data to inspect real agents.',
+    avatar: '🤖',
+    status: 'idle',
+    qualityScore: 0,
+    riskLevel: 'low',
+    memoryAccess: 'Restricted',
+    permissionLevel: 'read-only',
+    connectedTools: [],
+    tasksCompletedToday: 0,
+    tokensUsed: '—',
+  };
+  const featuredAgent = agents.find(a => a.id === selectedAgentId) || agents[1] || agents[0] || fallbackAgent;
 
   const filteredAgents = filterLevel === 'all' 
     ? agents 
@@ -110,6 +125,21 @@ export const AgentsPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
+      {/* 1. Overview Metrics (6 counters) */}
+      {!agents.length && (
+        <GlassCard className="border-amber-500/20 bg-amber-500/5">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-300 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-bold text-white">No live agents loaded</h3>
+              <p className="text-xs text-gray-400 mt-1">
+                The backend agent registry did not return agents yet. This page is still safe to view, but real agent cards will appear after the backend is running and live data refreshes.
+              </p>
+            </div>
+          </div>
+        </GlassCard>
+      )}
+
       {/* 1. Overview Metrics (6 counters) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
@@ -305,6 +335,11 @@ export const AgentsPage: React.FC = () => {
                         {t}
                       </span>
                     ))}
+                    {!agent.connectedTools.length && (
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-gray-500 border border-white/5">
+                        no tools assigned
+                      </span>
+                    )}
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleAgentStatus(agent.id); }}

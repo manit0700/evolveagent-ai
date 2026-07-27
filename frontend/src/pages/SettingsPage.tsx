@@ -27,7 +27,8 @@ import {
   Sparkles, 
   Terminal, 
   Layers, 
-  Lock
+  Lock,
+  RefreshCw
 } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
@@ -76,6 +77,23 @@ export const SettingsPage: React.FC = () => {
 
   const handleAction = (msg: string) => {
     showToast(msg, 'success');
+  };
+
+  const refreshLiveSettings = async () => {
+    const [nextProviders, nextStorage, nextHealth] = await Promise.all([
+      fetchProviderStatus(),
+      fetchStorageStatus(),
+      fetchSystemHealth(),
+    ]);
+    setProviders(nextProviders);
+    setStorageStatus(nextStorage);
+    setSystemHealth(nextHealth);
+    showToast(
+      [nextProviders, nextStorage, nextHealth].filter(Boolean).length
+        ? 'Refreshed live settings status'
+        : 'Live settings endpoints unavailable',
+      [nextProviders, nextStorage, nextHealth].filter(Boolean).length ? 'success' : 'warning'
+    );
   };
 
   return (
@@ -136,6 +154,11 @@ export const SettingsPage: React.FC = () => {
                   </span>
                 </div>
               ))}
+              {!providers.providers.length && (
+                <div className="sm:col-span-2 p-3 rounded-xl bg-white/[0.02] border border-white/5 text-xs text-gray-400">
+                  No provider key-check rows are available. The app can still use mock/fallback mode until real providers are configured.
+                </div>
+              )}
             </div>
             <p className="text-[11px] text-gray-500 pt-3">Readiness is boolean-only — no secret values are ever shown or stored.</p>
           </GlassCard>
@@ -150,16 +173,16 @@ export const SettingsPage: React.FC = () => {
               </span>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => handleAction('Exported workspace configuration package')}
+                  onClick={() => handleAction('Prepared workspace configuration export')}
                   className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 font-mono"
                 >
-                  Export Config
+                  Prepare Export
                 </button>
                 <button
-                  onClick={() => handleAction('Workspace settings saved')}
+                  onClick={refreshLiveSettings}
                   className="px-3 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold"
                 >
-                  Save Changes
+                  Refresh Live
                 </button>
               </div>
             </div>
@@ -174,10 +197,10 @@ export const SettingsPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="text-gray-400 block mb-1">Organization Owner</label>
+                <label className="text-gray-400 block mb-1">Project Owner Label</label>
                 <input
                   type="text"
-                  defaultValue="EvolveAgent Systems Inc."
+                  defaultValue="Local EvolveAgent Workspace"
                   className="w-full bg-black/50 border border-white/15 rounded-xl px-3 py-2 text-white font-sans focus:outline-none focus:border-cyan-500"
                 />
               </div>
@@ -194,7 +217,7 @@ export const SettingsPage: React.FC = () => {
                 <input
                   type="text"
                   disabled
-                  value="Local JSON + Vector SQLite (Port 3000)"
+                  value={storageStatus ? `${storageStatus.backend.toUpperCase()} backend · ${storageStatus.totalDocuments.toLocaleString()} records` : 'Storage status unavailable'}
                   className="w-full bg-black/30 border border-white/5 rounded-xl px-3 py-2 text-gray-400 cursor-not-allowed"
                 />
               </div>
@@ -215,13 +238,13 @@ export const SettingsPage: React.FC = () => {
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono mb-6">
               <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-2">
                 <div className="text-gray-400 text-[10px] uppercase">Primary Reasoning Engine</div>
-                <div className="text-sm font-bold text-white">Gemini 2.5 Pro / GPT-4o</div>
-                <div className="text-[11px] text-cyan-300">Used for Master Orchestration & Code Synthesis</div>
+                <div className="text-sm font-bold text-white">{providers ? `${providers.readyProviders}/${providers.totalProviders} provider(s) ready` : 'Provider status unavailable'}</div>
+                <div className="text-[11px] text-cyan-300">Live readiness from backend provider-control endpoints</div>
               </div>
               <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-2">
-                <div className="text-gray-400 text-[10px] uppercase">Secondary Backup Engine</div>
-                <div className="text-sm font-bold text-white">Gemini Flash / Claude 3.5 Sonnet</div>
-                <div className="text-[11px] text-blue-300">Used for Vector Indexing & Memory Summarization</div>
+                <div className="text-gray-400 text-[10px] uppercase">Fallback Engine</div>
+                <div className="text-sm font-bold text-white">{providers?.fallbackEnabled ? 'Enabled' : 'Unavailable or off'}</div>
+                <div className="text-[11px] text-blue-300">Fallback protects chat when real providers are missing or rate-limited</div>
               </div>
             </div>
 
@@ -444,15 +467,11 @@ export const SettingsPage: React.FC = () => {
 
           <div className="pt-3 border-t border-white/10">
             <button
-              onClick={() => {
-                fetchProviderStatus().then(setProviders);
-                fetchStorageStatus().then(setStorageStatus);
-                fetchSystemHealth().then(setSystemHealth);
-                handleAction('Refreshed live system status');
-              }}
-              className="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-sans font-semibold text-xs transition-colors shadow-lg"
+              onClick={refreshLiveSettings}
+              className="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-sans font-semibold text-xs transition-colors shadow-lg flex items-center justify-center gap-2"
             >
-              Refresh Live Status
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Refresh Live Status</span>
             </button>
           </div>
         </GlassCard>
