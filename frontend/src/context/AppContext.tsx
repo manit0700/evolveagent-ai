@@ -268,8 +268,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setChatRunStatus({
       active: true,
       phase: 'routing',
-      message: 'Routing through Master Orchestrator and specialist agents...',
+      message: liveConnected
+        ? 'Routing through the live backend: Master Orchestrator first, /api/run fallback if needed...'
+        : 'Trying to reconnect to the backend before using local fallback messaging...',
       startedAt: Date.now(),
+      routeUsed: undefined,
+      retryText: text,
+      errorDetail: undefined,
     });
 
     // Route through the real Master Agent. When Approval-Safe is OFF we ask the
@@ -293,7 +298,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           + (routed.requiresApproval ? '\n\n⚠️ This intent is **risky** — held for explicit approval (nothing was executed).' : '')
           + (ranForReal ? '\n\n✅ Approval-Safe is off — this non-risky action was executed for real.' : '')
           + (routed.suggestedWorkflow ? `\n\nSuggested workflow: **${routed.suggestedWorkflow}**` : '')
-        : `I couldn't reach the backend just now, so I'm using local fallback context. In live mode, I route this through the Master Orchestrator and prepare an approval-safe plan before any real action.`;
+          + `\n\nBackend route used: ${routed.routeUsed}`
+        : `I couldn't reach the backend from Chat.\n\nWhat this means:\n- No live agent run was created.\n- No tools executed.\n- Your prompt stayed in the local UI fallback.\n\nUse **Retry Backend** or start the backend, then send this again.`;
 
       const agentMsg: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
@@ -305,10 +311,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isWorkingCard: isDeploy && Boolean(routed?.requiresApproval)
       };
       setChatMessages(prev => [...prev, agentMsg]);
+      setLiveConnected(Boolean(routed));
       setChatRunStatus({
         active: false,
         phase: routed ? 'idle' : 'offline',
         message: routed ? '' : 'Backend route timed out or was unavailable.',
+        routeUsed: routed?.routeUsed,
+        retryText: routed ? undefined : text,
+        errorDetail: routed ? undefined : 'Both /api/master-agent/route and /api/run were unavailable or timed out.',
       });
     })();
   };
