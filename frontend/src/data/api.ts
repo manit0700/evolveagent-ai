@@ -16,6 +16,7 @@ import {
   MemoryItem,
   ToolConnector,
   ApprovalRequest,
+  TaskStatus,
 } from '../types';
 
 export const API_BASE =
@@ -35,6 +36,20 @@ async function postJson<T>(path: string, body: any): Promise<T | null> {
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+async function patchJson<T>(path: string, body: any): Promise<T | null> {
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
@@ -380,6 +395,44 @@ export async function fetchMissionData(): Promise<{ mission: Mission; tasks: Tas
       }],
     },
     tasks,
+  };
+}
+
+export async function updateMissionTaskStatus(
+  goalId: string,
+  taskId: string,
+  status: TaskStatus,
+): Promise<Task | null> {
+  const backendStatus = status === 'completed' ? 'done' : status;
+  const task = await patchJson<any>(
+    `/api/goals/${encodeURIComponent(goalId)}/tasks/${encodeURIComponent(taskId)}`,
+    { status: backendStatus },
+  );
+  if (!task) return null;
+  return {
+    id: task.task_id || taskId,
+    title: clip(task.title || 'Goal task', 100),
+    description: clip(task.description || task.last_result_summary || '', 220),
+    assignedAgentId: '',
+    assignedAgentName: task.recommended_agent || 'Mission Control',
+    status: mapTaskStatus(task.status),
+    riskLevel: riskFromLevel(task.risk_level || task.priority),
+    phase: task.phase || 'Planning',
+    timestamp: clip(task.updated_at || task.created_at, 10) || '—',
+    toolCall: task.automation_supported ? 'agent_workflow' : undefined,
+  };
+}
+
+export async function runMissionTask(goalId: string, taskId: string): Promise<{ finalOutput: string; requiresApproval: boolean } | null> {
+  const result = await postJsonWithTimeout<any>(
+    `/api/goals/${encodeURIComponent(goalId)}/tasks/${encodeURIComponent(taskId)}/run`,
+    {},
+    120000,
+  );
+  if (!result) return null;
+  return {
+    finalOutput: result.final_output || result.answer || 'Task run completed.',
+    requiresApproval: Boolean(result.requires_approval),
   };
 }
 

@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { fetchWorkflowRuns, startDurableRun, LiveWorkflowRun } from '../data/api';
+import {
+  fetchWorkflowRuns,
+  startDurableRun,
+  LiveWorkflowRun,
+  runMissionTask,
+  updateMissionTaskStatus,
+} from '../data/api';
 import { GlassCard } from '../components/shared/GlassCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
 import { RiskBadge } from '../components/shared/RiskBadge';
@@ -20,12 +26,14 @@ import {
   Check, 
   Cpu 
 } from 'lucide-react';
-import { TaskStatus } from '../types';
+import { Task, TaskStatus } from '../types';
 
 export const MissionControl: React.FC = () => {
-  const { mission, tasks, agents, approvals, advanceWorkflowStep, showToast } = useApp();
+  const { mission, tasks, agents, approvals, advanceWorkflowStep, showToast, refreshLive, liveConnected, setActivePage } = useApp();
   const [liveRuns, setLiveRuns] = useState<LiveWorkflowRun[] | null>(null);
   const [starting, setStarting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [actionBusyId, setActionBusyId] = useState<string | null>(null);
   const loadRuns = () => fetchWorkflowRuns().then(setLiveRuns);
   useEffect(() => { loadRuns(); }, []);
 
@@ -56,8 +64,8 @@ export const MissionControl: React.FC = () => {
     if (status === 'running') {
       return {
         label: 'Agent working',
-        nextAction: 'View Details',
-        explanation: 'An agent is already working on this task.',
+        nextAction: 'Mark Done',
+        explanation: 'An agent is working on this task. Mark it done after you verify the result.',
         tone: 'text-cyan-300',
       };
     }
@@ -79,28 +87,81 @@ export const MissionControl: React.FC = () => {
     }
     return {
       label: 'Needs review',
-      nextAction: 'Review Blocker',
-      explanation: 'This task hit a blocker or failed and needs attention.',
+      nextAction: 'Reopen Task',
+      explanation: 'This task hit a blocker or failed. Reopen it after you understand the issue.',
       tone: 'text-rose-300',
     };
   };
 
-  const runTaskAction = (taskStatus: TaskStatus, title: string) => {
-    const guide = explainTaskStatus(taskStatus);
-    if (taskStatus === 'waiting_approval') {
-      showToast(`Open Approvals to review "${title}".`, 'info');
+  const refreshMission = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([refreshLive(), loadRuns()]);
+      showToast('Mission Control refreshed from the backend.', 'success');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const runTaskAction = async (task: Task) => {
+    const guide = explainTaskStatus(task.status);
+    if (task.status === 'waiting_approval') {
+      setActivePage('approvals');
+      showToast(`Open Approvals to review "${task.title}".`, 'info');
       return;
     }
-    if (taskStatus === 'completed') {
-      showToast(`"${title}" is already complete.`, 'success');
+    if (task.status === 'completed') {
+      showToast(`"${task.title}" is complete. Check the task result summary in backend metadata.`, 'success');
       return;
     }
-    if (taskStatus === 'blocked' || taskStatus === 'failed') {
-      showToast(`"${title}" needs review before agents continue.`, 'warning');
-      return;
+
+    setActionBusyId(task.id);
+    try {
+      if (liveConnected && mission.id) {
+        if (task.status === 'planned') {
+          const result = await runMissionTask(mission.id, task.id);
+          if (!result) {
+            showToast(`Backend could not run "${task.title}". Check the server and try again.`, 'warning');
+            return;
+          }
+          await Promise.all([refreshLive(), loadRuns()]);
+          showToast(
+            result.requiresApproval
+              ? `"${task.title}" ran and is now waiting for approval.`
+              : `"${task.title}" ran through the agent workflow.`,
+            result.requiresApproval ? 'warning' : 'success',
+          );
+          return;
+        }
+
+        if (task.status === 'running') {
+          const updated = await updateMissionTaskStatus(mission.id, task.id, 'completed');
+          if (!updated) {
+            showToast(`Backend could not mark "${task.title}" done.`, 'warning');
+            return;
+          }
+          await refreshLive();
+          showToast(`Marked "${task.title}" done in Mission Control.`, 'success');
+          return;
+        }
+
+        if (task.status === 'blocked' || task.status === 'failed') {
+          const updated = await updateMissionTaskStatus(mission.id, task.id, 'planned');
+          if (!updated) {
+            showToast(`Backend could not reopen "${task.title}".`, 'warning');
+            return;
+          }
+          await refreshLive();
+          showToast(`Reopened "${task.title}" for another agent pass.`, 'success');
+          return;
+        }
+      }
+
+      advanceWorkflowStep();
+      showToast(`${guide.nextAction}: "${task.title}" delegated locally. Backend is offline.`, 'warning');
+    } finally {
+      setActionBusyId(null);
     }
-    advanceWorkflowStep();
-    showToast(`${guide.nextAction}: "${title}" delegated to agents.`, 'success');
   };
 
   const handleStartRun = async () => {
@@ -119,8 +180,11 @@ export const MissionControl: React.FC = () => {
   };
 
   const handleApproveNext = () => {
-    advanceWorkflowStep();
-    showToast('Next recommended action approved & delegated to agents!', 'success');
+    if (!nextTask) {
+      showToast('No next task is available. Create a new goal from Chat.', 'info');
+      return;
+    }
+    void runTaskAction(nextTask);
   };
 
   const columns: { ids: TaskStatus[]; label: string; color: string }[] = [
@@ -153,7 +217,7 @@ export const MissionControl: React.FC = () => {
                 Active Mission #01
               </span>
               <span className="text-xs font-mono text-emerald-400 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Running
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> {liveConnected ? 'Live backend' : 'Offline fallback'}
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{mission.title}</h1>
@@ -162,6 +226,14 @@ export const MissionControl: React.FC = () => {
 
           {/* Assigned Agents Avatars & Progress Radial/Bar */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 shrink-0 bg-white/[0.03] p-4 rounded-2xl border border-white/10">
+            <button
+              type="button"
+              onClick={refreshMission}
+              disabled={refreshing}
+              className="px-3 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-[11px] font-mono text-gray-200 transition-colors disabled:opacity-50"
+            >
+              {refreshing ? 'Refreshing...' : 'Refresh Live'}
+            </button>
             <div>
               <div className="text-[10px] font-mono uppercase text-gray-400 mb-1.5">Assigned Squad</div>
               <div className="flex items-center -space-x-2">
@@ -364,7 +436,8 @@ export const MissionControl: React.FC = () => {
                         </div>
                         <button
                           type="button"
-                          onClick={() => runTaskAction(t.status, t.title)}
+                          onClick={() => void runTaskAction(t)}
+                          disabled={actionBusyId === t.id}
                           className={`w-full mt-2 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
                             t.status === 'completed'
                               ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
@@ -373,9 +446,9 @@ export const MissionControl: React.FC = () => {
                                 : t.status === 'blocked' || t.status === 'failed'
                                   ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20'
                                   : 'bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-200 border border-cyan-500/30'
-                          }`}
+                          } disabled:opacity-60`}
                         >
-                          {guide.nextAction}
+                          {actionBusyId === t.id ? 'Working...' : guide.nextAction}
                         </button>
                       </div>
                         );

@@ -129,14 +129,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const live = await fetchLiveData();
     if (!live) { setLiveConnected(false); return; }
     setLiveConnected(true);
-    if (live.agents && live.agents.length) setAgents(live.agents);
+    if (live.agents) setAgents(live.agents);
     if (live.mission) setMission(live.mission);
-    if (live.tasks && live.tasks.length) setTasks(live.tasks);
-    if (live.governanceLogs && live.governanceLogs.length) setGovernanceLogs(live.governanceLogs);
-    if (live.systemMetrics && live.systemMetrics.length) setSystemMetrics(live.systemMetrics);
-    if (live.memories && live.memories.length) setMemories(live.memories);
-    if (live.connectors && live.connectors.length) setConnectors(live.connectors);
-    if (live.approvals && live.approvals.length) setApprovals(live.approvals);
+    if (live.tasks) setTasks(live.tasks);
+    if (live.governanceLogs) setGovernanceLogs(live.governanceLogs);
+    if (live.systemMetrics) setSystemMetrics(live.systemMetrics);
+    if (live.memories) setMemories(live.memories);
+    if (live.connectors) setConnectors(live.connectors);
+    if (live.approvals) setApprovals(live.approvals);
   };
 
   useEffect(() => {
