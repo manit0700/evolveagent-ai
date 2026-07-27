@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   fetchStorageStatus, fetchSystemHealth, StorageStatus, SystemHealth,
+  fetchProviderStatus, ProviderStatus,
+  fetchMemoryV2Summary, MemoryV2Summary,
+  fetchIntegrationReadiness, IntegrationReadiness,
   fetchModelServingDashboard, runModelServingDryRun, ModelServingDashboard,
   fetchGpuWorkerDashboard, GpuWorkerDashboard,
   fetchPrunableCollections, runStoragePrune, PrunableCollections, StoragePruneResult,
@@ -31,7 +34,10 @@ import {
   Server,
   Trash2,
   Archive,
-  Zap
+  Zap,
+  Brain,
+  PlugZap,
+  RefreshCw
 } from 'lucide-react';
 
 export const DevModeConsole: React.FC = () => {
@@ -56,10 +62,37 @@ export const DevModeConsole: React.FC = () => {
 
   const [health, setHealth] = useState<SystemHealth | null>(null);
   const [storageStatus, setStorageStatus] = useState<StorageStatus | null>(null);
+  const [providerStatus, setProviderStatus] = useState<ProviderStatus | null>(null);
+  const [memorySummary, setMemorySummary] = useState<MemoryV2Summary | null>(null);
+  const [integrationReadiness, setIntegrationReadiness] = useState<IntegrationReadiness | null>(null);
+  const [statusBusy, setStatusBusy] = useState(false);
   useEffect(() => {
-    fetchSystemHealth().then(setHealth);
-    fetchStorageStatus().then(setStorageStatus);
+    refreshLiveStatus(false);
   }, []);
+
+  const refreshLiveStatus = async (notify = true) => {
+    setStatusBusy(true);
+    const [latestHealth, latestStorage, latestProviders, latestMemory, latestIntegrations] = await Promise.all([
+      fetchSystemHealth(),
+      fetchStorageStatus(),
+      fetchProviderStatus(),
+      fetchMemoryV2Summary(),
+      fetchIntegrationReadiness(),
+    ]);
+    setHealth(latestHealth);
+    setStorageStatus(latestStorage);
+    setProviderStatus(latestProviders);
+    setMemorySummary(latestMemory);
+    setIntegrationReadiness(latestIntegrations);
+    setStatusBusy(false);
+    if (notify) {
+      const loadedCount = [latestHealth, latestStorage, latestProviders, latestMemory, latestIntegrations].filter(Boolean).length;
+      showToast(
+        loadedCount ? `Live system status refreshed (${loadedCount}/5 sources)` : 'Live system status endpoints unavailable',
+        loadedCount ? 'success' : 'warning'
+      );
+    }
+  };
 
   // v260 model serving + v240 GPU workers (Compute Fabric)
   const [modelServing, setModelServing] = useState<ModelServingDashboard | null>(null);
@@ -144,6 +177,152 @@ export const DevModeConsole: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* Live system status cockpit */}
+      <GlassCard className="space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+              <Activity className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-bold text-white">Live System Status</h3>
+                <StatusBadge status={health?.online ? 'connected' : 'waiting'} size="sm" showIcon={false} />
+                <span className="text-[11px] font-mono px-2 py-0.5 rounded-full border bg-white/5 text-gray-300 border-white/10">
+                  Real backend signals
+                </span>
+              </div>
+              <p className="text-xs text-gray-400 font-mono mt-1">
+                One place to verify backend health, storage, memory, model providers, external integrations, and governance activity.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => refreshLiveStatus(true)}
+            disabled={statusBusy}
+            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 flex items-center gap-1.5 transition-colors self-start disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${statusBusy ? 'animate-spin' : ''}`} />
+            <span>{statusBusy ? 'Refreshing…' : 'Refresh Live Status'}</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-white flex items-center gap-2">
+                <Server className="w-3.5 h-3.5 text-emerald-300" />
+                Backend
+              </span>
+              <span className={`w-2 h-2 rounded-full ${health?.online ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+            </div>
+            <div className={`text-lg font-bold font-mono ${health?.online ? 'text-emerald-300' : 'text-rose-300'}`}>
+              {health ? (health.online ? 'Online' : 'Unavailable') : 'Checking…'}
+            </div>
+            <p className="text-[11px] text-gray-500 font-mono">
+              {health ? `${health.workflowRuns} workflow run(s), ${health.learnedItems} learned item(s) today` : 'Waiting for /health and /api/today/summary.'}
+            </p>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-white flex items-center gap-2">
+                <Database className="w-3.5 h-3.5 text-blue-300" />
+                Storage
+              </span>
+              <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                storageStatus ? 'bg-blue-500/15 text-blue-300 border-blue-500/30' : 'bg-gray-500/15 text-gray-400 border-white/10'
+              }`}>
+                {storageStatus?.backend?.toUpperCase() || 'OFFLINE'}
+              </span>
+            </div>
+            <div className="text-lg font-bold font-mono text-cyan-300">
+              {storageStatus ? `${storageStatus.collections.toLocaleString()} collections` : 'Unavailable'}
+            </div>
+            <p className="text-[11px] text-gray-500 font-mono">
+              {storageStatus ? `${storageStatus.totalDocuments.toLocaleString()} records · PG ${storageStatus.postgresReady ? 'ready' : 'not ready'} · Redis ${storageStatus.redisReady ? 'ready' : 'optional'}` : 'Storage endpoint did not respond.'}
+            </p>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-white flex items-center gap-2">
+                <Brain className="w-3.5 h-3.5 text-purple-300" />
+                Memory v2
+              </span>
+              <span className={`w-2 h-2 rounded-full ${memorySummary?.available ? 'bg-emerald-400' : 'bg-gray-500'}`} />
+            </div>
+            <div className={`text-lg font-bold font-mono ${memorySummary?.available ? 'text-emerald-300' : 'text-gray-400'}`}>
+              {memorySummary ? `${memorySummary.items.toLocaleString()} memories` : 'Unavailable'}
+            </div>
+            <p className="text-[11px] text-gray-500 font-mono">
+              {memorySummary ? `${memorySummary.mode} retrieval · ${memorySummary.embedder} · ${memorySummary.dimensions || 'n/a'} dimensions` : 'Memory summary endpoint did not respond.'}
+            </p>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-white flex items-center gap-2">
+                <Cpu className="w-3.5 h-3.5 text-cyan-300" />
+                Providers
+              </span>
+              <span className={`w-2 h-2 rounded-full ${(providerStatus?.readyProviders || 0) > 0 ? 'bg-emerald-400' : 'bg-gray-500'}`} />
+            </div>
+            <div className="text-lg font-bold font-mono text-cyan-300">
+              {providerStatus ? `${providerStatus.readyProviders}/${providerStatus.totalProviders} ready` : 'Unavailable'}
+            </div>
+            <p className="text-[11px] text-gray-500 font-mono">
+              {providerStatus ? `Fallback ${providerStatus.fallbackEnabled ? 'enabled' : 'off'} · ${Object.keys(providerStatus.capabilityModes).length} capability mode(s)` : 'Provider status endpoint did not respond.'}
+            </p>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-white flex items-center gap-2">
+                <PlugZap className="w-3.5 h-3.5 text-amber-300" />
+                Integrations
+              </span>
+              <span className={`w-2 h-2 rounded-full ${
+                integrationReadiness && (integrationReadiness.slack.configured || integrationReadiness.notion.configured) ? 'bg-emerald-400' : 'bg-gray-500'
+              }`} />
+            </div>
+            <div className="text-lg font-bold font-mono text-amber-300">
+              {integrationReadiness
+                ? `${[integrationReadiness.slack.configured, integrationReadiness.notion.configured].filter(Boolean).length}/2 configured`
+                : 'Unavailable'}
+            </div>
+            <p className="text-[11px] text-gray-500 font-mono">
+              {integrationReadiness
+                ? `Slack ${integrationReadiness.slack.enabled ? 'on' : 'off'} · Notion ${integrationReadiness.notion.enabled ? 'on' : 'off'}`
+                : 'Integration status endpoints did not respond.'}
+            </p>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-white flex items-center gap-2">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
+                Governance
+              </span>
+              <RiskBadge level={(health?.blocked || 0) > 10 ? 'medium' : 'low'} size="sm" />
+            </div>
+            <div className="text-lg font-bold font-mono text-sky-300">
+              {health ? `${health.totalEvents.toLocaleString()} events` : `${governanceLogs.length} local events`}
+            </div>
+            <p className="text-[11px] text-gray-500 font-mono">
+              {health ? `${health.blocked} blocked · ${health.approvals} approvals` : 'Showing context fallback until live governance loads.'}
+            </p>
+          </div>
+        </div>
+
+        {(integrationReadiness?.slack.lastError || integrationReadiness?.notion.lastError) && (
+          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3 text-[11px] font-mono text-amber-200">
+            {integrationReadiness.slack.lastError && <div>Slack last error: {integrationReadiness.slack.lastError}</div>}
+            {integrationReadiness.notion.lastError && <div>Notion last error: {integrationReadiness.notion.lastError}</div>}
+          </div>
+        )}
+      </GlassCard>
 
       {/* 2. v100 Storage foundation status */}
       <GlassCard className="space-y-4">

@@ -10,6 +10,7 @@ import {
   fetchApprovals,
   fetchSystemHealth,
   fetchStorageStatus,
+  fetchIntegrationReadiness,
   fetchWorkflowRuns,
   fetchCodeChangeRuns,
   fetchWorkflowRunDetail,
@@ -248,6 +249,38 @@ describe('fetchStorageStatus', () => {
   it('returns null when storage status is unavailable', async () => {
     stubFetch({});
     expect(await fetchStorageStatus()).toBeNull();
+  });
+});
+
+describe('fetchIntegrationReadiness', () => {
+  it('maps Slack and Notion status without exposing secrets', async () => {
+    stubFetch({
+      '/api/integrations/slack/status': {
+        enabled: true,
+        configured: true,
+        default_channel_set: true,
+        recent_notifications: [{ sent: true }, { error: 'HTTP 403 forbidden' }],
+      },
+      '/api/integrations/notion/status': {
+        enabled: true,
+        configured: false,
+        parent_page_set: true,
+        recent_exports: [{ skipped: true }],
+      },
+    });
+
+    const status = await fetchIntegrationReadiness();
+    expect(status).toMatchObject({
+      slack: { enabled: true, configured: true, defaultChannelSet: true, recentCount: 2, lastError: 'HTTP 403 forbidden' },
+      notion: { enabled: true, configured: false, parentPageSet: true, recentCount: 1 },
+    });
+    expect(JSON.stringify(status)).not.toContain('token');
+    expect(JSON.stringify(status)).not.toContain('webhook');
+  });
+
+  it('returns null when integration endpoints are unavailable', async () => {
+    stubFetch({});
+    expect(await fetchIntegrationReadiness()).toBeNull();
   });
 });
 
