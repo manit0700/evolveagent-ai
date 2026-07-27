@@ -663,6 +663,51 @@ export interface StorageStatus {
   redisReady: boolean;
 }
 
+export interface IntegrationReadiness {
+  slack: {
+    enabled: boolean;
+    configured: boolean;
+    defaultChannelSet: boolean;
+    recentCount: number;
+    lastError: string;
+  };
+  notion: {
+    enabled: boolean;
+    configured: boolean;
+    parentPageSet: boolean;
+    recentCount: number;
+    lastError: string;
+  };
+}
+
+export async function fetchIntegrationReadiness(): Promise<IntegrationReadiness | null> {
+  const [slack, notion] = await Promise.all([
+    getJson<any>('/api/integrations/slack/status'),
+    getJson<any>('/api/integrations/notion/status'),
+  ]);
+  if (!slack && !notion) return null;
+  const slackRecent = Array.isArray(slack?.recent_notifications) ? slack.recent_notifications : [];
+  const notionRecent = Array.isArray(notion?.recent_exports) ? notion.recent_exports : [];
+  const lastSlackError = slackRecent.find((item: any) => item?.error)?.error || '';
+  const lastNotionError = notionRecent.find((item: any) => item?.error)?.error || '';
+  return {
+    slack: {
+      enabled: Boolean(slack?.enabled),
+      configured: Boolean(slack?.configured),
+      defaultChannelSet: Boolean(slack?.default_channel_set),
+      recentCount: slackRecent.length,
+      lastError: clip(lastSlackError, 140),
+    },
+    notion: {
+      enabled: Boolean(notion?.enabled),
+      configured: Boolean(notion?.configured),
+      parentPageSet: Boolean(notion?.parent_page_set),
+      recentCount: notionRecent.length,
+      lastError: clip(lastNotionError, 140),
+    },
+  };
+}
+
 export interface LiveWorkflowRun {
   id: string;
   name: string;
