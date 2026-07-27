@@ -46,10 +46,26 @@ export const Sidebar: React.FC<{ mobileOpen?: boolean; setMobileOpen?: (open: bo
   mobileOpen = false,
   setMobileOpen
 }) => {
-  const { activePage, setActivePage, approvals, agents, memories, safetySettings } = useApp();
+  const { activePage, setActivePage, approvals, agents, memories, connectors, governanceLogs, mission, safetySettings, liveConnected } = useApp();
 
   const pendingApprovalsCount = approvals.filter(a => a.status === 'pending').length;
   const activeAgentsCount = agents.filter(a => a.status === 'active' || a.status === 'running').length;
+  const connectedToolsCount = connectors.filter(c => c.status === 'connected' || c.status === 'approval-gated').length;
+  const blockedGovernanceCount = governanceLogs.filter(log => log.status === 'blocked' || log.type === 'safety_block').length;
+  const systemHealthScore = Math.max(
+    0,
+    Math.min(
+      100,
+      100
+        - (liveConnected ? 0 : 10)
+        - Math.min(25, pendingApprovalsCount * 3)
+        - Math.min(25, blockedGovernanceCount * 4)
+        - (safetySettings.requireApproval ? 0 : 10)
+        - (safetySettings.blockDestructive ? 0 : 15)
+    )
+  );
+  const healthGrade = systemHealthScore >= 95 ? 'A+' : systemHealthScore >= 90 ? 'A' : systemHealthScore >= 80 ? 'B' : systemHealthScore >= 70 ? 'C' : 'Needs review';
+  const healthTone = systemHealthScore >= 90 ? 'text-emerald-400' : systemHealthScore >= 75 ? 'text-amber-300' : 'text-rose-300';
 
   // Always-visible items: the ones you touch most, plus anything needing action right now
   const priorityItems: NavItem[] = [
@@ -66,10 +82,10 @@ export const Sidebar: React.FC<{ mobileOpen?: boolean; setMobileOpen?: (open: bo
       label: 'Work',
       defaultOpen: true,
       items: [
-        { id: 'mission-control', label: 'Mission Control', icon: Compass, badge: '62%', badgeColor: 'purple' },
+        { id: 'mission-control', label: 'Mission Control', icon: Compass, badge: `${mission.progress}%`, badgeColor: 'purple' },
         { id: 'agents', label: 'Agents', icon: Users, badge: activeAgentsCount, badgeColor: 'emerald' },
         { id: 'project-brain', label: 'Project Brain', icon: Brain, badge: memories.length, badgeColor: 'purple' },
-        { id: 'tools', label: 'Tools / MCP Hub', icon: Wrench, badge: '07', badgeColor: 'emerald' },
+        { id: 'tools', label: 'Tools / MCP Hub', icon: Wrench, badge: connectedToolsCount, badgeColor: 'emerald' },
         { id: 'command-center', label: 'Command Center', icon: Gauge, badge: 'v200', badgeColor: 'purple' },
         { id: 'chief-of-staff', label: 'Chief of Staff', icon: Target, badge: 'v180', badgeColor: 'amber' },
         { id: 'marketplace-hub', label: 'Marketplace Hub', icon: Store, badge: 'v160', badgeColor: 'purple' },
@@ -81,7 +97,7 @@ export const Sidebar: React.FC<{ mobileOpen?: boolean; setMobileOpen?: (open: bo
       label: 'Safety',
       defaultOpen: true,
       items: [
-        { id: 'governance', label: 'Governance', icon: Shield, badge: '98%', badgeColor: 'emerald' },
+        { id: 'governance', label: 'Governance', icon: Shield, badge: `${systemHealthScore}%`, badgeColor: systemHealthScore >= 85 ? 'emerald' : 'amber' },
         { id: 'compliance', label: 'Compliance', icon: Scale, badge: 'v190', badgeColor: 'amber' },
       ]
     },
@@ -171,7 +187,7 @@ export const Sidebar: React.FC<{ mobileOpen?: boolean; setMobileOpen?: (open: bo
                   EvolveAgent <span className="text-cyan-400 font-mono text-xs">AI</span>
                 </h1>
                 <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-mono">
-                  <span>vNext 2.4.0</span>
+                  <span>EvolveAgent OS</span>
                   <span className="w-1 h-1 rounded-full bg-emerald-400" />
                   <span className="text-emerald-400">Local-First</span>
                 </div>
@@ -216,11 +232,14 @@ export const Sidebar: React.FC<{ mobileOpen?: boolean; setMobileOpen?: (open: bo
               <span className="text-gray-400 flex items-center gap-1.5">
                 <Activity className="w-3.5 h-3.5 text-emerald-400" /> System Health
               </span>
-              <span className="font-mono font-semibold text-emerald-400">98% A+</span>
+              <span className={`font-mono font-semibold ${healthTone}`}>{systemHealthScore}% {healthGrade}</span>
             </div>
             
             <div className="w-full h-1.5 rounded-full bg-black/60 overflow-hidden p-0.5">
-              <div className="h-full w-[98%] rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500" />
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500"
+                style={{ width: `${systemHealthScore}%` }}
+              />
             </div>
 
             <div className="flex items-center justify-between text-[10px] font-mono text-gray-500 pt-1 border-t border-white/5">
