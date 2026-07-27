@@ -41,10 +41,17 @@ export const SimpleModeChat: React.FC = () => {
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim() && attachments.length === 0) return;
-    
+
     sendMessage(inputText, attachments.length > 0 ? attachments : undefined);
     setInputText('');
     setAttachments([]);
+  };
+
+  const handleRetryLastPrompt = async () => {
+    const retryText = chatRunStatus.retryText;
+    if (!retryText) return;
+    await refreshLive();
+    sendMessage(retryText);
   };
 
   const handleAttachExample = () => {
@@ -88,8 +95,27 @@ export const SimpleModeChat: React.FC = () => {
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                   Approval-Safe Mode
                 </span>
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                  chatRunStatus.active
+                    ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/25'
+                    : chatRunStatus.phase === 'offline'
+                      ? 'bg-rose-500/15 text-rose-300 border-rose-500/25'
+                      : liveConnected
+                        ? 'bg-sky-500/15 text-sky-300 border-sky-500/25'
+                        : 'bg-amber-500/15 text-amber-300 border-amber-500/25'
+                }`}>
+                  {chatRunStatus.active
+                    ? 'Routing'
+                    : chatRunStatus.phase === 'offline'
+                      ? 'Chat offline'
+                      : liveConnected
+                        ? 'Chat live'
+                        : 'Backend checking'}
+                </span>
               </div>
-              <p className="text-[11px] text-gray-400 font-mono">Routing across {activeAgents.length} active agents • Planning-First Active</p>
+              <p className="text-[11px] text-gray-400 font-mono">
+                Routing across {activeAgents.length} active agents • {chatRunStatus.routeUsed ? `Last route ${chatRunStatus.routeUsed}` : 'Planning-First Active'}
+              </p>
             </div>
           </div>
 
@@ -118,6 +144,26 @@ export const SimpleModeChat: React.FC = () => {
 
         {/* Messages Scroll Area */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+          {chatRunStatus.phase === 'offline' && !chatRunStatus.active && (
+            <div className="rounded-2xl border border-rose-500/25 bg-rose-500/10 p-4 text-sm text-rose-100 shadow-lg">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div>
+                  <div className="font-semibold">Chat backend is not connected</div>
+                  <p className="mt-1 text-xs text-rose-100/80">
+                    {chatRunStatus.errorDetail || 'The backend did not answer this chat request.'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRetryLastPrompt}
+                  disabled={!chatRunStatus.retryText}
+                  className="px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-400/25 text-xs font-semibold text-rose-50 disabled:opacity-50"
+                >
+                  Retry last prompt
+                </button>
+              </div>
+            </div>
+          )}
           {chatMessages.map((msg) => {
             const isUser = msg.sender === 'user';
             return (
@@ -178,7 +224,7 @@ export const SimpleModeChat: React.FC = () => {
                 <div className="flex items-center gap-2 px-1">
                   <span className="text-xs font-semibold text-gray-300">Master Orchestrator</span>
                   <span className="text-[10px] font-mono text-cyan-400">
-                    {chatRunStatus.phase === 'slow' ? 'still working' : 'routing'}
+                    {chatRunStatus.phase === 'slow' ? 'still working' : liveConnected ? 'live route' : 'connecting'}
                   </span>
                 </div>
                 <div className={`p-4 rounded-2xl text-sm leading-relaxed rounded-tl-none border shadow-md ${
@@ -191,7 +237,9 @@ export const SimpleModeChat: React.FC = () => {
                     <div>
                       <p className="font-medium">{chatRunStatus.message}</p>
                       <p className="mt-1 text-xs opacity-75">
-                        Keep this page open. The reply will appear here automatically when the backend returns.
+                        {chatRunStatus.phase === 'slow'
+                          ? 'Real provider calls can take longer. If this fails, the retry banner will keep your prompt.'
+                          : 'Keep this page open. The reply will appear here automatically when the backend returns.'}
                       </p>
                     </div>
                   </div>

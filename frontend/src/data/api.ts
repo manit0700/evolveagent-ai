@@ -87,7 +87,7 @@ export async function routeMessage(
   text: string,
   execute = false,
 ): Promise<
-  { answer: string; requiresApproval: boolean; blockedExecution: boolean; intent: string; suggestedWorkflow: string | null } | null
+  { answer: string; requiresApproval: boolean; blockedExecution: boolean; intent: string; suggestedWorkflow: string | null; routeUsed: string } | null
 > {
   const d = await postJsonWithTimeout<any>('/api/master-agent/route', { text, execute });
   if (!d) {
@@ -103,6 +103,7 @@ export async function routeMessage(
       blockedExecution: Boolean(fallback.blocked_execution),
       intent: fallback.task_type || '',
       suggestedWorkflow: fallback.suggested_workflow || null,
+      routeUsed: '/api/run',
     };
   }
   return {
@@ -111,6 +112,7 @@ export async function routeMessage(
     blockedExecution: Boolean(d.blocked_execution),
     intent: d.intent || '',
     suggestedWorkflow: d.suggested_workflow || null,
+    routeUsed: '/api/master-agent/route',
   };
 }
 

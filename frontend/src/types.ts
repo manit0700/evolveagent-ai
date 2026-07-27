@@ -160,6 +160,9 @@ export interface ChatRunStatus {
   phase: 'idle' | 'routing' | 'slow' | 'offline';
   message: string;
   startedAt?: number;
+  routeUsed?: string;
+  retryText?: string;
+  errorDetail?: string;
 }
 
 export interface SystemMetric {

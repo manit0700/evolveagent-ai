@@ -658,12 +658,31 @@ describe('v300 Digital Departments', () => {
 });
 
 describe('routeMessage', () => {
-  it('passes execute and returns the answer + flags', async () => {
+  it('passes execute and returns the answer + route metadata', async () => {
     const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ answer: 'hello', requires_approval: true, blocked_execution: false, suggested_workflow: 'wf' }) }));
     vi.stubGlobal('fetch', fetchMock as any);
     const res = await routeMessage('do a thing', true);
-    expect(res).toMatchObject({ answer: 'hello', requiresApproval: true, suggestedWorkflow: 'wf' });
+    expect(res).toMatchObject({ answer: 'hello', requiresApproval: true, suggestedWorkflow: 'wf', routeUsed: '/api/master-agent/route' });
     const body = JSON.parse((fetchMock.mock.calls[0][1] as any).body);
     expect(body).toMatchObject({ text: 'do a thing', execute: true });
+  });
+
+  it('falls back to /api/run when the master-agent route is unavailable', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes('/api/master-agent/route')) {
+        return { ok: false, status: 404, json: async () => ({}) };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ final_output: 'fallback answer', task_type: 'general', requires_approval: false }),
+      };
+    });
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    const res = await routeMessage('fallback please', false);
+    expect(res).toMatchObject({ answer: 'fallback answer', intent: 'general', routeUsed: '/api/run' });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toContain('/api/run');
   });
 });
