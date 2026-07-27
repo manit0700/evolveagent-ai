@@ -34,7 +34,7 @@ import {
 import { MemoryItem } from '../types';
 
 export const ProjectBrain: React.FC = () => {
-  const { memories, togglePinMemory, addMemoryItem, showToast } = useApp();
+  const { memories, togglePinMemory, addMemoryItem, showToast, refreshLive } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeChip, setActiveChip] = useState<string>('all');
   const [isAddingModalOpen, setIsAddingModalOpen] = useState(false);
@@ -144,9 +144,11 @@ export const ProjectBrain: React.FC = () => {
     );
     setAddBusy(false);
     if (saved?.ok) {
+      addMemoryItem(newTitle, newSnippet, newType, tagArray);
       showToast(`Saved "${newTitle}" to Memory v2 (${saved.mode || 'live'}).`, 'success');
       const summary = await fetchMemoryV2Summary();
       if (summary) setMemorySummary(summary);
+      refreshLive();
       if (searchQuery.trim()) {
         const response = await searchMemoryV2(searchQuery, 8);
         if (response?.results?.length) {
@@ -168,6 +170,11 @@ export const ProjectBrain: React.FC = () => {
     setNewType(example.type);
     setNewSnippet(example.snippet);
     setNewTags(example.tags);
+  };
+
+  const openMemoryExample = (example: typeof memoryExamples[number]) => {
+    fillMemoryExample(example);
+    setIsAddingModalOpen(true);
   };
 
   const semanticMemories: MemoryItem[] = (semanticResults || []).map(result => {
@@ -211,10 +218,17 @@ export const ProjectBrain: React.FC = () => {
           <div className="mt-4 flex flex-col sm:flex-row gap-2">
             <button
               onClick={() => setIsAddingModalOpen(true)}
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-cyan-500/20"
+              className="w-full sm:w-auto px-5 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-cyan-500/20"
             >
               <Plus className="w-4 h-4" />
               Add Memory
+            </button>
+            <button
+              onClick={() => openMemoryExample(memoryExamples[1])}
+              className="w-full sm:w-auto px-4 py-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.09] border border-white/10 text-gray-200 font-semibold text-sm flex items-center justify-center gap-2 transition-all"
+            >
+              <Sparkles className="w-4 h-4 text-amber-300" />
+              Add My Preference
             </button>
             <div className="rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-xs text-gray-400 leading-relaxed">
               Save product goals, preferences, safety rules, project facts, or UI direction so EvolveAgent can use them later.
@@ -222,7 +236,15 @@ export const ProjectBrain: React.FC = () => {
           </div>
 
           {/* Search bar */}
-          <div className="mt-6 relative">
+          <div className="mt-6">
+            <div className="mb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+              <label className="text-xs font-semibold text-white flex items-center gap-2">
+                <Search className="w-3.5 h-3.5 text-cyan-400" />
+                Search Project Brain
+              </label>
+              <span className="text-[10px] font-mono text-gray-500">Try: safety, UI, product goal, preference</span>
+            </div>
+            <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400" />
             <input
               type="text"
@@ -238,6 +260,7 @@ export const ProjectBrain: React.FC = () => {
               <Plus className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Add Memory</span>
             </button>
+            </div>
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-mono text-gray-400">
             <span className={`px-2 py-0.5 rounded-full border ${
@@ -291,6 +314,44 @@ export const ProjectBrain: React.FC = () => {
           </div>
         ))}
       </div>
+
+      <GlassCard>
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div className="max-w-2xl">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <Plus className="w-4 h-4 text-cyan-400" />
+              Add Memory Fast
+            </h3>
+            <p className="mt-1 text-xs text-gray-400 leading-relaxed">
+              Use this when you want EvolveAgent to remember something for future chats, goals, agents, or UI work. Good memories are short, specific, and reusable.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsAddingModalOpen(true)}
+            className="px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20"
+          >
+            <Plus className="w-4 h-4" />
+            Open Add Memory
+          </button>
+        </div>
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {memoryExamples.map((example) => (
+            <button
+              key={example.label}
+              type="button"
+              onClick={() => openMemoryExample(example)}
+              className="text-left rounded-2xl border border-white/10 bg-black/25 hover:bg-white/[0.06] p-3 transition-colors"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-white">{example.label}</span>
+                <span className="text-[10px] font-mono text-cyan-300">{example.type}</span>
+              </div>
+              <p className="mt-2 text-[11px] text-gray-400 leading-relaxed line-clamp-3">{example.snippet}</p>
+            </button>
+          ))}
+        </div>
+      </GlassCard>
 
       {/* 3. Main Split Section: Relevant Findings (Left 2 cols) & Knowledge Graph Visualizer (Right 1 col) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -389,6 +450,22 @@ export const ProjectBrain: React.FC = () => {
               <GlassCard className="text-center py-10">
                 <p className="text-sm text-gray-300 font-semibold">No matching memories found.</p>
                 <p className="text-xs text-gray-500 font-mono mt-1">Try a broader query or add a new Memory v2 item.</p>
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="px-3 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.09] border border-white/10 text-xs text-gray-200"
+                  >
+                    Clear search
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingModalOpen(true)}
+                    className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-xs font-semibold text-white"
+                  >
+                    Add this as memory
+                  </button>
+                </div>
               </GlassCard>
             )}
           </div>
