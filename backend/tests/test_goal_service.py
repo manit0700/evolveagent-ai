@@ -94,3 +94,31 @@ def test_add_task_and_update_task_still_touch_goal_progress(tmp_path):
     service.update_task(goal.goal_id, task.task_id, {"status": "done"})
     updated, _ = service.get_goal(goal.goal_id)
     assert updated["progress_percent"] == 100
+
+
+def test_list_goals_reads_task_graphs_once_for_progress(tmp_path):
+    """Mission Control's list endpoint must not scan task_graphs.json once per
+    goal. That becomes a seconds-long UI timeout on real local data."""
+    storage = StorageService(data_dir=str(tmp_path / "data"))
+    service = GoalService(storage)
+    for index in range(25):
+        goal, _ = service.create_manual(f"Goal {index}", "desc")
+        task = service.add_task(goal.goal_id, {"title": f"Task {index}"})
+        if index % 2 == 0:
+            service.update_task(goal.goal_id, task.task_id, {"status": "done"})
+
+    read_counts: dict[str, int] = {}
+    original_read_list = storage.read_list
+
+    def _counting_read_list(filename):
+        read_counts[filename] = read_counts.get(filename, 0) + 1
+        return original_read_list(filename)
+
+    storage.read_list = _counting_read_list
+
+    goals = service.list_goals()
+
+    assert len(goals) == 25
+    assert read_counts["goals.json"] == 1
+    assert read_counts["task_graphs.json"] == 1
+    assert {goal["progress_percent"] for goal in goals} == {0, 100}
