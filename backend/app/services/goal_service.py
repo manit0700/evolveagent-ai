@@ -90,10 +90,33 @@ class GoalService:
         }
         return self.create_from_plan(planner_result, tags=tags, workspace_id=workspace_id)
 
+    @staticmethod
+    def _progress_by_goal(task_graphs: list[dict]) -> dict[str, int]:
+        progress: dict[str, int] = {}
+        for graph in task_graphs:
+            goal_id = graph.get("goal_id")
+            if not goal_id:
+                continue
+            tasks = graph.get("tasks", [])
+            if not tasks:
+                progress[goal_id] = 0
+                continue
+            done = sum(1 for item in tasks if item.get("status") == "done")
+            progress[goal_id] = round((done / len(tasks)) * 100)
+        return progress
+
     def list_goals(self, workspace_id: str | None = None) -> list[dict]:
-        goals = [self.with_progress(item) for item in self.storage.read_list("goals.json")]
+        goals = self.storage.read_list("goals.json")
         if workspace_id:
             goals = [item for item in goals if item.get("workspace_id") == workspace_id]
+        progress_by_goal = self._progress_by_goal(self.storage.read_list("task_graphs.json"))
+        goals = [
+            {
+                **item,
+                "progress_percent": progress_by_goal.get(item.get("goal_id"), item.get("progress_percent", 0)),
+            }
+            for item in goals
+        ]
         return sorted(goals, key=lambda item: item.get("updated_at") or "", reverse=True)
 
     def get_goal(self, goal_id: str) -> tuple[dict, dict] | None:
