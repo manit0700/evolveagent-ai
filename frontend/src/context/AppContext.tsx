@@ -12,7 +12,8 @@ import {
   ChatMessage,
   ChatRunStatus,
   SystemMetric,
-  RiskLevel
+  RiskLevel,
+  ProjectSetupSummary
 } from '../types';
 import {
   INITIAL_AGENTS,
@@ -66,6 +67,7 @@ interface AppContextType {
   toast: { message: string; type: 'success' | 'info' | 'warning' } | null;
   showToast: (message: string, type?: 'success' | 'info' | 'warning') => void;
   liveConnected: boolean;
+  projectSetup: ProjectSetupSummary | null;
   refreshLive: () => Promise<void>;
 
   // Actions
@@ -102,6 +104,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isCommandModalOpen, setIsCommandModalOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'warning' } | null>(null);
   const [liveConnected, setLiveConnected] = useState(false);
+  const [projectSetup, setProjectSetup] = useState<ProjectSetupSummary | null>(null);
 
   const [safetySettings, setSafetySettings] = useState<SafetySettings>(() => {
     try {
@@ -137,6 +140,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (live.memories) setMemories(live.memories);
     if (live.connectors) setConnectors(live.connectors);
     if (live.approvals) setApprovals(live.approvals);
+    if (live.projectSetup) setProjectSetup(live.projectSetup);
   };
 
   useEffect(() => {
@@ -413,6 +417,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toast,
         showToast,
         liveConnected,
+        projectSetup,
         refreshLive,
         approveRequest,
         rejectRequest,
