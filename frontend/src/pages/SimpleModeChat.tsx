@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 
 export const SimpleModeChat: React.FC = () => {
-  const { chatMessages, chatRunStatus, sendMessage, mission, agents, connectors, memories, setActivePage, showToast, liveConnected, refreshLive } = useApp();
+  const { chatMessages, chatRunStatus, sendMessage, mission, agents, connectors, memories, setActivePage, showToast, liveConnected, projectSetup, refreshLive } = useApp();
   const [inputText, setInputText] = useState('');
   const [selectedDb, setSelectedDb] = useState('Workspace Memory + Postgres');
   const [attachments, setAttachments] = useState<{ name: string; size: string; type: string }[]>([]);
@@ -355,6 +355,85 @@ export const SimpleModeChat: React.FC = () => {
 
       {/* Right 1 Col: Workspace Context Panel */}
       <div className="space-y-4 flex flex-col h-full overflow-y-auto">
+        <GlassCard glow="blue">
+          <div className="flex items-center justify-between pb-3 border-b border-white/10">
+            <div className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-cyan-400" />
+              <h4 className="text-xs font-semibold text-white">Active Project Setup</h4>
+            </div>
+            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+              projectSetup
+                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+            }`}>
+              {projectSetup ? 'Live' : 'Fallback'}
+            </span>
+          </div>
+          <div className="mt-3 space-y-3">
+            <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-3">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-cyan-300">Workspace</div>
+              <div className="mt-1 text-sm font-bold text-white">
+                {projectSetup?.workspaceName || 'Default Workspace'}
+              </div>
+              <p className="mt-1 text-[11px] text-gray-400 line-clamp-2">
+                {projectSetup?.workspaceDescription || 'Current chat uses the default workspace context until a live project setup is selected.'}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-xl bg-white/[0.03] border border-white/10 p-2.5">
+                <div className="text-[10px] font-mono text-gray-500 uppercase">Active agent</div>
+                <div className="mt-1 font-semibold text-white truncate">
+                  {projectSetup?.agentName || 'Master Orchestrator'}
+                </div>
+              </div>
+              <div className="rounded-xl bg-white/[0.03] border border-white/10 p-2.5">
+                <div className="text-[10px] font-mono text-gray-500 uppercase">Memory loaded</div>
+                <div className="mt-1 font-semibold text-white">
+                  {projectSetup?.memoryCount ?? memories.length} items
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-white/[0.03] border border-white/10 p-2.5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-[10px] font-mono text-gray-500 uppercase">Current goal</div>
+                  <div className="mt-1 text-xs font-semibold text-white line-clamp-2">
+                    {projectSetup?.goalTitle || mission.title}
+                  </div>
+                </div>
+                <span className="shrink-0 text-[10px] font-mono text-cyan-300">
+                  {Math.round(projectSetup?.goalProgress ?? mission.progress)}%
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              {(projectSetup?.agentTools?.length ? projectSetup.agentTools : ['memory_search', 'file_analysis']).slice(0, 4).map((tool) => (
+                <span key={tool} className="px-2 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[10px] font-mono text-blue-200">
+                  {tool}
+                </span>
+              ))}
+              <span className="px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono text-emerald-200">
+                {projectSetup?.agentPermission || 'approval_safe'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <button onClick={() => setActivePage('project-brain')} className="rounded-xl bg-white/[0.05] hover:bg-white/[0.09] border border-white/10 px-2 py-2 text-[10px] font-semibold text-gray-200">
+                Brain
+              </button>
+              <button onClick={() => setActivePage('agents')} className="rounded-xl bg-white/[0.05] hover:bg-white/[0.09] border border-white/10 px-2 py-2 text-[10px] font-semibold text-gray-200">
+                Agent
+              </button>
+              <button onClick={() => setActivePage('mission-control')} className="rounded-xl bg-white/[0.05] hover:bg-white/[0.09] border border-white/10 px-2 py-2 text-[10px] font-semibold text-gray-200">
+                Goal
+              </button>
+            </div>
+          </div>
+        </GlassCard>
+
         {/* Active Mission Overview */}
         <GlassCard>
           <div className="flex items-center justify-between pb-3 border-b border-white/10">

@@ -34,7 +34,7 @@ import {
 import { MemoryItem } from '../types';
 
 export const ProjectBrain: React.FC = () => {
-  const { memories, togglePinMemory, addMemoryItem, showToast, refreshLive } = useApp();
+  const { memories, togglePinMemory, addMemoryItem, showToast, projectSetup, refreshLive } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeChip, setActiveChip] = useState<string>('all');
   const [isAddingModalOpen, setIsAddingModalOpen] = useState(false);
@@ -296,6 +296,57 @@ export const ProjectBrain: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <GlassCard glow="blue">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div className="max-w-3xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-mono">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Current setup
+              </span>
+              <span className="text-[11px] font-mono text-gray-500">
+                {projectSetup ? 'Loaded from backend workspace data' : 'Using local fallback context'}
+              </span>
+            </div>
+            <h3 className="mt-3 text-lg font-bold text-white">
+              {projectSetup?.workspaceName || 'Default Workspace'}
+            </h3>
+            <p className="mt-1 text-sm text-gray-300 leading-relaxed">
+              {projectSetup?.workspaceDescription || 'Project Brain stores reusable facts, preferences, decisions, and goals that EvolveAgent can retrieve before answering.'}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 min-w-full lg:min-w-[420px]">
+            <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Active agent</div>
+              <div className="mt-1 text-sm font-bold text-white truncate">{projectSetup?.agentName || 'Master Orchestrator'}</div>
+              <div className="mt-1 text-[10px] font-mono text-cyan-300">{projectSetup?.agentPermission || 'approval_safe'}</div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Memory loaded</div>
+              <div className="mt-1 text-sm font-bold text-white">{projectSetup?.memoryCount ?? memories.length} items</div>
+              <div className="mt-1 text-[10px] font-mono text-emerald-300">{activeMemoryMode}</div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Goal context</div>
+              <div className="mt-1 text-sm font-bold text-white">{Math.round(projectSetup?.goalProgress ?? 0)}%</div>
+              <div className="mt-1 text-[10px] text-gray-400 line-clamp-2">{projectSetup?.goalTitle || 'No active goal selected'}</div>
+            </div>
+          </div>
+        </div>
+
+        {!!projectSetup?.memoryTitles?.length && (
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+            {projectSetup.memoryTitles.map((title) => (
+              <div key={title} className="rounded-xl border border-cyan-500/15 bg-cyan-500/5 p-2.5">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-cyan-300">Loaded memory</div>
+                <div className="mt-1 text-xs font-semibold text-gray-100 line-clamp-2">{title}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </GlassCard>
 
       {/* 2. Memory Health Metrics (6 counters) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">

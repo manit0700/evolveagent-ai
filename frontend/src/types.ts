@@ -172,3 +172,19 @@ export interface SystemMetric {
   isPositive?: boolean;
   subtitle?: string;
 }
+
+export interface ProjectSetupSummary {
+  workspaceId: string;
+  workspaceName: string;
+  workspaceDescription: string;
+  agentId?: string;
+  agentName?: string;
+  agentPermission?: string;
+  agentTools: string[];
+  memoryCount: number;
+  memoryTitles: string[];
+  goalId?: string;
+  goalTitle?: string;
+  goalProgress?: number;
+  source: 'live' | 'fallback';
+}

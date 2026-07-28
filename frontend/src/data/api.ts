@@ -17,6 +17,7 @@ import {
   ToolConnector,
   ApprovalRequest,
   TaskStatus,
+  ProjectSetupSummary,
 } from '../types';
 
 export const API_BASE =
@@ -616,6 +617,51 @@ export async function fetchApprovals(): Promise<ApprovalRequest[] | null> {
   }));
 }
 
+// ---- Active project setup ---------------------------------------------------
+function chooseProjectWorkspace(workspaces: any[]): any | null {
+  const active = workspaces.filter((workspace) => String(workspace.status || 'active') !== 'archived');
+  const resume = active.find((workspace) => {
+    const haystack = `${workspace.name || ''} ${workspace.description || ''} ${(workspace.tags || []).join(' ')}`.toLowerCase();
+    return haystack.includes('resume') || haystack.includes('ats') || haystack.includes('internship');
+  });
+  return resume || active.find((workspace) => workspace.default) || active[0] || null;
+}
+
+export async function fetchProjectSetupSummary(): Promise<ProjectSetupSummary | null> {
+  const workspaces = await getJson<any[]>('/api/workspaces');
+  if (!Array.isArray(workspaces) || workspaces.length === 0) return null;
+  const workspace = chooseProjectWorkspace(workspaces);
+  if (!workspace?.workspace_id) return null;
+  const workspaceId = workspace.workspace_id;
+  const [agents, memories, goals] = await Promise.all([
+    getJson<any[]>(`/api/agents/custom?workspace_id=${encodeURIComponent(workspaceId)}`),
+    getJson<any[]>(`/api/workspaces/${encodeURIComponent(workspaceId)}/memory?q=resume`),
+    getJson<any[]>(`/api/goals?workspace_id=${encodeURIComponent(workspaceId)}`),
+  ]);
+
+  const agentList = Array.isArray(agents) ? agents.filter((agent) => agent.enabled !== false) : [];
+  const resumeAgent = agentList.find((agent) => String(agent.name || '').toLowerCase().includes('resume')) || agentList[0];
+  const memoryList = Array.isArray(memories) ? memories : [];
+  const goalList = Array.isArray(goals) ? goals : [];
+  const activeGoal = goalList.find((goal) => String(goal.status || '').toLowerCase() === 'active') || goalList[0];
+
+  return {
+    workspaceId,
+    workspaceName: workspace.name || 'Workspace',
+    workspaceDescription: workspace.description || '',
+    agentId: resumeAgent?.agent_id,
+    agentName: resumeAgent?.name,
+    agentPermission: resumeAgent?.approval_level,
+    agentTools: Array.isArray(resumeAgent?.tools_allowed) ? resumeAgent.tools_allowed : [],
+    memoryCount: memoryList.length,
+    memoryTitles: memoryList.slice(0, 4).map((memory) => clip(memory.title || 'Memory', 70)),
+    goalId: activeGoal?.goal_id,
+    goalTitle: activeGoal?.title,
+    goalProgress: Number(activeGoal?.progress_percent ?? 0),
+    source: 'live',
+  };
+}
+
 // ---- Provider / settings status (secret-safe) ------------------------------
 export interface ProviderStatus {
   totalProviders: number;
@@ -921,8 +967,9 @@ export async function fetchLiveData(): Promise<{
   memories: MemoryItem[] | null;
   connectors: ToolConnector[] | null;
   approvals: ApprovalRequest[] | null;
+  projectSetup: ProjectSetupSummary | null;
 } | null> {
-  const [agents, missionData, governanceLogs, systemMetrics, memories, connectors, approvals] = await Promise.all([
+  const [agents, missionData, governanceLogs, systemMetrics, memories, connectors, approvals, projectSetup] = await Promise.all([
     fetchAgents(),
     fetchMissionData(),
     fetchGovernance(),
@@ -930,8 +977,9 @@ export async function fetchLiveData(): Promise<{
     fetchMemories(),
     fetchConnectors(),
     fetchApprovals(),
+    fetchProjectSetupSummary(),
   ]);
-  if (!agents && !missionData && !governanceLogs && !systemMetrics && !memories && !connectors && !approvals) return null;
+  if (!agents && !missionData && !governanceLogs && !systemMetrics && !memories && !connectors && !approvals && !projectSetup) return null;
   return {
     agents,
     mission: missionData?.mission || null,
@@ -941,6 +989,7 @@ export async function fetchLiveData(): Promise<{
     memories,
     connectors,
     approvals,
+    projectSetup,
   };
 }
 
