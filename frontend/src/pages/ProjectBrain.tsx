@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import {
+  addWorkspaceMemory,
   addMemoryV2,
   fetchMemoryV2Summary,
   fetchRetrievalSummary,
@@ -50,6 +51,7 @@ export const ProjectBrain: React.FC = () => {
   const [newSnippet, setNewSnippet] = useState('');
   const [newType, setNewType] = useState<MemoryItem['type']>('Decision');
   const [newTags, setNewTags] = useState('product, memory');
+  const [newImportance, setNewImportance] = useState<'low' | 'medium' | 'high'>('medium');
 
   const memoryExamples = [
     {
@@ -131,21 +133,57 @@ export const ProjectBrain: React.FC = () => {
     };
   }, [searchQuery]);
 
-  const handleCreateSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const workspaceTypeForMemory = (type: MemoryItem['type']): 'preference' | 'project_fact' | 'decision' | 'summary' | 'task_result' | 'learned_pattern' => {
+    if (type === 'Decision') return 'decision';
+    if (type === 'Goal') return 'project_fact';
+    if (type === 'Chat Memory') return 'summary';
+    if (type === 'File Index') return 'summary';
+    return 'preference';
+  };
+
+  const resetMemoryForm = () => {
+    setNewTitle('');
+    setNewSnippet('');
+    setNewType('Decision');
+    setNewTags('product, memory');
+    setNewImportance('medium');
+  };
+
+  const saveMemory = async (closeModal: boolean) => {
     if (!newTitle.trim() || !newSnippet.trim()) return;
     const tagArray = newTags.split(',').map(t => t.trim()).filter(Boolean);
     setAddBusy(true);
+    const workspaceSaved = projectSetup?.workspaceId
+      ? await addWorkspaceMemory(projectSetup.workspaceId, {
+          title: newTitle.trim(),
+          content: newSnippet.trim(),
+          type: workspaceTypeForMemory(newType),
+          source: 'manual',
+          importance: newImportance,
+          tags: tagArray,
+        })
+      : null;
     const saved = await addMemoryV2(
       `${newTitle.trim()}\n\n${newSnippet.trim()}`,
       newType,
       'project_brain_ui',
-      { title: newTitle.trim(), tags: tagArray },
+      {
+        title: newTitle.trim(),
+        tags: tagArray,
+        workspace_id: projectSetup?.workspaceId,
+        importance: newImportance,
+        workspace_memory_id: workspaceSaved?.id,
+      },
     );
     setAddBusy(false);
-    if (saved?.ok) {
+    if (workspaceSaved?.ok || saved?.ok) {
       addMemoryItem(newTitle, newSnippet, newType, tagArray);
-      showToast(`Saved "${newTitle}" to Memory v2 (${saved.mode || 'live'}).`, 'success');
+      showToast(
+        workspaceSaved?.ok
+          ? `Saved "${newTitle}" to ${projectSetup?.workspaceName || 'workspace'} memory.`
+          : `Saved "${newTitle}" to Memory v2 (${saved?.mode || 'live'}).`,
+        'success',
+      );
       const summary = await fetchMemoryV2Summary();
       if (summary) setMemorySummary(summary);
       refreshLive();
@@ -160,9 +198,13 @@ export const ProjectBrain: React.FC = () => {
       addMemoryItem(newTitle, newSnippet, newType, tagArray);
       showToast(`Backend unavailable. Saved "${newTitle}" to local Project Brain state.`, 'warning');
     }
-    setNewTitle('');
-    setNewSnippet('');
-    setIsAddingModalOpen(false);
+    resetMemoryForm();
+    if (closeModal) setIsAddingModalOpen(false);
+  };
+
+  const handleCreateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    saveMemory(true);
   };
 
   const fillMemoryExample = (example: typeof memoryExamples[number]) => {
@@ -170,6 +212,7 @@ export const ProjectBrain: React.FC = () => {
     setNewType(example.type);
     setNewSnippet(example.snippet);
     setNewTags(example.tags);
+    setNewImportance(example.type === 'Decision' || example.type === 'Goal' ? 'high' : 'medium');
   };
 
   const openMemoryExample = (example: typeof memoryExamples[number]) => {
@@ -428,42 +471,118 @@ export const ProjectBrain: React.FC = () => {
         ))}
       </div>
 
-      <GlassCard>
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-          <div className="max-w-2xl">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Plus className="w-4 h-4 text-cyan-400" />
-              Add Memory Fast
-            </h3>
-            <p className="mt-1 text-xs text-gray-400 leading-relaxed">
-              Use this when you want EvolveAgent to remember something for future chats, goals, agents, or UI work. Good memories are short, specific, and reusable.
-            </p>
+      <GlassCard glow="blue">
+        <form onSubmit={(e) => { e.preventDefault(); saveMemory(false); }} className="space-y-4">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+            <div className="max-w-3xl">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Plus className="w-4 h-4 text-cyan-400" />
+                Quick Add Memory
+              </h3>
+              <p className="mt-1 text-xs text-gray-400 leading-relaxed">
+                Save the fact, decision, preference, or goal directly into the selected workspace. This is the fastest path for teaching EvolveAgent what to remember.
+              </p>
+            </div>
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-200 font-mono">
+              Target: {projectSetup?.workspaceName || 'local Project Brain'}
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setIsAddingModalOpen(true)}
-            className="px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20"
-          >
-            <Plus className="w-4 h-4" />
-            Open Add Memory
-          </button>
-        </div>
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {memoryExamples.map((example) => (
-            <button
-              key={example.label}
-              type="button"
-              onClick={() => openMemoryExample(example)}
-              className="text-left rounded-2xl border border-white/10 bg-black/25 hover:bg-white/[0.06] p-3 transition-colors"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-bold text-white">{example.label}</span>
-                <span className="text-[10px] font-mono text-cyan-300">{example.type}</span>
-              </div>
-              <p className="mt-2 text-[11px] text-gray-400 leading-relaxed line-clamp-3">{example.snippet}</p>
-            </button>
-          ))}
-        </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+            <div className="lg:col-span-4">
+              <label className="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Title</label>
+              <input
+                type="text"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="Example: Resume bullet style preference"
+                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400"
+                required
+              />
+            </div>
+            <div className="lg:col-span-3">
+              <label className="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Type</label>
+              <select
+                value={newType}
+                onChange={(e) => setNewType(e.target.value as MemoryItem['type'])}
+                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-400"
+              >
+                <option value="Memory">Preference</option>
+                <option value="Decision">Decision</option>
+                <option value="Goal">Project Fact / Goal</option>
+                <option value="Chat Memory">Chat Summary</option>
+                <option value="File Index">File Note</option>
+              </select>
+            </div>
+            <div className="lg:col-span-2">
+              <label className="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Importance</label>
+              <select
+                value={newImportance}
+                onChange={(e) => setNewImportance(e.target.value as 'low' | 'medium' | 'high')}
+                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-400"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+            <div className="lg:col-span-3">
+              <label className="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Tags</label>
+              <input
+                type="text"
+                value={newTags}
+                onChange={(e) => setNewTags(e.target.value)}
+                placeholder="resume, ats, preference"
+                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">What should EvolveAgent remember?</label>
+            <textarea
+              rows={3}
+              value={newSnippet}
+              onChange={(e) => setNewSnippet(e.target.value)}
+              placeholder="Example: Resume bullets should start with strong action verbs, include measurable impact, and stay one line when possible."
+              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400"
+              required
+            />
+          </div>
+
+          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              {memoryExamples.map((example) => (
+                <button
+                  key={example.label}
+                  type="button"
+                  onClick={() => fillMemoryExample(example)}
+                  className="rounded-xl border border-white/10 bg-black/25 hover:bg-white/[0.06] px-3 py-2 text-left transition-colors"
+                >
+                  <div className="text-[11px] font-bold text-white">{example.label}</div>
+                  <div className="text-[10px] font-mono text-cyan-300">{example.type}</div>
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsAddingModalOpen(true)}
+                className="px-4 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.09] border border-white/10 text-gray-200 font-semibold text-xs"
+              >
+                Advanced
+              </button>
+              <button
+                type="submit"
+                disabled={addBusy || !newTitle.trim() || !newSnippet.trim()}
+                className="px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-cyan-500/20"
+              >
+                <Plus className="w-4 h-4" />
+                {addBusy ? 'Saving...' : 'Save Memory'}
+              </button>
+            </div>
+          </div>
+        </form>
       </GlassCard>
 
       {/* 3. Main Split Section: Relevant Findings (Left 2 cols) & Knowledge Graph Visualizer (Right 1 col) */}
@@ -742,6 +861,19 @@ export const ProjectBrain: React.FC = () => {
                   <option value="Memory">Memory - useful fact or preference</option>
                   <option value="Chat Memory">Chat Memory - something from a conversation</option>
                   <option value="File Index">File Index - note about a file or document</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-gray-300 mb-1 font-semibold">How important is it?</label>
+                <select
+                  value={newImportance}
+                  onChange={(e) => setNewImportance(e.target.value as 'low' | 'medium' | 'high')}
+                  className="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500"
+                >
+                  <option value="low">Low - useful background context</option>
+                  <option value="medium">Medium - should be considered often</option>
+                  <option value="high">High - important project rule or preference</option>
                 </select>
               </div>
 

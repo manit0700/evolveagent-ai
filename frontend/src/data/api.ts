@@ -517,6 +517,31 @@ export async function addMemoryV2(
   };
 }
 
+export async function addWorkspaceMemory(
+  workspaceId: string,
+  payload: {
+    title: string;
+    content: string;
+    type: 'preference' | 'project_fact' | 'decision' | 'summary' | 'task_result' | 'learned_pattern';
+    source?: 'chat' | 'file' | 'recording' | 'goal' | 'feedback' | 'manual';
+    importance?: 'low' | 'medium' | 'high';
+    tags?: string[];
+  },
+): Promise<{ ok: boolean; id?: string; tier?: string } | null> {
+  const data = await postJson<any>(`/api/workspaces/${encodeURIComponent(workspaceId)}/memory`, {
+    source: 'manual',
+    importance: 'medium',
+    tags: [],
+    ...payload,
+  });
+  if (!data) return null;
+  return {
+    ok: Boolean(data.memory_id || data.id),
+    id: data.memory_id || data.id,
+    tier: data.memory_tier || data.tier,
+  };
+}
+
 export async function searchMemoryV2(query: string, limit = 8): Promise<MemoryV2SearchResponse | null> {
   const q = String(query || '').trim();
   if (!q) return null;
