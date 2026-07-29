@@ -41,6 +41,8 @@ import {
   planDepartmentRun,
   fetchSchedulerTickStatus,
   fetchProjectSetupSummary,
+  fetchAgentTemplates,
+  createCustomAgent,
 } from './api';
 
 // Helper: stub global fetch to return a given JSON body per-URL.
@@ -78,6 +80,74 @@ describe('fetchAgents', () => {
   it('returns null when the endpoint fails', async () => {
     stubFetch({}); // everything 404s
     expect(await fetchAgents()).toBeNull();
+  });
+});
+
+describe('custom agent helpers', () => {
+  it('maps reusable custom agent templates from the backend', async () => {
+    stubFetch({
+      '/api/agents/templates': [
+        {
+          name: 'Resume Agent',
+          role: 'ATS reviewer',
+          description: 'Improves resumes',
+          default_prompt: 'Improve the resume safely.',
+          tools_allowed: ['memory_search', 'file_read'],
+          approval_level: 'read_only',
+          recommended_use_case: 'Resume improvement',
+        },
+      ],
+    });
+
+    const templates = await fetchAgentTemplates();
+    expect(templates).toEqual([
+      {
+        name: 'Resume Agent',
+        role: 'ATS reviewer',
+        description: 'Improves resumes',
+        defaultPrompt: 'Improve the resume safely.',
+        toolsAllowed: ['memory_search', 'file_read'],
+        approvalLevel: 'read_only',
+        recommendedUseCase: 'Resume improvement',
+      },
+    ]);
+  });
+
+  it('creates a workspace-scoped custom agent with governance-safe defaults', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ agent_id: 'agent-1', name: 'Resume Agent' }),
+    }));
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    const result = await createCustomAgent({
+      workspaceId: 'workspace-1',
+      templateName: 'Resume Agent',
+      name: 'Resume Agent',
+      description: 'ATS reviewer',
+      role: 'Resume specialist',
+      prompt: 'Improve the resume safely.',
+      toolsAllowed: ['memory_search', 'file_read'],
+      approvalLevel: 'read_only',
+    });
+
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/agents/custom');
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'POST' });
+    expect(JSON.parse((fetchMock.mock.calls[0][1] as any).body)).toMatchObject({
+      workspace_id: 'workspace-1',
+      template_name: 'Resume Agent',
+      name: 'Resume Agent',
+      description: 'ATS reviewer',
+      role: 'Resume specialist',
+      prompt: 'Improve the resume safely.',
+      tools_allowed: ['memory_search', 'file_read'],
+      approval_level: 'read_only',
+      memory_scope: 'workspace',
+      model_preference: 'default',
+      enabled: true,
+    });
+    expect(result).toEqual({ ok: true, agentId: 'agent-1', name: 'Resume Agent' });
   });
 });
 

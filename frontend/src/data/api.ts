@@ -289,6 +289,63 @@ export async function fetchAgents(): Promise<Agent[] | null> {
   });
 }
 
+export interface AgentTemplate {
+  name: string;
+  role: string;
+  description: string;
+  defaultPrompt: string;
+  toolsAllowed: string[];
+  approvalLevel: 'read_only' | 'plan_only' | 'approve_to_edit' | 'approve_to_run' | 'blocked';
+  recommendedUseCase: string;
+}
+
+export async function fetchAgentTemplates(): Promise<AgentTemplate[] | null> {
+  const data = await getJson<any[]>('/api/agents/templates');
+  if (!Array.isArray(data)) return null;
+  return data.map((template) => ({
+    name: template.name || 'Custom Agent',
+    role: template.role || '',
+    description: template.description || '',
+    defaultPrompt: template.default_prompt || '',
+    toolsAllowed: Array.isArray(template.tools_allowed) ? template.tools_allowed : [],
+    approvalLevel: template.approval_level || 'read_only',
+    recommendedUseCase: template.recommended_use_case || '',
+  }));
+}
+
+export async function createCustomAgent(payload: {
+  workspaceId?: string;
+  templateName?: string;
+  name: string;
+  description: string;
+  role: string;
+  prompt: string;
+  toolsAllowed: string[];
+  approvalLevel: 'read_only' | 'plan_only' | 'approve_to_edit' | 'approve_to_run' | 'blocked';
+  memoryScope?: 'none' | 'session' | 'workspace' | 'global';
+  modelPreference?: 'default' | 'openai' | 'claude' | 'gemini' | 'mock';
+}): Promise<{ ok: boolean; agentId?: string; name?: string } | null> {
+  const data = await postJson<any>('/api/agents/custom', {
+    workspace_id: payload.workspaceId,
+    template_name: payload.templateName,
+    name: payload.name,
+    description: payload.description,
+    role: payload.role,
+    prompt: payload.prompt,
+    tools_allowed: payload.toolsAllowed,
+    approval_level: payload.approvalLevel,
+    memory_scope: payload.memoryScope || 'workspace',
+    model_preference: payload.modelPreference || 'default',
+    enabled: true,
+  });
+  if (!data) return null;
+  return {
+    ok: Boolean(data.agent_id),
+    agentId: data.agent_id,
+    name: data.name,
+  };
+}
+
 // ---- Governance -------------------------------------------------------------
 export async function fetchGovernance(): Promise<GovernanceEvent[] | null> {
   const data = await getJson<{ recent_events: any[] }>('/api/governance');
