@@ -848,6 +848,12 @@ describe('routeMessage', () => {
       selectedTaskType: 'code_review',
       primaryDomain: 'Coding & Review',
       routeConfidence: 0.82,
+      decision: {
+        actionMode: 'approval_required',
+        selectedAgent: 'Coding & Review specialist lane',
+        selectedWorkflow: 'wf',
+        approvalState: 'required',
+      },
     });
     const body = JSON.parse((fetchMock.mock.calls[0][1] as any).body);
     expect(body).toMatchObject({ text: 'do a thing', execute: true });

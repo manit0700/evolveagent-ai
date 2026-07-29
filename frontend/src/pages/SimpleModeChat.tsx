@@ -22,7 +22,10 @@ import {
   Loader2,
   Wifi,
   WifiOff,
-  Route
+  Route,
+  ShieldAlert,
+  Workflow,
+  CheckCircle2
 } from 'lucide-react';
 
 export const SimpleModeChat: React.FC = () => {
@@ -34,6 +37,17 @@ export const SimpleModeChat: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const activeAgents = agents.filter(a => a.status === 'active' || a.status === 'running');
+  const actionModeLabel = (mode?: string) => {
+    if (mode === 'approval_required') return 'Approval required';
+    if (mode === 'blocked') return 'Blocked safely';
+    if (mode === 'plan') return 'Plan selected';
+    return 'Answer selected';
+  };
+  const approvalTone = (state?: string) => {
+    if (state === 'required') return 'border-amber-400/30 bg-amber-500/10 text-amber-100';
+    if (state === 'blocked') return 'border-rose-400/30 bg-rose-500/10 text-rose-100';
+    return 'border-emerald-400/25 bg-emerald-500/10 text-emerald-100';
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -215,26 +229,54 @@ export const SimpleModeChat: React.FC = () => {
                   {msg.isWorkingCard && <LiveWorkingCard />}
 
                   {!isUser && msg.routing && (
-                    <div className="flex flex-wrap items-center gap-2 px-1">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-[10px] font-mono text-cyan-200">
-                        <Route className="w-3 h-3" />
-                        EVA priority {msg.routing.masterPriority ? 'on' : 'off'}
-                      </span>
-                      {msg.routing.selectedTaskType && (
-                        <span className="px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/25 text-[10px] font-mono text-purple-200">
-                          {msg.routing.selectedTaskType.replaceAll('_', ' ')}
+                    <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/[0.06] p-3 shadow-lg shadow-cyan-950/20">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-xl bg-cyan-500/15 border border-cyan-400/20 flex items-center justify-center text-cyan-200">
+                            <Route className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold text-white">What EVA decided</div>
+                            <div className="text-[10px] font-mono text-cyan-200/80">
+                              {msg.routing.masterPriority ? 'Master Agent priority route' : 'Fallback route'}
+                            </div>
+                          </div>
+                        </div>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-mono ${approvalTone(msg.routing.decision?.approvalState)}`}>
+                          {msg.routing.decision?.approvalState === 'required' || msg.routing.decision?.approvalState === 'blocked'
+                            ? <ShieldAlert className="w-3 h-3" />
+                            : <CheckCircle2 className="w-3 h-3" />}
+                          {actionModeLabel(msg.routing.decision?.actionMode)}
                         </span>
-                      )}
-                      {msg.routing.primaryDomain && (
-                        <span className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-mono text-gray-300">
-                          {msg.routing.primaryDomain}
-                        </span>
-                      )}
-                      {typeof msg.routing.routeConfidence === 'number' && (
-                        <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-[10px] font-mono text-emerald-200">
-                          {Math.round(msg.routing.routeConfidence * 100)}% route confidence
-                        </span>
-                      )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 text-[11px]">
+                        <div className="rounded-xl border border-white/10 bg-black/20 p-2">
+                          <div className="text-gray-500 font-mono">Task type</div>
+                          <div className="text-gray-100 font-semibold">{(msg.routing.selectedTaskType || 'auto').replaceAll('_', ' ')}</div>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-black/20 p-2">
+                          <div className="text-gray-500 font-mono">Agent lane</div>
+                          <div className="text-gray-100 font-semibold">{msg.routing.decision?.selectedAgent || msg.routing.primaryDomain || 'Master Orchestrator'}</div>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-black/20 p-2">
+                          <div className="text-gray-500 font-mono">Workflow</div>
+                          <div className="text-gray-100 font-semibold flex items-center gap-1.5">
+                            <Workflow className="w-3 h-3 text-purple-300" />
+                            {msg.routing.decision?.selectedWorkflow || 'Direct answer'}
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-black/20 p-2">
+                          <div className="text-gray-500 font-mono">Confidence</div>
+                          <div className="text-gray-100 font-semibold">
+                            {typeof msg.routing.routeConfidence === 'number' ? `${Math.round(msg.routing.routeConfidence * 100)}%` : 'not reported'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="mt-3 text-[11px] text-gray-300">
+                        {msg.routing.decision?.nextStep || 'Continue from this routed answer.'}
+                      </p>
                     </div>
                   )}
                 </div>
