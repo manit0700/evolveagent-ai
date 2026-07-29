@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { GlassCard } from '../components/shared/GlassCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
 import { RiskBadge } from '../components/shared/RiskBadge';
+import { AgentTemplate, createCustomAgent, fetchAgentTemplates } from '../data/api';
 import { 
   Users, 
   Bot, 
@@ -24,10 +25,141 @@ import {
 } from 'lucide-react';
 import { Agent, PermissionLevel } from '../types';
 
+type AgentApprovalLevel = 'read_only' | 'plan_only' | 'approve_to_edit' | 'approve_to_run' | 'blocked';
+
 export const AgentsPage: React.FC = () => {
-  const { agents, toggleAgentStatus, showToast } = useApp();
+  const {
+    agents,
+    toggleAgentStatus,
+    showToast,
+    projectSetup,
+    projectContextSelection,
+    updateProjectContextSelection,
+    refreshLive,
+  } = useApp();
   const [selectedAgentId, setSelectedAgentId] = useState<string>('agent-ui');
   const [filterLevel, setFilterLevel] = useState<string>('all');
+  const [templates, setTemplates] = useState<AgentTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [createBusy, setCreateBusy] = useState(false);
+  const [selectedTemplateName, setSelectedTemplateName] = useState('');
+  const [agentName, setAgentName] = useState('');
+  const [agentDescription, setAgentDescription] = useState('');
+  const [agentRole, setAgentRole] = useState('');
+  const [agentPrompt, setAgentPrompt] = useState('');
+  const [agentApprovalLevel, setAgentApprovalLevel] = useState<AgentApprovalLevel>('read_only');
+  const [selectedTools, setSelectedTools] = useState<string[]>(['memory_search']);
+
+  const fallbackTemplates: AgentTemplate[] = [
+    {
+      name: 'Resume Agent',
+      role: 'Resume and ATS optimization specialist',
+      description: 'Reviews resumes, improves bullets, and aligns experience to job descriptions.',
+      defaultPrompt: 'You are a resume specialist. Improve clarity, impact, ATS keywords, and measurable outcomes while preserving truthfulness.',
+      toolsAllowed: ['memory_search', 'file_read'],
+      approvalLevel: 'read_only',
+      recommendedUseCase: 'Resume reviews, ATS rewrites, internship applications, and job-specific tailoring.',
+    },
+    {
+      name: 'Code Review Agent',
+      role: 'Code quality and regression reviewer',
+      description: 'Reviews code changes for bugs, regressions, risky assumptions, and missing tests.',
+      defaultPrompt: 'You are a strict code reviewer. Lead with concrete defects, cite files, and focus on behavior, tests, and maintainability.',
+      toolsAllowed: ['memory_search', 'file_read', 'github_read'],
+      approvalLevel: 'plan_only',
+      recommendedUseCase: 'Pull request review, backend/API checks, frontend bug review, and test planning.',
+    },
+    {
+      name: 'Meeting Notes Agent',
+      role: 'Transcript and action item specialist',
+      description: 'Turns meeting notes or recordings into decisions, owners, deadlines, and follow-ups.',
+      defaultPrompt: 'You are a meeting intelligence agent. Extract decisions, action items, owners, blockers, and concise follow-up drafts.',
+      toolsAllowed: ['memory_search', 'recording_read'],
+      approvalLevel: 'read_only',
+      recommendedUseCase: 'Meetings, lectures, client calls, and planning sessions.',
+    },
+  ];
+
+  const toolOptions = [
+    { id: 'memory_search', label: 'Memory search' },
+    { id: 'file_read', label: 'File analysis' },
+    { id: 'research_search', label: 'Research search' },
+    { id: 'github_read', label: 'GitHub read' },
+    { id: 'recording_read', label: 'Recording analysis' },
+  ];
+
+  const applyTemplate = (template: AgentTemplate) => {
+    setSelectedTemplateName(template.name);
+    setAgentName(template.name);
+    setAgentDescription(template.description);
+    setAgentRole(template.role);
+    setAgentPrompt(template.defaultPrompt);
+    setAgentApprovalLevel(template.approvalLevel || 'read_only');
+    setSelectedTools(template.toolsAllowed.length ? template.toolsAllowed : ['memory_search']);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    setTemplatesLoading(true);
+    fetchAgentTemplates()
+      .then((data) => {
+        if (cancelled) return;
+        const liveTemplates = data?.length ? data : fallbackTemplates;
+        setTemplates(liveTemplates);
+        if (!selectedTemplateName && liveTemplates.length) {
+          applyTemplate(liveTemplates[0]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setTemplatesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const toggleTool = (toolId: string) => {
+    setSelectedTools((current) =>
+      current.includes(toolId)
+        ? current.filter((item) => item !== toolId)
+        : [...current, toolId],
+    );
+  };
+
+  const handleCreateAgent = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!agentName.trim()) {
+      showToast('Agent name is required before creating a custom agent.', 'warning');
+      return;
+    }
+
+    setCreateBusy(true);
+    const result = await createCustomAgent({
+      workspaceId: projectSetup?.workspaceId || projectContextSelection.workspaceId,
+      templateName: selectedTemplateName || undefined,
+      name: agentName.trim(),
+      description: agentDescription.trim(),
+      role: agentRole.trim(),
+      prompt: agentPrompt.trim(),
+      toolsAllowed: selectedTools,
+      approvalLevel: agentApprovalLevel,
+      memoryScope: 'workspace',
+      modelPreference: 'default',
+    });
+    setCreateBusy(false);
+
+    if (!result?.ok) {
+      showToast('Could not create the agent. Check the backend and try again.', 'warning');
+      return;
+    }
+
+    showToast(`Created ${result.name || agentName} in ${projectSetup?.workspaceName || 'the selected workspace'}.`, 'success');
+    await refreshLive();
+    if (result.agentId) {
+      updateProjectContextSelection({ agentId: result.agentId });
+      setSelectedAgentId(result.agentId);
+    }
+  };
 
   const fallbackAgent: Agent = {
     id: 'agent-unavailable',
@@ -139,6 +271,166 @@ export const AgentsPage: React.FC = () => {
           </div>
         </GlassCard>
       )}
+
+      <GlassCard glow="blue">
+        <div className="flex flex-col xl:flex-row gap-6">
+          <div className="xl:w-[34%] space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-[11px] font-mono uppercase tracking-[0.22em] text-cyan-300">Custom Agent Builder</div>
+                <h2 className="mt-1 text-xl font-extrabold text-white tracking-tight">Create a reusable workflow specialist</h2>
+                <p className="mt-2 text-xs text-gray-400 leading-relaxed">
+                  Pick a template, tune the role and permission level, then save it into the active workspace. Custom agents still follow governance, permissions, and approval rules.
+                </p>
+              </div>
+              <div className="shrink-0 rounded-2xl border border-cyan-500/25 bg-cyan-500/10 p-3">
+                <Bot className="w-5 h-5 text-cyan-300" />
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Target workspace</div>
+              <div className="mt-1 text-sm font-bold text-white truncate">
+                {projectSetup?.workspaceName || 'Default Workspace'}
+              </div>
+              <p className="mt-1 text-[11px] text-gray-500 line-clamp-2">
+                {projectSetup?.workspaceDescription || 'The agent will be attached to the current workspace context.'}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-white">Templates</span>
+                <span className="text-[10px] font-mono text-gray-500">
+                  {templatesLoading ? 'loading...' : `${templates.length} available`}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto pr-1">
+                {templates.map((template) => (
+                  <button
+                    key={template.name}
+                    type="button"
+                    onClick={() => applyTemplate(template)}
+                    className={`text-left rounded-2xl border p-3 transition-all ${
+                      selectedTemplateName === template.name
+                        ? 'border-cyan-400/60 bg-cyan-500/10 shadow-[0_0_24px_-12px_rgba(34,211,238,0.75)]'
+                        : 'border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-bold text-white">{template.name}</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-black/30 text-cyan-300 border border-cyan-500/20">
+                        {template.approvalLevel.replaceAll('_', ' ')}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-400 line-clamp-2">{template.recommendedUseCase || template.description}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <form onSubmit={handleCreateAgent} className="xl:flex-1 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label className="space-y-1">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Agent name</span>
+                <input
+                  value={agentName}
+                  onChange={(e) => setAgentName(e.target.value)}
+                  className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400/60"
+                  placeholder="Resume Agent"
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Permission level</span>
+                <select
+                  value={agentApprovalLevel}
+                  onChange={(e) => setAgentApprovalLevel(e.target.value as AgentApprovalLevel)}
+                  className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400/60"
+                >
+                  <option value="read_only">Read only</option>
+                  <option value="plan_only">Plan only</option>
+                  <option value="approve_to_edit">Approval to edit</option>
+                  <option value="approve_to_run">Approval to run</option>
+                  <option value="blocked">Blocked</option>
+                </select>
+              </label>
+            </div>
+
+            <label className="block space-y-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Description</span>
+              <input
+                value={agentDescription}
+                onChange={(e) => setAgentDescription(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400/60"
+                placeholder="What this agent is responsible for"
+              />
+            </label>
+
+            <label className="block space-y-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Role</span>
+              <textarea
+                value={agentRole}
+                onChange={(e) => setAgentRole(e.target.value)}
+                rows={2}
+                className="w-full resize-none rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400/60"
+                placeholder="Define the specialist role"
+              />
+            </label>
+
+            <label className="block space-y-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500">System prompt</span>
+              <textarea
+                value={agentPrompt}
+                onChange={(e) => setAgentPrompt(e.target.value)}
+                rows={4}
+                className="w-full resize-none rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400/60"
+                placeholder="Tell the agent how to work"
+              />
+            </label>
+
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Allowed tools</span>
+                <span className="text-[10px] font-mono text-gray-500">{selectedTools.length} selected</span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {toolOptions.map((tool) => {
+                  const active = selectedTools.includes(tool.id);
+                  return (
+                    <button
+                      key={tool.id}
+                      type="button"
+                      onClick={() => toggleTool(tool.id)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-mono transition-all ${
+                        active
+                          ? 'border-emerald-400/50 bg-emerald-500/10 text-emerald-300'
+                          : 'border-white/10 bg-white/[0.03] text-gray-400 hover:bg-white/[0.07]'
+                      }`}
+                    >
+                      {tool.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
+              <p className="text-[11px] text-gray-500 leading-relaxed max-w-2xl">
+                This creates the profile only. File edits, commands, external sends, or paid runs still require the existing approval workflow.
+              </p>
+              <button
+                type="submit"
+                disabled={createBusy}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-cyan-500/20 transition-colors hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Plus className="w-4 h-4" />
+                {createBusy ? 'Creating...' : 'Create Agent'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </GlassCard>
 
       {/* 1. Overview Metrics (6 counters) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
