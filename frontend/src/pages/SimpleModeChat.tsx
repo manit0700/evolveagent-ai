@@ -377,6 +377,24 @@ export const SimpleModeChat: React.FC = () => {
                         </div>
                       </div>
 
+                      <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <div>
+                            <div className="text-[10px] text-gray-500 font-mono uppercase">Model router transparency</div>
+                            <p className="mt-1 text-[11px] text-gray-300">
+                              {msg.routing.context.modelRoutingReason}
+                            </p>
+                          </div>
+                          <span className={`shrink-0 px-2.5 py-1 rounded-full border text-[10px] font-mono ${
+                            msg.routing.context.fallbackUsed
+                              ? 'bg-amber-500/10 border-amber-400/25 text-amber-200'
+                              : 'bg-emerald-500/10 border-emerald-400/25 text-emerald-200'
+                          }`}>
+                            {msg.routing.context.fallbackUsed ? 'fallback used' : 'primary route'}
+                          </span>
+                        </div>
+                      </div>
+
                       <div className="mt-3 flex flex-wrap gap-2">
                         {msg.routing.context.selectedTools.length > 0 ? (
                           msg.routing.context.selectedTools.map((tool) => (
