@@ -840,7 +840,7 @@ describe('routeMessage', () => {
         workspace_memory_used: [{ memory_id: 'm1' }],
         sources: [{ label: 'Project Brain' }],
         tool_trace: [{ tool_name: 'knowledge_search' }],
-        agent_outputs: [{ provider: 'openai', model: 'gpt-4o-mini' }],
+        agent_outputs: [{ provider: 'openai', model: 'gpt-4o-mini', fallback_used: false }],
         quality_gates: { prompt_injection_check: 'passed', secret_scan: 'passed' },
         route_explanation: 'Code request routed to review lane.',
       }),
@@ -870,10 +870,12 @@ describe('routeMessage', () => {
         selectedTools: ['knowledge_search'],
         provider: 'openai',
         model: 'gpt-4o-mini',
+        fallbackUsed: false,
         safetyStatus: 'passed',
         routeExplanation: 'Code request routed to review lane.',
       },
     });
+    expect(res?.context.modelRoutingReason).toContain('openai/gpt-4o-mini');
     const body = JSON.parse((fetchMock.mock.calls[0][1] as any).body);
     expect(body).toMatchObject({ text: 'do a thing', execute: true });
   });

@@ -99,6 +99,8 @@ type EvaContext = {
   selectedTools: string[];
   provider?: string;
   model?: string;
+  fallbackUsed: boolean;
+  modelRoutingReason: string;
   safetyStatus: 'passed' | 'blocked' | 'unknown';
   routeExplanation?: string;
 };
@@ -153,6 +155,20 @@ function buildEvaContext(payload: any): EvaContext {
     : gateValues.length > 0
       ? 'passed'
       : 'unknown';
+  const provider = agentOutput?.provider || payload?.provider || payload?.image_result?.provider;
+  const model = agentOutput?.model || payload?.model || payload?.image_result?.model;
+  const fallbackUsed = Boolean(
+    payload?.fallback_used
+    || agentOutput?.fallback_used
+    || payload?.image_result?.fallback_used
+    || payload?.judge_result?.fallback_used
+  );
+  const selectedTaskType = payload?.selected_task_type || payload?.intent?.selected_task_type || payload?.task_type || 'auto';
+  const modelRoutingReason = fallbackUsed
+    ? 'Fallback was used because the preferred provider was unavailable, failed, or mock-safe mode handled the request.'
+    : provider
+      ? `EVA routed this ${selectedTaskType.replaceAll('_', ' ')} task to ${provider}${model ? `/${model}` : ''} based on available provider metadata.`
+      : 'EVA used the model router path, but the backend did not report a concrete provider for this response.';
 
   return {
     workspaceId: payload?.workspace_id || payload?.workspace?.workspace_id,
@@ -163,8 +179,10 @@ function buildEvaContext(payload: any): EvaContext {
       .map((tool: any) => tool.tool_name || tool.name)
       .filter(Boolean)
       .slice(0, 4),
-    provider: agentOutput?.provider || payload?.provider || payload?.image_result?.provider,
-    model: agentOutput?.model || payload?.model || payload?.image_result?.model,
+    provider,
+    model,
+    fallbackUsed,
+    modelRoutingReason,
     safetyStatus,
     routeExplanation: payload?.route_explanation || payload?.master_plan?.selection_reason,
   };

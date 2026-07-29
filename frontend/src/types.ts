@@ -174,6 +174,8 @@ export interface ChatMessage {
       selectedTools: string[];
       provider?: string;
       model?: string;
+      fallbackUsed: boolean;
+      modelRoutingReason: string;
       safetyStatus: 'passed' | 'blocked' | 'unknown';
       routeExplanation?: string;
     };
@@ -205,6 +207,8 @@ export interface ChatRunStatus {
     selectedTools: string[];
     provider?: string;
     model?: string;
+    fallbackUsed: boolean;
+    modelRoutingReason: string;
     safetyStatus: 'passed' | 'blocked' | 'unknown';
     routeExplanation?: string;
   };
