@@ -22,6 +22,7 @@ import {
   searchMemoryV2,
   fetchMemoryV2Summary,
   fetchRetrievalSummary,
+  addWorkspaceMemory,
   routeMessage,
   startDurableRun,
   fetchModelServingDashboard,
@@ -179,6 +180,35 @@ describe('Project Brain summaries', () => {
     });
     await expect(fetchMemoryV2Summary()).resolves.toMatchObject({ available: true, mode: 'pgvector', items: 12 });
     await expect(fetchRetrievalSummary()).resolves.toMatchObject({ documentCount: 7, chunkCount: 44, queryCount: 3 });
+  });
+
+  it('creates workspace-scoped memory with safe defaults', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ memory_id: 'mem-1', memory_tier: 'hot' }),
+    }));
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    const result = await addWorkspaceMemory('w1', {
+      title: 'Resume preference',
+      content: 'Use action verbs and measurable impact.',
+      type: 'preference',
+      importance: 'high',
+      tags: ['resume', 'ats'],
+    });
+
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/workspaces/w1/memory');
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'POST' });
+    expect(JSON.parse((fetchMock.mock.calls[0][1] as any).body)).toMatchObject({
+      title: 'Resume preference',
+      content: 'Use action verbs and measurable impact.',
+      type: 'preference',
+      source: 'manual',
+      importance: 'high',
+      tags: ['resume', 'ats'],
+    });
+    expect(result).toMatchObject({ ok: true, id: 'mem-1', tier: 'hot' });
   });
 });
 
