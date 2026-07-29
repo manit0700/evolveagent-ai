@@ -111,6 +111,20 @@ type EvaContext = {
     snippet?: string;
   }[];
   selectedTools: string[];
+  toolPreviews: {
+    id: string;
+    name: string;
+    source?: string;
+    permissionLevel?: string;
+    selected: boolean;
+    executed: boolean;
+    blocked: boolean;
+    approvalRequired: boolean;
+    sanitizedInput?: string;
+    resultSummary?: string;
+    riskLevel?: string;
+    status: 'selected' | 'executed' | 'blocked' | 'approval_required' | 'idle';
+  }[];
   provider?: string;
   model?: string;
   fallbackUsed: boolean;
@@ -142,6 +156,38 @@ function normalizeKnowledgeSource(source: any, index: number) {
     type: source?.type || source?.source_type ? String(source.type || source.source_type) : undefined,
     source: source?.source || source?.route || source?.source_route ? String(source.source || source.route || source.source_route) : undefined,
     snippet: clipText(source?.snippet || source?.content || source?.why || source?.summary),
+  };
+}
+
+function normalizeToolPreview(tool: any, index: number) {
+  const blocked = Boolean(tool?.blocked);
+  const approvalRequired = Boolean(tool?.approval_required || tool?.approvalRequired);
+  const executed = Boolean(tool?.executed);
+  const selected = tool?.selected !== false;
+  const name = String(tool?.tool_name || tool?.name || `Tool ${index + 1}`);
+  const status = blocked
+    ? 'blocked'
+    : approvalRequired
+      ? 'approval_required'
+      : executed
+        ? 'executed'
+        : selected
+          ? 'selected'
+          : 'idle';
+
+  return {
+    id: String(tool?.tool_id || tool?.id || name),
+    name,
+    source: tool?.source ? String(tool.source) : undefined,
+    permissionLevel: tool?.permission_level || tool?.permissionLevel ? String(tool.permission_level || tool.permissionLevel) : undefined,
+    selected,
+    executed,
+    blocked,
+    approvalRequired,
+    sanitizedInput: clipText(tool?.sanitized_input || tool?.sanitizedInput || tool?.input_summary || tool?.input),
+    resultSummary: clipText(tool?.result_summary || tool?.resultSummary || tool?.output_summary || tool?.result),
+    riskLevel: tool?.risk_level || tool?.riskLevel ? String(tool.risk_level || tool.riskLevel) : undefined,
+    status,
   };
 }
 
@@ -221,6 +267,7 @@ function buildEvaContext(payload: any): EvaContext {
       .map((tool: any) => tool.tool_name || tool.name)
       .filter(Boolean)
       .slice(0, 4),
+    toolPreviews: toolTrace.map(normalizeToolPreview).slice(0, 5),
     provider,
     model,
     fallbackUsed,

@@ -60,6 +60,13 @@ export const SimpleModeChat: React.FC = () => {
     if (state === 'passed') return 'text-emerald-200 border-emerald-400/25 bg-emerald-500/10';
     return 'text-gray-300 border-white/10 bg-white/5';
   };
+  const toolStatusTone = (state?: string) => {
+    if (state === 'blocked') return 'text-rose-200 border-rose-400/25 bg-rose-500/10';
+    if (state === 'approval_required') return 'text-amber-200 border-amber-400/25 bg-amber-500/10';
+    if (state === 'executed') return 'text-emerald-200 border-emerald-400/25 bg-emerald-500/10';
+    if (state === 'selected') return 'text-cyan-200 border-cyan-400/25 bg-cyan-500/10';
+    return 'text-gray-300 border-white/10 bg-white/5';
+  };
   const continueActionsFor = (routing?: typeof chatMessages[number]['routing']): ContinueAction[] => {
     if (!routing) return [{ label: 'Open Developer Trace', page: 'dev-console' }];
     const actions: ContinueAction[] = [];
@@ -408,6 +415,71 @@ export const SimpleModeChat: React.FC = () => {
                           </span>
                         )}
                       </div>
+
+                      {msg.routing.context.toolPreviews.length > 0 && (
+                        <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div>
+                              <div className="text-[10px] text-gray-500 font-mono uppercase">Tool execution preview</div>
+                              <p className="mt-1 text-[11px] text-gray-300">
+                                EVA selected these tools under the reported permission and safety state.
+                              </p>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openContinueAction({ label: 'Open Tools Hub', page: 'tools' })}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.11] border border-white/10 text-[10px] font-semibold text-gray-100 transition-colors"
+                              >
+                                <Wrench className="w-3 h-3" />
+                                Tools Hub
+                              </button>
+                              {msg.routing.context.toolPreviews.some((tool) => tool.approvalRequired || tool.blocked) && (
+                                <button
+                                  type="button"
+                                  onClick={() => openContinueAction({ label: 'Open Approvals', page: 'approvals' })}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-400/25 text-[10px] font-semibold text-amber-100 transition-colors"
+                                >
+                                  <ShieldAlert className="w-3 h-3" />
+                                  Approvals
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="mt-3 space-y-2">
+                            {msg.routing.context.toolPreviews.map((tool) => (
+                              <div key={tool.id} className="rounded-lg border border-white/10 bg-white/[0.035] p-2">
+                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                                  <div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="text-[11px] font-semibold text-white">{tool.name}</span>
+                                      {tool.permissionLevel && (
+                                        <span className="text-[10px] font-mono text-cyan-200">{tool.permissionLevel.replaceAll('_', ' ')}</span>
+                                      )}
+                                      {tool.source && <span className="text-[10px] font-mono text-gray-500">{tool.source}</span>}
+                                      {tool.riskLevel && <span className="text-[10px] font-mono text-amber-200">risk {tool.riskLevel}</span>}
+                                    </div>
+                                    {tool.sanitizedInput && (
+                                      <p className="mt-1 text-[10px] text-gray-400">
+                                        Input: {tool.sanitizedInput}
+                                      </p>
+                                    )}
+                                    {tool.resultSummary && (
+                                      <p className="mt-1 text-[10px] text-gray-400">
+                                        Result: {tool.resultSummary}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <span className={`shrink-0 px-2.5 py-1 rounded-full border text-[10px] font-mono ${toolStatusTone(tool.status)}`}>
+                                    {tool.status.replaceAll('_', ' ')}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {msg.routing.context.routeExplanation && (
                         <p className="mt-3 text-[11px] text-gray-300">

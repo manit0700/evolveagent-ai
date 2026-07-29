@@ -186,6 +186,20 @@ export interface ChatMessage {
         snippet?: string;
       }[];
       selectedTools: string[];
+      toolPreviews: {
+        id: string;
+        name: string;
+        source?: string;
+        permissionLevel?: string;
+        selected: boolean;
+        executed: boolean;
+        blocked: boolean;
+        approvalRequired: boolean;
+        sanitizedInput?: string;
+        resultSummary?: string;
+        riskLevel?: string;
+        status: 'selected' | 'executed' | 'blocked' | 'approval_required' | 'idle';
+      }[];
       provider?: string;
       model?: string;
       fallbackUsed: boolean;
@@ -233,6 +247,20 @@ export interface ChatRunStatus {
       snippet?: string;
     }[];
     selectedTools: string[];
+    toolPreviews: {
+      id: string;
+      name: string;
+      source?: string;
+      permissionLevel?: string;
+      selected: boolean;
+      executed: boolean;
+      blocked: boolean;
+      approvalRequired: boolean;
+      sanitizedInput?: string;
+      resultSummary?: string;
+      riskLevel?: string;
+      status: 'selected' | 'executed' | 'blocked' | 'approval_required' | 'idle';
+    }[];
     provider?: string;
     model?: string;
     fallbackUsed: boolean;
