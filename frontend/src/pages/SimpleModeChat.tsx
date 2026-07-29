@@ -30,6 +30,11 @@ import {
   Cpu
 } from 'lucide-react';
 
+type ContinueAction = {
+  label: string;
+  page: 'dev-console' | 'approvals' | 'mission-control' | 'tools' | 'project-brain' | 'code-changes';
+};
+
 export const SimpleModeChat: React.FC = () => {
   const { chatMessages, chatRunStatus, sendMessage, mission, agents, connectors, memories, setActivePage, showToast, liveConnected, projectSetup, projectContextSelection, updateProjectContextSelection, refreshLive } = useApp();
   const [inputText, setInputText] = useState('');
@@ -54,6 +59,36 @@ export const SimpleModeChat: React.FC = () => {
     if (state === 'blocked') return 'text-rose-200 border-rose-400/25 bg-rose-500/10';
     if (state === 'passed') return 'text-emerald-200 border-emerald-400/25 bg-emerald-500/10';
     return 'text-gray-300 border-white/10 bg-white/5';
+  };
+  const continueActionsFor = (routing?: typeof chatMessages[number]['routing']): ContinueAction[] => {
+    if (!routing) return [{ label: 'Open Developer Trace', page: 'dev-console' }];
+    const actions: ContinueAction[] = [];
+    if (routing.decision?.approvalState === 'required' || routing.decision?.approvalState === 'blocked') {
+      actions.push({ label: 'Open Approvals', page: 'approvals' });
+    }
+    if (routing.decision?.selectedWorkflow || routing.selectedTaskType?.includes('goal')) {
+      actions.push({ label: 'Open Mission Control', page: 'mission-control' });
+    }
+    if ((routing.context?.selectedTools || []).length > 0 || routing.selectedTaskType === 'app_automation') {
+      actions.push({ label: 'Open Tools Hub', page: 'tools' });
+    }
+    if (routing.context?.memoryUsed || (routing.context?.knowledgeHits || 0) > 0) {
+      actions.push({ label: 'Open Project Brain', page: 'project-brain' });
+    }
+    if (routing.selectedTaskType === 'code_review' || routing.selectedTaskType === 'app_automation') {
+      actions.push({ label: 'Open Code Changes', page: 'code-changes' });
+    }
+    actions.push({ label: 'Open Developer Trace', page: 'dev-console' });
+    const seen = new Set<string>();
+    return actions.filter((action) => {
+      if (seen.has(action.page)) return false;
+      seen.add(action.page);
+      return true;
+    });
+  };
+  const openContinueAction = (action: ContinueAction) => {
+    setActivePage(action.page);
+    showToast(`${action.label} opened from EVA`, 'info');
   };
 
   useEffect(() => {
@@ -284,6 +319,20 @@ export const SimpleModeChat: React.FC = () => {
                       <p className="mt-3 text-[11px] text-gray-300">
                         {msg.routing.decision?.nextStep || 'Continue from this routed answer.'}
                       </p>
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {continueActionsFor(msg.routing).map((action) => (
+                          <button
+                            key={action.page}
+                            type="button"
+                            onClick={() => openContinueAction(action)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.11] border border-white/10 text-[11px] font-semibold text-gray-100 transition-colors"
+                          >
+                            {action.label}
+                            <ArrowRight className="w-3 h-3" />
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
 
