@@ -13,7 +13,8 @@ import {
   ChatRunStatus,
   SystemMetric,
   RiskLevel,
-  ProjectSetupSummary
+  ProjectSetupSummary,
+  ProjectContextSelection
 } from '../types';
 import {
   INITIAL_AGENTS,
@@ -30,6 +31,7 @@ import {
 import { fetchLiveData, routeMessage, decideApproval, setConnectorEnabled } from '../data/api';
 
 const SAFETY_KEY = 'evolveagent-safety';
+const PROJECT_CONTEXT_KEY = 'evolveagent-project-context';
 const DEFAULT_SAFETY: SafetySettings = {
   planningFirst: true,
   mockSafe: true,
@@ -68,7 +70,9 @@ interface AppContextType {
   showToast: (message: string, type?: 'success' | 'info' | 'warning') => void;
   liveConnected: boolean;
   projectSetup: ProjectSetupSummary | null;
-  refreshLive: () => Promise<void>;
+  projectContextSelection: ProjectContextSelection;
+  updateProjectContextSelection: (updates: ProjectContextSelection) => void;
+  refreshLive: (selection?: ProjectContextSelection) => Promise<void>;
 
   // Actions
   approveRequest: (id: string) => void;
@@ -105,6 +109,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'warning' } | null>(null);
   const [liveConnected, setLiveConnected] = useState(false);
   const [projectSetup, setProjectSetup] = useState<ProjectSetupSummary | null>(null);
+  const [projectContextSelection, setProjectContextSelection] = useState<ProjectContextSelection>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(PROJECT_CONTEXT_KEY) || 'null');
+      if (saved && typeof saved === 'object') return saved;
+    } catch { /* ignore */ }
+    return {};
+  });
 
   const [safetySettings, setSafetySettings] = useState<SafetySettings>(() => {
     try {
@@ -128,8 +139,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Load real backend data on mount; keep local fallback data so the UI
   // works even if the backend is down. Only overrides slices that came back.
-  const refreshLive = async () => {
-    const live = await fetchLiveData();
+  const refreshLive = async (selection: ProjectContextSelection = projectContextSelection) => {
+    const live = await fetchLiveData(selection);
     if (!live) { setLiveConnected(false); return; }
     setLiveConnected(true);
     if (live.agents) setAgents(live.agents);
@@ -140,7 +151,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (live.memories) setMemories(live.memories);
     if (live.connectors) setConnectors(live.connectors);
     if (live.approvals) setApprovals(live.approvals);
-    if (live.projectSetup) setProjectSetup(live.projectSetup);
+    if (live.projectSetup) {
+      setProjectSetup(live.projectSetup);
+      const resolvedSelection = live.projectSetup.selection || selection;
+      setProjectContextSelection(resolvedSelection);
+      try { localStorage.setItem(PROJECT_CONTEXT_KEY, JSON.stringify(resolvedSelection)); } catch { /* ignore */ }
+    }
   };
 
   useEffect(() => {
@@ -153,6 +169,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTimeout(() => {
       setToast(null);
     }, 4000);
+  };
+
+  const updateProjectContextSelection = (updates: ProjectContextSelection) => {
+    const nextSelection: ProjectContextSelection = {
+      ...projectContextSelection,
+      ...updates,
+    };
+    if (updates.workspaceId && updates.workspaceId !== projectContextSelection.workspaceId) {
+      nextSelection.agentId = undefined;
+      nextSelection.goalId = undefined;
+    }
+    Object.keys(nextSelection).forEach((key) => {
+      const typedKey = key as keyof ProjectContextSelection;
+      if (!nextSelection[typedKey]) delete nextSelection[typedKey];
+    });
+    setProjectContextSelection(nextSelection);
+    try { localStorage.setItem(PROJECT_CONTEXT_KEY, JSON.stringify(nextSelection)); } catch { /* ignore */ }
+    refreshLive(nextSelection);
+    showToast('Project context updated for Chat and Project Brain.', 'info');
   };
 
   const toggleSafetySetting = (key: keyof SafetySettings) => {
@@ -293,7 +328,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         } : prev);
       }, 12000);
 
-      const routed = await routeMessage(text, !safetySettings.mockSafe);
+      const routed = await routeMessage(text, !safetySettings.mockSafe, projectContextSelection);
       window.clearTimeout(slowTimer);
       const isDeploy = text.toLowerCase().includes('deploy') || text.toLowerCase().includes('run');
       const ranForReal = routed && !safetySettings.mockSafe && !routed.requiresApproval && !routed.blockedExecution;
@@ -418,6 +453,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         showToast,
         liveConnected,
         projectSetup,
+        projectContextSelection,
+        updateProjectContextSelection,
         refreshLive,
         approveRequest,
         rejectRequest,

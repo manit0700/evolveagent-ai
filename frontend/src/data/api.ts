@@ -18,6 +18,8 @@ import {
   ApprovalRequest,
   TaskStatus,
   ProjectSetupSummary,
+  ProjectContextSelection,
+  ProjectContextOption,
 } from '../types';
 
 export const API_BASE =
@@ -87,15 +89,22 @@ async function postJsonWithTimeout<T>(path: string, body: any, timeoutMs = 90000
 export async function routeMessage(
   text: string,
   execute = false,
+  context?: ProjectContextSelection,
 ): Promise<
   { answer: string; requiresApproval: boolean; blockedExecution: boolean; intent: string; suggestedWorkflow: string | null; routeUsed: string } | null
 > {
-  const d = await postJsonWithTimeout<any>('/api/master-agent/route', { text, execute });
+  const contextPayload = {
+    ...(context?.workspaceId ? { workspace_id: context.workspaceId } : {}),
+    ...(context?.agentId ? { agent_id: context.agentId } : {}),
+    ...(context?.goalId ? { goal_id: context.goalId } : {}),
+  };
+  const d = await postJsonWithTimeout<any>('/api/master-agent/route', { text, execute, ...contextPayload });
   if (!d) {
     const fallback = await postJsonWithTimeout<any>('/api/run', {
       user_input: text,
       task_type: 'auto',
       deep_mode: false,
+      ...contextPayload,
     });
     if (!fallback) return null;
     return {
@@ -618,8 +627,10 @@ export async function fetchApprovals(): Promise<ApprovalRequest[] | null> {
 }
 
 // ---- Active project setup ---------------------------------------------------
-function chooseProjectWorkspace(workspaces: any[]): any | null {
+function chooseProjectWorkspace(workspaces: any[], selectedWorkspaceId?: string): any | null {
   const active = workspaces.filter((workspace) => String(workspace.status || 'active') !== 'archived');
+  const selected = active.find((workspace) => workspace.workspace_id === selectedWorkspaceId);
+  if (selected) return selected;
   const resume = active.find((workspace) => {
     const haystack = `${workspace.name || ''} ${workspace.description || ''} ${(workspace.tags || []).join(' ')}`.toLowerCase();
     return haystack.includes('resume') || haystack.includes('ats') || haystack.includes('internship');
@@ -627,37 +638,85 @@ function chooseProjectWorkspace(workspaces: any[]): any | null {
   return resume || active.find((workspace) => workspace.default) || active[0] || null;
 }
 
-export async function fetchProjectSetupSummary(): Promise<ProjectSetupSummary | null> {
+function mapWorkspaceOptions(workspaces: any[]): ProjectContextOption[] {
+  return workspaces
+    .filter((workspace) => String(workspace.status || 'active') !== 'archived')
+    .map((workspace) => ({
+      id: workspace.workspace_id,
+      name: workspace.name || 'Workspace',
+      description: workspace.description || '',
+      status: workspace.default ? 'default' : workspace.status || 'active',
+    }))
+    .filter((workspace) => Boolean(workspace.id));
+}
+
+function mapAgentOptions(agents: any[]): ProjectContextOption[] {
+  return agents
+    .filter((agent) => agent.enabled !== false)
+    .map((agent) => ({
+      id: agent.agent_id,
+      name: agent.name || 'Custom agent',
+      description: agent.description || agent.role || '',
+      status: agent.approval_level || 'approval_safe',
+    }))
+    .filter((agent) => Boolean(agent.id));
+}
+
+function mapGoalOptions(goals: any[]): ProjectContextOption[] {
+  return goals
+    .map((goal) => ({
+      id: goal.goal_id,
+      name: goal.title || 'Goal',
+      description: goal.description || '',
+      status: goal.status || 'active',
+    }))
+    .filter((goal) => Boolean(goal.id));
+}
+
+export async function fetchProjectSetupSummary(selection: ProjectContextSelection = {}): Promise<ProjectSetupSummary | null> {
   const workspaces = await getJson<any[]>('/api/workspaces');
   if (!Array.isArray(workspaces) || workspaces.length === 0) return null;
-  const workspace = chooseProjectWorkspace(workspaces);
+  const workspaceOptions = mapWorkspaceOptions(workspaces);
+  const workspace = chooseProjectWorkspace(workspaces, selection.workspaceId);
   if (!workspace?.workspace_id) return null;
   const workspaceId = workspace.workspace_id;
   const [agents, memories, goals] = await Promise.all([
     getJson<any[]>(`/api/agents/custom?workspace_id=${encodeURIComponent(workspaceId)}`),
-    getJson<any[]>(`/api/workspaces/${encodeURIComponent(workspaceId)}/memory?q=resume`),
+    getJson<any[]>(`/api/workspaces/${encodeURIComponent(workspaceId)}/memory`),
     getJson<any[]>(`/api/goals?workspace_id=${encodeURIComponent(workspaceId)}`),
   ]);
 
   const agentList = Array.isArray(agents) ? agents.filter((agent) => agent.enabled !== false) : [];
-  const resumeAgent = agentList.find((agent) => String(agent.name || '').toLowerCase().includes('resume')) || agentList[0];
+  const agentOptions = mapAgentOptions(agentList);
+  const selectedAgent = agentList.find((agent) => agent.agent_id === selection.agentId);
+  const resumeAgent = selectedAgent || agentList.find((agent) => String(agent.name || '').toLowerCase().includes('resume')) || agentList[0];
   const memoryList = Array.isArray(memories) ? memories : [];
   const goalList = Array.isArray(goals) ? goals : [];
-  const activeGoal = goalList.find((goal) => String(goal.status || '').toLowerCase() === 'active') || goalList[0];
+  const goalOptions = mapGoalOptions(goalList);
+  const selectedGoal = goalList.find((goal) => goal.goal_id === selection.goalId);
+  const activeGoal = selectedGoal || goalList.find((goal) => String(goal.status || '').toLowerCase() === 'active') || goalList[0];
 
   return {
     workspaceId,
     workspaceName: workspace.name || 'Workspace',
     workspaceDescription: workspace.description || '',
+    workspaces: workspaceOptions,
     agentId: resumeAgent?.agent_id,
     agentName: resumeAgent?.name,
     agentPermission: resumeAgent?.approval_level,
     agentTools: Array.isArray(resumeAgent?.tools_allowed) ? resumeAgent.tools_allowed : [],
+    agents: agentOptions,
     memoryCount: memoryList.length,
     memoryTitles: memoryList.slice(0, 4).map((memory) => clip(memory.title || 'Memory', 70)),
     goalId: activeGoal?.goal_id,
     goalTitle: activeGoal?.title,
     goalProgress: Number(activeGoal?.progress_percent ?? 0),
+    goals: goalOptions,
+    selection: {
+      workspaceId,
+      agentId: resumeAgent?.agent_id,
+      goalId: activeGoal?.goal_id,
+    },
     source: 'live',
   };
 }
@@ -958,7 +1017,7 @@ export async function fetchStorageStatus(): Promise<StorageStatus | null> {
   };
 }
 
-export async function fetchLiveData(): Promise<{
+export async function fetchLiveData(selection: ProjectContextSelection = {}): Promise<{
   agents: Agent[] | null;
   mission: Mission | null;
   tasks: Task[] | null;
@@ -977,7 +1036,7 @@ export async function fetchLiveData(): Promise<{
     fetchMemories(),
     fetchConnectors(),
     fetchApprovals(),
-    fetchProjectSetupSummary(),
+    fetchProjectSetupSummary(selection),
   ]);
   if (!agents && !missionData && !governanceLogs && !systemMetrics && !memories && !connectors && !approvals && !projectSetup) return null;
   return {
