@@ -414,6 +414,60 @@ export const SimpleModeChat: React.FC = () => {
                           {msg.routing.context.routeExplanation}
                         </p>
                       )}
+
+                      {(msg.routing.context.memorySources.length > 0 || msg.routing.context.knowledgeSources.length > 0) && (
+                        <details className="mt-3 rounded-xl border border-white/10 bg-black/20 p-2">
+                          <summary className="cursor-pointer text-[11px] font-semibold text-gray-100">
+                            View memory and source drilldown
+                          </summary>
+                          <div className="mt-3 space-y-3">
+                            {msg.routing.context.memorySources.length > 0 && (
+                              <div>
+                                <div className="text-[10px] font-mono uppercase text-cyan-300">Workspace memory used</div>
+                                <div className="mt-2 space-y-2">
+                                  {msg.routing.context.memorySources.map((memory) => (
+                                    <div key={memory.id} className="rounded-lg border border-white/10 bg-white/[0.035] p-2">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-[11px] font-semibold text-white">{memory.title}</span>
+                                        {memory.type && <span className="text-[10px] font-mono text-cyan-200">{memory.type}</span>}
+                                        {memory.source && <span className="text-[10px] font-mono text-gray-500">{memory.source}</span>}
+                                      </div>
+                                      {memory.snippet && <p className="mt-1 text-[10px] text-gray-400">{memory.snippet}</p>}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {msg.routing.context.knowledgeSources.length > 0 && (
+                              <div>
+                                <div className="text-[10px] font-mono uppercase text-purple-300">Knowledge sources used</div>
+                                <div className="mt-2 space-y-2">
+                                  {msg.routing.context.knowledgeSources.map((source) => (
+                                    <div key={source.id} className="rounded-lg border border-white/10 bg-white/[0.035] p-2">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-[11px] font-semibold text-white">{source.label}</span>
+                                        {source.type && <span className="text-[10px] font-mono text-purple-200">{source.type}</span>}
+                                        {source.source && <span className="text-[10px] font-mono text-gray-500">{source.source}</span>}
+                                      </div>
+                                      {source.snippet && <p className="mt-1 text-[10px] text-gray-400">{source.snippet}</p>}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => openContinueAction({ label: 'Open Project Brain', page: 'project-brain' })}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/15 border border-cyan-400/20 text-[11px] font-semibold text-cyan-100 transition-colors"
+                            >
+                              Open Project Brain
+                              <ArrowRight className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </details>
+                      )}
                     </div>
                   )}
                 </div>
