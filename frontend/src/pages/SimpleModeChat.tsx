@@ -73,6 +73,56 @@ export const SimpleModeChat: React.FC = () => {
     if (state === 'passed') return 'text-emerald-200 border-emerald-400/25 bg-emerald-500/10';
     return 'text-gray-300 border-white/10 bg-white/5';
   };
+  const outcomeTone = (state?: string) => {
+    if (state === 'blocked' || state === 'failed') return 'text-rose-200 border-rose-400/25 bg-rose-500/10';
+    if (state === 'needs approval' || state === 'needs review') return 'text-amber-200 border-amber-400/25 bg-amber-500/10';
+    return 'text-emerald-200 border-emerald-400/25 bg-emerald-500/10';
+  };
+  const outcomeFor = (routing: NonNullable<typeof chatMessages[number]['routing']>) => {
+    const actionMode = routing.decision?.actionMode;
+    const selectedTaskType = routing.selectedTaskType || 'auto';
+    const deliverable = selectedTaskType.includes('goal')
+      ? 'Goal plan'
+      : selectedTaskType.includes('image')
+        ? 'Image result'
+        : selectedTaskType.includes('code')
+          ? 'Code review'
+          : selectedTaskType.includes('document') || selectedTaskType.includes('file')
+            ? 'Document analysis'
+            : selectedTaskType.includes('automation')
+              ? 'Automation plan'
+              : actionMode === 'plan'
+                ? 'Action plan'
+                : 'Answer';
+    const completionState = actionMode === 'blocked'
+      ? 'blocked'
+      : actionMode === 'approval_required'
+        ? 'needs approval'
+        : routing.context?.overallVerification === 'needs_review'
+          ? 'needs review'
+          : routing.context?.overallVerification === 'blocked'
+            ? 'failed'
+            : 'complete';
+    const evidence = [
+      routing.context?.memoryUsed ? 'memory saved/used' : null,
+      (routing.context?.selectedTools || []).length > 0 ? 'tools selected' : null,
+      routing.context?.overallVerification === 'passed' ? 'verification passed' : null,
+      routing.context?.fallbackUsed ? 'fallback used' : 'primary model route',
+    ].filter(Boolean) as string[];
+    return {
+      outcome: actionMode === 'blocked'
+        ? 'Blocked before action'
+        : actionMode === 'approval_required'
+          ? 'Waiting for approval'
+          : actionMode === 'plan'
+            ? 'Plan prepared'
+            : 'Answer delivered',
+      deliverable,
+      completionState,
+      nextAction: continueActionsFor(routing)[0],
+      evidence,
+    };
+  };
   const continueActionsFor = (routing?: typeof chatMessages[number]['routing']): ContinueAction[] => {
     if (!routing) return [{ label: 'Open Developer Trace', page: 'dev-console' }];
     const actions: ContinueAction[] = [];
@@ -332,6 +382,49 @@ export const SimpleModeChat: React.FC = () => {
                       <p className="mt-3 text-[11px] text-gray-300">
                         {msg.routing.decision?.nextStep || 'Continue from this routed answer.'}
                       </p>
+
+                      {(() => {
+                        const outcome = outcomeFor(msg.routing);
+                        return (
+                          <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-2">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                              <div>
+                                <div className="text-[10px] text-gray-500 font-mono uppercase">Outcome report</div>
+                                <div className="mt-1 text-sm font-semibold text-white">{outcome.outcome}</div>
+                              </div>
+                              <span className={`shrink-0 px-2.5 py-1 rounded-full border text-[10px] font-mono ${outcomeTone(outcome.completionState)}`}>
+                                {outcome.completionState}
+                              </span>
+                            </div>
+
+                            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                              <div className="rounded-lg border border-white/10 bg-white/[0.035] p-2">
+                                <div className="text-gray-500 font-mono">Deliverable</div>
+                                <div className="text-gray-100 font-semibold">{outcome.deliverable}</div>
+                              </div>
+                              <div className="rounded-lg border border-white/10 bg-white/[0.035] p-2">
+                                <div className="text-gray-500 font-mono">Next best action</div>
+                                <button
+                                  type="button"
+                                  onClick={() => openContinueAction(outcome.nextAction)}
+                                  className="mt-1 inline-flex items-center gap-1.5 text-gray-100 font-semibold hover:text-cyan-200 transition-colors"
+                                >
+                                  {outcome.nextAction.label}
+                                  <ArrowRight className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {outcome.evidence.map((item) => (
+                                <span key={item} className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-mono text-gray-300">
+                                  {item}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
 
                       <div className="mt-3 flex flex-wrap gap-2">
                         {continueActionsFor(msg.routing).map((action) => (
