@@ -200,6 +200,13 @@ export interface ChatMessage {
         riskLevel?: string;
         status: 'selected' | 'executed' | 'blocked' | 'approval_required' | 'idle';
       }[];
+      verificationChecks: {
+        id: string;
+        label: string;
+        status: 'passed' | 'blocked' | 'needs_review' | 'unknown';
+        detail?: string;
+      }[];
+      overallVerification: 'passed' | 'blocked' | 'needs_review' | 'unknown';
       provider?: string;
       model?: string;
       fallbackUsed: boolean;
@@ -261,6 +268,13 @@ export interface ChatRunStatus {
       riskLevel?: string;
       status: 'selected' | 'executed' | 'blocked' | 'approval_required' | 'idle';
     }[];
+    verificationChecks: {
+      id: string;
+      label: string;
+      status: 'passed' | 'blocked' | 'needs_review' | 'unknown';
+      detail?: string;
+    }[];
+    overallVerification: 'passed' | 'blocked' | 'needs_review' | 'unknown';
     provider?: string;
     model?: string;
     fallbackUsed: boolean;

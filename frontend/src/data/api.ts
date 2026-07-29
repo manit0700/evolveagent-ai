@@ -125,6 +125,13 @@ type EvaContext = {
     riskLevel?: string;
     status: 'selected' | 'executed' | 'blocked' | 'approval_required' | 'idle';
   }[];
+  verificationChecks: {
+    id: string;
+    label: string;
+    status: 'passed' | 'blocked' | 'needs_review' | 'unknown';
+    detail?: string;
+  }[];
+  overallVerification: 'passed' | 'blocked' | 'needs_review' | 'unknown';
   provider?: string;
   model?: string;
   fallbackUsed: boolean;
@@ -191,6 +198,81 @@ function normalizeToolPreview(tool: any, index: number) {
   };
 }
 
+function humanizeKey(value: string): string {
+  return value
+    .replaceAll('_', ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function verificationStatus(value: any): 'passed' | 'blocked' | 'needs_review' | 'unknown' {
+  const text = String(value ?? '').toLowerCase();
+  if (!text) return 'unknown';
+  if (text.includes('blocked') || text.includes('failed') || text.includes('deny') || text.includes('rejected')) return 'blocked';
+  if (text.includes('review') || text.includes('approval') || text.includes('pending') || text.includes('warning')) return 'needs_review';
+  if (text.includes('pass') || text.includes('allow') || text.includes('safe') || text.includes('ok')) return 'passed';
+  return 'unknown';
+}
+
+function buildVerificationChecks(payload: any): EvaContext['verificationChecks'] {
+  const qualityGates = payload?.quality_gates || {};
+  const securityReport = payload?.security_report || {};
+  const checks = Object.entries(qualityGates)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(([key, value]) => ({
+      id: `quality-${key}`,
+      label: humanizeKey(key),
+      status: verificationStatus(value),
+      detail: clipText(value, 90),
+    }));
+
+  if (securityReport.recommendation) {
+    checks.push({
+      id: 'security-recommendation',
+      label: 'Security recommendation',
+      status: verificationStatus(securityReport.recommendation),
+      detail: clipText(securityReport.recommendation, 90),
+    });
+  }
+
+  if (payload?.blocked_execution) {
+    checks.push({
+      id: 'execution-blocked',
+      label: 'Execution gate',
+      status: 'blocked',
+      detail: 'EVA blocked execution before taking action.',
+    });
+  } else if (payload?.requires_approval) {
+    checks.push({
+      id: 'approval-required',
+      label: 'Approval gate',
+      status: 'needs_review',
+      detail: 'Human approval is required before execution.',
+    });
+  }
+
+  const confidence = typeof payload?.confidence === 'number' ? payload.confidence : null;
+  if (confidence !== null) {
+    checks.push({
+      id: 'route-confidence',
+      label: 'Route confidence',
+      status: confidence >= 0.75 ? 'passed' : confidence >= 0.45 ? 'needs_review' : 'blocked',
+      detail: `${Math.round(confidence * 100)}% confidence`,
+    });
+  }
+
+  const judgeScore = Number(payload?.judge_result?.score ?? payload?.judge_score);
+  if (Number.isFinite(judgeScore) && judgeScore > 0) {
+    checks.push({
+      id: 'judge-score',
+      label: 'Judge score',
+      status: judgeScore >= 70 ? 'passed' : judgeScore >= 45 ? 'needs_review' : 'blocked',
+      detail: `${Math.round(judgeScore)} / 100`,
+    });
+  }
+
+  return checks.slice(0, 6);
+}
+
 function buildEvaDecision(payload: any, routeUsed: string): EvaDecision {
   const primaryDomain = payload?.intent?.primary_domain || payload?.primary_domain || '';
   const selectedTaskType = payload?.selected_task_type || payload?.intent?.selected_task_type || payload?.task_type || 'auto';
@@ -255,6 +337,14 @@ function buildEvaContext(payload: any): EvaContext {
     : provider
       ? `EVA routed this ${selectedTaskType.replaceAll('_', ' ')} task to ${provider}${model ? `/${model}` : ''} based on available provider metadata.`
       : 'EVA used the model router path, but the backend did not report a concrete provider for this response.';
+  const verificationChecks = buildVerificationChecks(payload);
+  const overallVerification: EvaContext['overallVerification'] = verificationChecks.some((check) => check.status === 'blocked')
+    ? 'blocked'
+    : verificationChecks.some((check) => check.status === 'needs_review')
+      ? 'needs_review'
+      : verificationChecks.some((check) => check.status === 'passed')
+        ? 'passed'
+        : 'unknown';
 
   return {
     workspaceId: payload?.workspace_id || payload?.workspace?.workspace_id,
@@ -268,6 +358,8 @@ function buildEvaContext(payload: any): EvaContext {
       .filter(Boolean)
       .slice(0, 4),
     toolPreviews: toolTrace.map(normalizeToolPreview).slice(0, 5),
+    verificationChecks,
+    overallVerification,
     provider,
     model,
     fallbackUsed,

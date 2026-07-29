@@ -895,6 +895,13 @@ describe('routeMessage', () => {
           riskLevel: 'low',
           status: 'selected',
         }],
+        verificationChecks: [
+          { id: 'quality-prompt_injection_check', label: 'Prompt Injection Check', status: 'passed', detail: 'passed' },
+          { id: 'quality-secret_scan', label: 'Secret Scan', status: 'passed', detail: 'passed' },
+          { id: 'approval-required', label: 'Approval gate', status: 'needs_review', detail: 'Human approval is required before execution.' },
+          { id: 'route-confidence', label: 'Route confidence', status: 'passed', detail: '82% confidence' },
+        ],
+        overallVerification: 'needs_review',
         provider: 'openai',
         model: 'gpt-4o-mini',
         fallbackUsed: false,

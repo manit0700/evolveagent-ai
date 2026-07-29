@@ -67,6 +67,12 @@ export const SimpleModeChat: React.FC = () => {
     if (state === 'selected') return 'text-cyan-200 border-cyan-400/25 bg-cyan-500/10';
     return 'text-gray-300 border-white/10 bg-white/5';
   };
+  const verificationTone = (state?: string) => {
+    if (state === 'blocked') return 'text-rose-200 border-rose-400/25 bg-rose-500/10';
+    if (state === 'needs_review') return 'text-amber-200 border-amber-400/25 bg-amber-500/10';
+    if (state === 'passed') return 'text-emerald-200 border-emerald-400/25 bg-emerald-500/10';
+    return 'text-gray-300 border-white/10 bg-white/5';
+  };
   const continueActionsFor = (routing?: typeof chatMessages[number]['routing']): ContinueAction[] => {
     if (!routing) return [{ label: 'Open Developer Trace', page: 'dev-console' }];
     const actions: ContinueAction[] = [];
@@ -401,6 +407,35 @@ export const SimpleModeChat: React.FC = () => {
                           </span>
                         </div>
                       </div>
+
+                      {msg.routing.context.verificationChecks.length > 0 && (
+                        <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div>
+                              <div className="text-[10px] text-gray-500 font-mono uppercase">Verification evidence</div>
+                              <p className="mt-1 text-[11px] text-gray-300">
+                                EVA reported these checks before presenting the answer.
+                              </p>
+                            </div>
+                            <span className={`shrink-0 px-2.5 py-1 rounded-full border text-[10px] font-mono ${verificationTone(msg.routing.context.overallVerification)}`}>
+                              {msg.routing.context.overallVerification.replaceAll('_', ' ')}
+                            </span>
+                          </div>
+                          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {msg.routing.context.verificationChecks.map((check) => (
+                              <div key={check.id} className="rounded-lg border border-white/10 bg-white/[0.035] p-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-[11px] font-semibold text-white">{check.label}</span>
+                                  <span className={`px-2 py-0.5 rounded-full border text-[9px] font-mono ${verificationTone(check.status)}`}>
+                                    {check.status.replaceAll('_', ' ')}
+                                  </span>
+                                </div>
+                                {check.detail && <p className="mt-1 text-[10px] text-gray-400">{check.detail}</p>}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       <div className="mt-3 flex flex-wrap gap-2">
                         {msg.routing.context.selectedTools.length > 0 ? (
