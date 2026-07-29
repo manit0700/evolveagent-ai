@@ -91,7 +91,18 @@ export async function routeMessage(
   execute = false,
   context?: ProjectContextSelection,
 ): Promise<
-  { answer: string; requiresApproval: boolean; blockedExecution: boolean; intent: string; suggestedWorkflow: string | null; routeUsed: string } | null
+  {
+    answer: string;
+    requiresApproval: boolean;
+    blockedExecution: boolean;
+    intent: string;
+    suggestedWorkflow: string | null;
+    routeUsed: string;
+    masterPriority: boolean;
+    selectedTaskType: string;
+    primaryDomain: string;
+    routeConfidence: number | null;
+  } | null
 > {
   const contextPayload = {
     ...(context?.workspaceId ? { workspace_id: context.workspaceId } : {}),
@@ -114,6 +125,10 @@ export async function routeMessage(
       intent: fallback.task_type || '',
       suggestedWorkflow: fallback.suggested_workflow || null,
       routeUsed: '/api/run',
+      masterPriority: Boolean(fallback.master_priority),
+      selectedTaskType: fallback.selected_task_type || fallback.task_type || '',
+      primaryDomain: fallback.intent?.primary_domain || fallback.primary_domain || '',
+      routeConfidence: typeof fallback.confidence === 'number' ? fallback.confidence : null,
     };
   }
   return {
@@ -123,6 +138,10 @@ export async function routeMessage(
     intent: d.intent || '',
     suggestedWorkflow: d.suggested_workflow || null,
     routeUsed: '/api/master-agent/route',
+    masterPriority: Boolean(d.master_priority),
+    selectedTaskType: d.selected_task_type || d.intent?.selected_task_type || '',
+    primaryDomain: d.intent?.primary_domain || d.primary_domain || '',
+    routeConfidence: typeof d.confidence === 'number' ? d.confidence : null,
   };
 }
 

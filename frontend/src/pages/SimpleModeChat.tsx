@@ -21,7 +21,8 @@ import {
   ChevronRight,
   Loader2,
   Wifi,
-  WifiOff
+  WifiOff,
+  Route
 } from 'lucide-react';
 
 export const SimpleModeChat: React.FC = () => {
@@ -115,6 +116,7 @@ export const SimpleModeChat: React.FC = () => {
               </div>
               <p className="text-[11px] text-gray-400 font-mono">
                 Routing across {activeAgents.length} active agents • {chatRunStatus.routeUsed ? `Last route ${chatRunStatus.routeUsed}` : 'Planning-First Active'}
+                {chatRunStatus.masterPriority && chatRunStatus.selectedTaskType ? ` • EVA → ${chatRunStatus.selectedTaskType.replaceAll('_', ' ')}` : ''}
               </p>
             </div>
           </div>
@@ -211,6 +213,30 @@ export const SimpleModeChat: React.FC = () => {
 
                   {/* If this message contains the Live Orchestration Card */}
                   {msg.isWorkingCard && <LiveWorkingCard />}
+
+                  {!isUser && msg.routing && (
+                    <div className="flex flex-wrap items-center gap-2 px-1">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-[10px] font-mono text-cyan-200">
+                        <Route className="w-3 h-3" />
+                        EVA priority {msg.routing.masterPriority ? 'on' : 'off'}
+                      </span>
+                      {msg.routing.selectedTaskType && (
+                        <span className="px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/25 text-[10px] font-mono text-purple-200">
+                          {msg.routing.selectedTaskType.replaceAll('_', ' ')}
+                        </span>
+                      )}
+                      {msg.routing.primaryDomain && (
+                        <span className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-mono text-gray-300">
+                          {msg.routing.primaryDomain}
+                        </span>
+                      )}
+                      {typeof msg.routing.routeConfidence === 'number' && (
+                        <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-[10px] font-mono text-emerald-200">
+                          {Math.round(msg.routing.routeConfidence * 100)}% route confidence
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             );

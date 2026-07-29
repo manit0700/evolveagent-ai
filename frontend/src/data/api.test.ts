@@ -823,10 +823,32 @@ describe('v300 Digital Departments', () => {
 
 describe('routeMessage', () => {
   it('passes execute and returns the answer + route metadata', async () => {
-    const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ answer: 'hello', requires_approval: true, blocked_execution: false, suggested_workflow: 'wf' }) }));
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        answer: 'hello',
+        requires_approval: true,
+        blocked_execution: false,
+        suggested_workflow: 'wf',
+        master_priority: true,
+        selected_task_type: 'code_review',
+        confidence: 0.82,
+        intent: { primary_domain: 'Coding & Review', selected_task_type: 'code_review' },
+      }),
+    }));
     vi.stubGlobal('fetch', fetchMock as any);
     const res = await routeMessage('do a thing', true);
-    expect(res).toMatchObject({ answer: 'hello', requiresApproval: true, suggestedWorkflow: 'wf', routeUsed: '/api/master-agent/route' });
+    expect(res).toMatchObject({
+      answer: 'hello',
+      requiresApproval: true,
+      suggestedWorkflow: 'wf',
+      routeUsed: '/api/master-agent/route',
+      masterPriority: true,
+      selectedTaskType: 'code_review',
+      primaryDomain: 'Coding & Review',
+      routeConfidence: 0.82,
+    });
     const body = JSON.parse((fetchMock.mock.calls[0][1] as any).body);
     expect(body).toMatchObject({ text: 'do a thing', execute: true });
   });

@@ -153,6 +153,13 @@ export interface ChatMessage {
   timestamp: string;
   isWorkingCard?: boolean;
   attachments?: { name: string; size: string; type: string }[];
+  routing?: {
+    masterPriority: boolean;
+    selectedTaskType?: string;
+    primaryDomain?: string;
+    routeConfidence?: number | null;
+    routeUsed?: string;
+  };
 }
 
 export interface ChatRunStatus {
@@ -161,6 +168,10 @@ export interface ChatRunStatus {
   message: string;
   startedAt?: number;
   routeUsed?: string;
+  masterPriority?: boolean;
+  selectedTaskType?: string;
+  primaryDomain?: string;
+  routeConfidence?: number | null;
   retryText?: string;
   errorDetail?: string;
 }

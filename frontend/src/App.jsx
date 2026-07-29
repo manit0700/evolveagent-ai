@@ -13629,6 +13629,12 @@ function App() {
                   )}
                   <div className="master-answer-head">
                     <span className="master-badge">{masterResult.intent?.primary_domain || 'Routed'}</span>
+                    {masterResult.master_priority && (
+                      <span className="master-badge">EVA priority</span>
+                    )}
+                    {(masterResult.selected_task_type || masterResult.intent?.selected_task_type) && (
+                      <span className="master-badge">{formatType(masterResult.selected_task_type || masterResult.intent?.selected_task_type)}</span>
+                    )}
                     {typeof masterResult.confidence === 'number' && (
                       <span className={`master-confidence ${masterResult.fallback_used ? 'low' : ''}`}>
                         {masterResult.fallback_used ? 'fallback' : `${Math.round(masterResult.confidence * 100)}% confident`}
@@ -13640,6 +13646,11 @@ function App() {
                   </div>
                   {masterResult.route_explanation && (
                     <p className="master-why">Why this route: {masterResult.route_explanation}</p>
+                  )}
+                  {masterResult.master_priority && (
+                    <p className="master-why">
+                      Master Agent selected {formatType(masterResult.selected_task_type || masterResult.intent?.selected_task_type || 'auto')} before handing off to the governed workflow.
+                    </p>
                   )}
                   {masterResult.suggested_workflow && (
                     <p className="master-workflow">Suggested next: {masterResult.suggested_workflow}</p>
@@ -14141,6 +14152,18 @@ function App() {
                 <div>
                   <span>Type</span>
                   <strong>{formatType(selectedRun.master_plan.detected_task_type)}</strong>
+                </div>
+                <div>
+                  <span>EVA priority</span>
+                  <strong>{selectedRun.master_priority ? 'Yes' : 'No'}</strong>
+                </div>
+                <div>
+                  <span>Selected task</span>
+                  <strong>{formatType(selectedRun.selected_task_type || selectedRun.intent?.selected_task_type || selectedRun.master_plan.detected_task_type || 'auto')}</strong>
+                </div>
+                <div>
+                  <span>Domain</span>
+                  <strong>{selectedRun.intent?.primary_domain || selectedRun.primary_domain || 'n/a'}</strong>
                 </div>
                 <div>
                   <span>Confidence</span>
