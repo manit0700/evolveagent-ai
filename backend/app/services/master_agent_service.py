@@ -63,6 +63,23 @@ _ROUTE_WORKFLOWS = {
     "Playbooks & Automation": "Run a saved Playbook (planning-first) or schedule a task (/api/playbooks).",
 }
 
+# The Master Agent remains the priority surface, but the lower-level
+# orchestrator still needs its established task_type vocabulary. This map turns
+# a selected EVA domain into the concrete run pipeline it should use.
+_DOMAIN_TASK_TYPES = {
+    "Coding & Review": "code_review",
+    "Research & Retrieval": "research",
+    "Project & Portfolio": "goal_planning",
+    "Business Operations": "business",
+    "Compliance & Legal": "general",
+    "Personal / Life OS": "general",
+    "Innovation & Simulation": "business",
+    "MCP Tools & Integrations": "app_automation",
+    "Approvals & Governance": "general",
+    "Health & Ops": "system_explanation",
+    "Playbooks & Automation": "app_automation",
+}
+
 # v61: below this confidence the router marks the route uncertain and uses a safe fallback.
 _CONFIDENCE_FALLBACK_THRESHOLD = 0.34
 _FALLBACK_DOMAIN = "Research & Retrieval"
@@ -127,6 +144,11 @@ class MasterAgentService:
         kws = ", ".join(top.get("matched_keywords", [])[:5]) or "general intent"
         return f"Routed to {top['domain']} (confidence {int(top['confidence'] * 100)}%) — matched: {kws}."
 
+    @staticmethod
+    def _task_type_for_domain(domain: str, fallback_used: bool) -> str:
+        selected_domain = _FALLBACK_DOMAIN if fallback_used else domain
+        return _DOMAIN_TASK_TYPES.get(selected_domain, "general")
+
     def _detect_risky_intent(self, text: str, engaged: list[dict]) -> tuple[bool, list[str]]:
         haystack = f" {(text or '').lower()} "
         verbs = [v for v in _RISKY_VERBS if v in haystack]
@@ -160,9 +182,11 @@ class MasterAgentService:
         # v61: uncertain routing → safe fallback (never silently guess a specific system).
         confidence = primary.get("confidence", 0.0)
         fallback_used = primary.get("match_score", 0) == 0 or confidence < _CONFIDENCE_FALLBACK_THRESHOLD
+        primary_domain = _FALLBACK_DOMAIN if fallback_used else primary["domain"]
+        selected_task_type = self._task_type_for_domain(primary["domain"], fallback_used)
         route_explanation = self._route_explanation(primary, fallback_used)
         suggested_workflow = _ROUTE_WORKFLOWS.get(
-            _FALLBACK_DOMAIN if fallback_used else primary["domain"],
+            primary_domain,
             "Answer directly, then suggest a specific workflow.",
         )
         mcp = self.mcp_suggestion.suggest(text)
@@ -177,7 +201,12 @@ class MasterAgentService:
         answered = False
         blocked_execution = requires_approval
         try:
-            run_request = RunRequest(user_input=text or "Summarize what you can help with.", workspace_id=workspace_id, voice_used=voice_used)
+            run_request = RunRequest(
+                user_input=text or "Summarize what you can help with.",
+                task_type=selected_task_type,
+                workspace_id=workspace_id,
+                voice_used=voice_used,
+            )
             response = self._run_fn(run_request)
             answer = getattr(response, "final_output", "") or ""
             agents_used = list(getattr(response, "agents_used", []) or [])
@@ -201,7 +230,9 @@ class MasterAgentService:
         record = {
             "run_id": str(uuid4()),
             "request": text[:1000],
-            "primary_domain": _FALLBACK_DOMAIN if fallback_used else primary["domain"],
+            "primary_domain": primary_domain,
+            "selected_task_type": selected_task_type,
+            "master_priority": True,
             "engaged_domains": [c["domain"] for c in top],
             "confidence": confidence,
             "fallback_used": fallback_used,
@@ -232,6 +263,8 @@ class MasterAgentService:
             "request": text,
             "intent": {
                 "primary_domain": record["primary_domain"],
+                "selected_task_type": selected_task_type,
+                "master_priority": True,
                 "engaged": top,
                 "confidence": confidence,
                 "fallback_used": fallback_used,
@@ -239,6 +272,8 @@ class MasterAgentService:
                 "suggested_workflow": suggested_workflow,
             },
             "confidence": confidence,
+            "selected_task_type": selected_task_type,
+            "master_priority": True,
             "fallback_used": fallback_used,
             "route_explanation": route_explanation,
             "suggested_workflow": suggested_workflow,
