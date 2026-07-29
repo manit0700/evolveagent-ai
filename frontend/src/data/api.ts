@@ -505,6 +505,33 @@ export async function runMissionTask(goalId: string, taskId: string): Promise<{ 
   };
 }
 
+export async function createMissionGoal(payload: {
+  prompt: string;
+  title?: string;
+  description?: string;
+  workspaceId?: string;
+  tags?: string[];
+}): Promise<{ ok: boolean; goalId?: string; title?: string; taskCount: number } | null> {
+  const result = await postJsonWithTimeout<any>(
+    '/api/goals',
+    {
+      prompt: payload.prompt,
+      title: payload.title,
+      description: payload.description,
+      workspace_id: payload.workspaceId,
+      tags: payload.tags || [],
+    },
+    120000,
+  );
+  if (!result?.goal) return null;
+  return {
+    ok: true,
+    goalId: result.goal.goal_id,
+    title: result.goal.title,
+    taskCount: Array.isArray(result.task_graph?.tasks) ? result.task_graph.tasks.length : 0,
+  };
+}
+
 // ---- Project Brain memories (task memory) ----------------------------------
 export async function fetchMemories(): Promise<MemoryItem[] | null> {
   const data = await getJson<any[]>('/api/memory');

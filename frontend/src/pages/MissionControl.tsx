@@ -6,6 +6,7 @@ import {
   LiveWorkflowRun,
   runMissionTask,
   updateMissionTaskStatus,
+  createMissionGoal,
 } from '../data/api';
 import { GlassCard } from '../components/shared/GlassCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
@@ -29,11 +30,14 @@ import {
 import { Task, TaskStatus } from '../types';
 
 export const MissionControl: React.FC = () => {
-  const { mission, tasks, agents, approvals, advanceWorkflowStep, showToast, refreshLive, liveConnected, setActivePage } = useApp();
+  const { mission, tasks, agents, approvals, advanceWorkflowStep, showToast, refreshLive, liveConnected, setActivePage, projectSetup, projectContextSelection } = useApp();
   const [liveRuns, setLiveRuns] = useState<LiveWorkflowRun[] | null>(null);
   const [starting, setStarting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [actionBusyId, setActionBusyId] = useState<string | null>(null);
+  const [goalPrompt, setGoalPrompt] = useState('Build an AI resume analyzer app');
+  const [goalTitle, setGoalTitle] = useState('');
+  const [creatingGoal, setCreatingGoal] = useState(false);
   const loadRuns = () => fetchWorkflowRuns().then(setLiveRuns);
   useEffect(() => { loadRuns(); }, []);
 
@@ -181,10 +185,38 @@ export const MissionControl: React.FC = () => {
 
   const handleApproveNext = () => {
     if (!nextTask) {
-      showToast('No next task is available. Create a new goal from Chat.', 'info');
+      showToast('No next task is available. Create a new goal from Mission Control.', 'info');
       return;
     }
     void runTaskAction(nextTask);
+  };
+
+  const handleCreateGoal = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const prompt = goalPrompt.trim();
+    if (!prompt) {
+      showToast('Describe the goal before creating a Mission Control plan.', 'warning');
+      return;
+    }
+
+    setCreatingGoal(true);
+    try {
+      const result = await createMissionGoal({
+        workspaceId: projectSetup?.workspaceId || projectContextSelection.workspaceId,
+        prompt,
+        title: goalTitle.trim() || undefined,
+        tags: ['mission-control'],
+      });
+      if (!result?.ok) {
+        showToast('Could not create the goal. Check the backend and try again.', 'warning');
+        return;
+      }
+      await refreshLive();
+      setGoalTitle('');
+      showToast(`Created "${result.title || goalTitle || 'Mission Control goal'}" with ${result.taskCount} planned tasks.`, 'success');
+    } finally {
+      setCreatingGoal(false);
+    }
   };
 
   const columns: { ids: TaskStatus[]; label: string; color: string }[] = [
@@ -197,13 +229,67 @@ export const MissionControl: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
+      <GlassCard glow="blue">
+        <div className="flex flex-col lg:flex-row gap-5 lg:items-start lg:justify-between">
+          <div className="max-w-2xl">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-cyan-300" />
+              <span className="text-[11px] font-mono uppercase tracking-[0.22em] text-cyan-300">Goal Planner Agent</span>
+            </div>
+            <h2 className="mt-2 text-xl font-extrabold text-white tracking-tight">Create a live goal and task graph</h2>
+            <p className="mt-2 text-xs text-gray-400 leading-relaxed">
+              Describe a big outcome. Mission Control will save a workspace-scoped goal, generate phases and tasks, assign suggested agents, and let you run each task through the governed workflow.
+            </p>
+            <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[11px] font-mono text-gray-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              Target: {projectSetup?.workspaceName || 'Default Workspace'}
+            </div>
+          </div>
+
+          <form onSubmit={handleCreateGoal} className="w-full lg:max-w-xl space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4">
+            <label className="block space-y-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Goal title optional</span>
+              <input
+                value={goalTitle}
+                onChange={(e) => setGoalTitle(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400/60"
+                placeholder="AI resume analyzer"
+              />
+            </label>
+            <label className="block space-y-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500">What do you want to finish?</span>
+              <textarea
+                value={goalPrompt}
+                onChange={(e) => setGoalPrompt(e.target.value)}
+                rows={3}
+                className="w-full resize-none rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400/60"
+                placeholder="Build an AI resume analyzer app with upload, scoring, ATS feedback, and a clean demo."
+              />
+            </label>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-[11px] text-gray-500 leading-relaxed">
+                This plans the mission only. Running tasks, edits, external actions, and paid work still follow approvals.
+              </p>
+              <button
+                type="submit"
+                disabled={creatingGoal}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-cyan-500/20 transition-colors hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Sparkles className="w-4 h-4" />
+                {creatingGoal ? 'Planning...' : 'Create Goal'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </GlassCard>
+
       {/* 1. Active Mission Overview Header Card */}
       {tasks.length === 0 ? (
         <GlassCard className="text-center py-12">
           <Compass className="w-10 h-10 text-cyan-400 mx-auto" />
           <h2 className="mt-4 text-xl font-extrabold text-white">No active mission yet</h2>
           <p className="mt-2 text-sm text-gray-400 max-w-xl mx-auto">
-            Create a goal from Chat, for example: “Build an AI resume analyzer app.” Mission Control will show the phases, tasks, agents, approvals, and progress here.
+            Create a goal above, for example: “Build an AI resume analyzer app.” Mission Control will show the phases, tasks, agents, approvals, and progress here.
           </p>
         </GlassCard>
       ) : (
