@@ -34,7 +34,7 @@ import {
 import { MemoryItem } from '../types';
 
 export const ProjectBrain: React.FC = () => {
-  const { memories, togglePinMemory, addMemoryItem, showToast, projectSetup, refreshLive } = useApp();
+  const { memories, togglePinMemory, addMemoryItem, showToast, projectSetup, projectContextSelection, updateProjectContextSelection, refreshLive } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeChip, setActiveChip] = useState<string>('all');
   const [isAddingModalOpen, setIsAddingModalOpen] = useState(false);
@@ -309,9 +309,71 @@ export const ProjectBrain: React.FC = () => {
                 {projectSetup ? 'Loaded from backend workspace data' : 'Using local fallback context'}
               </span>
             </div>
-            <h3 className="mt-3 text-lg font-bold text-white">
-              {projectSetup?.workspaceName || 'Default Workspace'}
-            </h3>
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div>
+                <label className="text-[10px] font-mono uppercase tracking-wider text-cyan-300" htmlFor="brain-workspace-select">
+                  Workspace
+                </label>
+                {projectSetup?.workspaces?.length ? (
+                  <select
+                    id="brain-workspace-select"
+                    value={projectContextSelection.workspaceId || projectSetup.workspaceId}
+                    onChange={(e) => updateProjectContextSelection({ workspaceId: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/40 px-2.5 py-2 text-sm font-bold text-white focus:outline-none focus:border-cyan-400"
+                  >
+                    {projectSetup.workspaces.map((workspace) => (
+                      <option key={workspace.id} value={workspace.id} className="bg-[#111116]">
+                        {workspace.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <h3 className="mt-1 text-lg font-bold text-white">Default Workspace</h3>
+                )}
+              </div>
+              <div>
+                <label className="text-[10px] font-mono uppercase tracking-wider text-gray-500" htmlFor="brain-agent-select">
+                  Active agent
+                </label>
+                {projectSetup?.agents?.length ? (
+                  <select
+                    id="brain-agent-select"
+                    value={projectContextSelection.agentId || projectSetup.agentId || ''}
+                    onChange={(e) => updateProjectContextSelection({ agentId: e.target.value || undefined })}
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/40 px-2.5 py-2 text-sm font-semibold text-white focus:outline-none focus:border-cyan-400"
+                  >
+                    {projectSetup.agents.map((agent) => (
+                      <option key={agent.id} value={agent.id} className="bg-[#111116]">
+                        {agent.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="mt-2 text-sm font-semibold text-white">Master Orchestrator</div>
+                )}
+              </div>
+              <div>
+                <label className="text-[10px] font-mono uppercase tracking-wider text-gray-500" htmlFor="brain-goal-select">
+                  Goal
+                </label>
+                {projectSetup?.goals?.length ? (
+                  <select
+                    id="brain-goal-select"
+                    value={projectContextSelection.goalId || projectSetup.goalId || ''}
+                    onChange={(e) => updateProjectContextSelection({ goalId: e.target.value || undefined })}
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/40 px-2.5 py-2 text-sm font-semibold text-white focus:outline-none focus:border-cyan-400"
+                  >
+                    {projectSetup.goals.map((goal) => (
+                      <option key={goal.id} value={goal.id} className="bg-[#111116]">
+                        {goal.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="mt-2 text-sm font-semibold text-white">No active goal</div>
+                )}
+              </div>
+            </div>
             <p className="mt-1 text-sm text-gray-300 leading-relaxed">
               {projectSetup?.workspaceDescription || 'Project Brain stores reusable facts, preferences, decisions, and goals that EvolveAgent can retrieve before answering.'}
             </p>

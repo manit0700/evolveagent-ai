@@ -39,6 +39,7 @@ import {
   setDepartmentBudget,
   planDepartmentRun,
   fetchSchedulerTickStatus,
+  fetchProjectSetupSummary,
 } from './api';
 
 // Helper: stub global fetch to return a given JSON body per-URL.
@@ -713,9 +714,51 @@ describe('routeMessage', () => {
     });
     vi.stubGlobal('fetch', fetchMock as any);
 
-    const res = await routeMessage('fallback please', false);
+    const res = await routeMessage('fallback please', false, {
+      workspaceId: 'w1',
+      agentId: 'a1',
+      goalId: 'g1',
+    });
     expect(res).toMatchObject({ answer: 'fallback answer', intent: 'general', routeUsed: '/api/run' });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[1][0]).toContain('/api/run');
+    const body = JSON.parse((fetchMock.mock.calls[1][1] as any).body);
+    expect(body).toMatchObject({ workspace_id: 'w1', agent_id: 'a1', goal_id: 'g1' });
+  });
+});
+
+describe('fetchProjectSetupSummary', () => {
+  it('uses the selected workspace, agent, and goal when provided', async () => {
+    stubFetch({
+      '/api/workspaces': [
+        { workspace_id: 'w-default', name: 'Default Workspace', default: true },
+        { workspace_id: 'w-resume', name: 'Resume Projects', description: 'ATS internship work', tags: ['resume'] },
+      ],
+      '/api/agents/custom?workspace_id=w-resume': [
+        { agent_id: 'a1', name: 'Resume Review Agent', approval_level: 'read_only', tools_allowed: ['memory_search'] },
+        { agent_id: 'a2', name: 'Portfolio Agent', approval_level: 'plan_only', tools_allowed: ['file_analysis'] },
+      ],
+      '/api/workspaces/w-resume/memory': [
+        { memory_id: 'm1', title: 'Resume bullet style preference' },
+        { memory_id: 'm2', title: 'Resume project goal' },
+      ],
+      '/api/goals?workspace_id=w-resume': [
+        { goal_id: 'g1', title: 'Prepare portfolio', status: 'active', progress_percent: 30 },
+        { goal_id: 'g2', title: 'Polish resume', status: 'paused', progress_percent: 70 },
+      ],
+    });
+
+    const setup = await fetchProjectSetupSummary({ workspaceId: 'w-resume', agentId: 'a2', goalId: 'g2' });
+    expect(setup).toMatchObject({
+      workspaceId: 'w-resume',
+      agentId: 'a2',
+      goalId: 'g2',
+      agentName: 'Portfolio Agent',
+      goalTitle: 'Polish resume',
+      memoryCount: 2,
+    });
+    expect(setup?.workspaces.map((workspace) => workspace.id)).toContain('w-resume');
+    expect(setup?.agents).toHaveLength(2);
+    expect(setup?.goals).toHaveLength(2);
   });
 });

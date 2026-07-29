@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 
 export const SimpleModeChat: React.FC = () => {
-  const { chatMessages, chatRunStatus, sendMessage, mission, agents, connectors, memories, setActivePage, showToast, liveConnected, projectSetup, refreshLive } = useApp();
+  const { chatMessages, chatRunStatus, sendMessage, mission, agents, connectors, memories, setActivePage, showToast, liveConnected, projectSetup, projectContextSelection, updateProjectContextSelection, refreshLive } = useApp();
   const [inputText, setInputText] = useState('');
   const [selectedDb, setSelectedDb] = useState('Workspace Memory + Postgres');
   const [attachments, setAttachments] = useState<{ name: string; size: string; type: string }[]>([]);
@@ -371,10 +371,25 @@ export const SimpleModeChat: React.FC = () => {
           </div>
           <div className="mt-3 space-y-3">
             <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-3">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-cyan-300">Workspace</div>
-              <div className="mt-1 text-sm font-bold text-white">
-                {projectSetup?.workspaceName || 'Default Workspace'}
-              </div>
+              <label className="text-[10px] font-mono uppercase tracking-wider text-cyan-300" htmlFor="chat-workspace-select">
+                Workspace
+              </label>
+              {projectSetup?.workspaces?.length ? (
+                <select
+                  id="chat-workspace-select"
+                  value={projectContextSelection.workspaceId || projectSetup.workspaceId}
+                  onChange={(e) => updateProjectContextSelection({ workspaceId: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-cyan-500/20 bg-black/50 px-2.5 py-2 text-sm font-bold text-white focus:outline-none focus:border-cyan-400"
+                >
+                  {projectSetup.workspaces.map((workspace) => (
+                    <option key={workspace.id} value={workspace.id} className="bg-[#111116]">
+                      {workspace.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="mt-1 text-sm font-bold text-white">Default Workspace</div>
+              )}
               <p className="mt-1 text-[11px] text-gray-400 line-clamp-2">
                 {projectSetup?.workspaceDescription || 'Current chat uses the default workspace context until a live project setup is selected.'}
               </p>
@@ -382,10 +397,23 @@ export const SimpleModeChat: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="rounded-xl bg-white/[0.03] border border-white/10 p-2.5">
-                <div className="text-[10px] font-mono text-gray-500 uppercase">Active agent</div>
-                <div className="mt-1 font-semibold text-white truncate">
-                  {projectSetup?.agentName || 'Master Orchestrator'}
-                </div>
+                <label className="text-[10px] font-mono text-gray-500 uppercase" htmlFor="chat-agent-select">Active agent</label>
+                {projectSetup?.agents?.length ? (
+                  <select
+                    id="chat-agent-select"
+                    value={projectContextSelection.agentId || projectSetup.agentId || ''}
+                    onChange={(e) => updateProjectContextSelection({ agentId: e.target.value || undefined })}
+                    className="mt-1 w-full rounded-lg border border-white/10 bg-black/40 px-2 py-1.5 font-semibold text-white focus:outline-none focus:border-cyan-400"
+                  >
+                    {projectSetup.agents.map((agent) => (
+                      <option key={agent.id} value={agent.id} className="bg-[#111116]">
+                        {agent.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="mt-1 font-semibold text-white truncate">Master Orchestrator</div>
+                )}
               </div>
               <div className="rounded-xl bg-white/[0.03] border border-white/10 p-2.5">
                 <div className="text-[10px] font-mono text-gray-500 uppercase">Memory loaded</div>
@@ -398,10 +426,23 @@ export const SimpleModeChat: React.FC = () => {
             <div className="rounded-xl bg-white/[0.03] border border-white/10 p-2.5">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-[10px] font-mono text-gray-500 uppercase">Current goal</div>
-                  <div className="mt-1 text-xs font-semibold text-white line-clamp-2">
-                    {projectSetup?.goalTitle || mission.title}
-                  </div>
+                  <label className="text-[10px] font-mono text-gray-500 uppercase" htmlFor="chat-goal-select">Current goal</label>
+                  {projectSetup?.goals?.length ? (
+                    <select
+                      id="chat-goal-select"
+                      value={projectContextSelection.goalId || projectSetup.goalId || ''}
+                      onChange={(e) => updateProjectContextSelection({ goalId: e.target.value || undefined })}
+                      className="mt-1 w-full rounded-lg border border-white/10 bg-black/40 px-2 py-1.5 text-xs font-semibold text-white focus:outline-none focus:border-cyan-400"
+                    >
+                      {projectSetup.goals.map((goal) => (
+                        <option key={goal.id} value={goal.id} className="bg-[#111116]">
+                          {goal.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="mt-1 text-xs font-semibold text-white line-clamp-2">{mission.title}</div>
+                  )}
                 </div>
                 <span className="shrink-0 text-[10px] font-mono text-cyan-300">
                   {Math.round(projectSetup?.goalProgress ?? mission.progress)}%

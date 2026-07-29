@@ -177,14 +177,31 @@ export interface ProjectSetupSummary {
   workspaceId: string;
   workspaceName: string;
   workspaceDescription: string;
+  workspaces: ProjectContextOption[];
   agentId?: string;
   agentName?: string;
   agentPermission?: string;
   agentTools: string[];
+  agents: ProjectContextOption[];
   memoryCount: number;
   memoryTitles: string[];
   goalId?: string;
   goalTitle?: string;
   goalProgress?: number;
+  goals: ProjectContextOption[];
+  selection: ProjectContextSelection;
   source: 'live' | 'fallback';
+}
+
+export interface ProjectContextSelection {
+  workspaceId?: string;
+  agentId?: string;
+  goalId?: string;
+}
+
+export interface ProjectContextOption {
+  id: string;
+  name: string;
+  description?: string;
+  status?: string;
 }
