@@ -312,6 +312,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         : 'Trying to reconnect to the backend before using local fallback messaging...',
       startedAt: Date.now(),
       routeUsed: undefined,
+      masterPriority: undefined,
+      selectedTaskType: undefined,
+      primaryDomain: undefined,
+      routeConfidence: undefined,
       retryText: text,
       errorDetail: undefined,
     });
@@ -337,6 +341,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           + (routed.requiresApproval ? '\n\n⚠️ This intent is **risky** — held for explicit approval (nothing was executed).' : '')
           + (ranForReal ? '\n\n✅ Approval-Safe is off — this non-risky action was executed for real.' : '')
           + (routed.suggestedWorkflow ? `\n\nSuggested workflow: **${routed.suggestedWorkflow}**` : '')
+          + (routed.masterPriority ? `\n\nEVA selected task type: **${routed.selectedTaskType || 'auto'}**${routed.primaryDomain ? ` under **${routed.primaryDomain}**` : ''}.` : '')
           + `\n\nBackend route used: ${routed.routeUsed}`
         : `I couldn't reach the backend from Chat.\n\nWhat this means:\n- No live agent run was created.\n- No tools executed.\n- Your prompt stayed in the local UI fallback.\n\nUse **Retry Backend** or start the backend, then send this again.`;
 
@@ -347,7 +352,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         avatar: '🤖',
         text: replyText,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isWorkingCard: isDeploy && Boolean(routed?.requiresApproval)
+        isWorkingCard: isDeploy && Boolean(routed?.requiresApproval),
+        routing: routed ? {
+          masterPriority: routed.masterPriority,
+          selectedTaskType: routed.selectedTaskType,
+          primaryDomain: routed.primaryDomain,
+          routeConfidence: routed.routeConfidence,
+          routeUsed: routed.routeUsed,
+        } : undefined,
       };
       setChatMessages(prev => [...prev, agentMsg]);
       setLiveConnected(Boolean(routed));
@@ -356,6 +368,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         phase: routed ? 'idle' : 'offline',
         message: routed ? '' : 'Backend route timed out or was unavailable.',
         routeUsed: routed?.routeUsed,
+        masterPriority: routed?.masterPriority,
+        selectedTaskType: routed?.selectedTaskType,
+        primaryDomain: routed?.primaryDomain,
+        routeConfidence: routed?.routeConfidence,
         retryText: routed ? undefined : text,
         errorDetail: routed ? undefined : 'Both /api/master-agent/route and /api/run were unavailable or timed out.',
       });
