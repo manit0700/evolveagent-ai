@@ -317,6 +317,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       primaryDomain: undefined,
       routeConfidence: undefined,
       decision: undefined,
+      context: undefined,
       retryText: text,
       errorDetail: undefined,
     });
@@ -361,6 +362,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           routeConfidence: routed.routeConfidence,
           routeUsed: routed.routeUsed,
           decision: routed.decision,
+          context: routed.context,
         } : undefined,
       };
       setChatMessages(prev => [...prev, agentMsg]);
@@ -375,6 +377,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         primaryDomain: routed?.primaryDomain,
         routeConfidence: routed?.routeConfidence,
         decision: routed?.decision,
+        context: routed?.context,
         retryText: routed ? undefined : text,
         errorDetail: routed ? undefined : 'Both /api/master-agent/route and /api/run were unavailable or timed out.',
       });

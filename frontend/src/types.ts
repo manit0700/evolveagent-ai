@@ -166,6 +166,17 @@ export interface ChatMessage {
       approvalState: 'not_required' | 'required' | 'blocked';
       nextStep: string;
     };
+    context?: {
+      workspaceId?: string;
+      memoryUsed: boolean;
+      memoryCount: number;
+      knowledgeHits: number;
+      selectedTools: string[];
+      provider?: string;
+      model?: string;
+      safetyStatus: 'passed' | 'blocked' | 'unknown';
+      routeExplanation?: string;
+    };
   };
 }
 
@@ -185,6 +196,17 @@ export interface ChatRunStatus {
     selectedWorkflow?: string | null;
     approvalState: 'not_required' | 'required' | 'blocked';
     nextStep: string;
+  };
+  context?: {
+    workspaceId?: string;
+    memoryUsed: boolean;
+    memoryCount: number;
+    knowledgeHits: number;
+    selectedTools: string[];
+    provider?: string;
+    model?: string;
+    safetyStatus: 'passed' | 'blocked' | 'unknown';
+    routeExplanation?: string;
   };
   retryText?: string;
   errorDetail?: string;
