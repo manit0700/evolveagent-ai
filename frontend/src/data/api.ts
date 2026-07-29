@@ -83,6 +83,45 @@ async function postJsonWithTimeout<T>(path: string, body: any, timeoutMs = 90000
 }
 
 // ---- Actions ---------------------------------------------------------------
+type EvaDecision = {
+  actionMode: 'answer' | 'plan' | 'approval_required' | 'blocked';
+  selectedAgent: string;
+  selectedWorkflow?: string | null;
+  approvalState: 'not_required' | 'required' | 'blocked';
+  nextStep: string;
+};
+
+function buildEvaDecision(payload: any, routeUsed: string): EvaDecision {
+  const primaryDomain = payload?.intent?.primary_domain || payload?.primary_domain || '';
+  const selectedTaskType = payload?.selected_task_type || payload?.intent?.selected_task_type || payload?.task_type || 'auto';
+  const selectedWorkflow = payload?.suggested_workflow || null;
+  const blocked = Boolean(payload?.blocked_execution);
+  const requiresApproval = Boolean(payload?.requires_approval);
+  const actionMode: EvaDecision['actionMode'] = blocked
+    ? 'blocked'
+    : requiresApproval
+      ? 'approval_required'
+      : selectedWorkflow
+        ? 'plan'
+        : 'answer';
+
+  return {
+    actionMode,
+    selectedAgent: primaryDomain ? `${primaryDomain} specialist lane` : 'Master Orchestrator',
+    selectedWorkflow,
+    approvalState: blocked ? 'blocked' : requiresApproval ? 'required' : 'not_required',
+    nextStep: blocked
+      ? 'Review the blocked action before retrying.'
+      : requiresApproval
+        ? 'Open Approvals to review before anything executes.'
+        : selectedWorkflow
+          ? 'Review the suggested workflow, then continue from Mission Control or Developer Mode.'
+          : routeUsed === '/api/master-agent/route'
+            ? `Continue with the ${selectedTaskType.replaceAll('_', ' ')} path.`
+            : 'Backend fallback answered this request through /api/run.',
+  };
+}
+
 /** Route a chat message through the Master Agent. Returns the reply + metadata.
  *  `execute` is only honored by the backend for NON-risky intents; risky actions
  *  are always held for approval regardless. */
@@ -102,6 +141,7 @@ export async function routeMessage(
     selectedTaskType: string;
     primaryDomain: string;
     routeConfidence: number | null;
+    decision: EvaDecision;
   } | null
 > {
   const contextPayload = {
@@ -129,6 +169,7 @@ export async function routeMessage(
       selectedTaskType: fallback.selected_task_type || fallback.task_type || '',
       primaryDomain: fallback.intent?.primary_domain || fallback.primary_domain || '',
       routeConfidence: typeof fallback.confidence === 'number' ? fallback.confidence : null,
+      decision: buildEvaDecision(fallback, '/api/run'),
     };
   }
   return {
@@ -142,6 +183,7 @@ export async function routeMessage(
     selectedTaskType: d.selected_task_type || d.intent?.selected_task_type || '',
     primaryDomain: d.intent?.primary_domain || d.primary_domain || '',
     routeConfidence: typeof d.confidence === 'number' ? d.confidence : null,
+    decision: buildEvaDecision(d, '/api/master-agent/route'),
   };
 }
 

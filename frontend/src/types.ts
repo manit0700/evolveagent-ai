@@ -159,6 +159,13 @@ export interface ChatMessage {
     primaryDomain?: string;
     routeConfidence?: number | null;
     routeUsed?: string;
+    decision?: {
+      actionMode: 'answer' | 'plan' | 'approval_required' | 'blocked';
+      selectedAgent: string;
+      selectedWorkflow?: string | null;
+      approvalState: 'not_required' | 'required' | 'blocked';
+      nextStep: string;
+    };
   };
 }
 
@@ -172,6 +179,13 @@ export interface ChatRunStatus {
   selectedTaskType?: string;
   primaryDomain?: string;
   routeConfidence?: number | null;
+  decision?: {
+    actionMode: 'answer' | 'plan' | 'approval_required' | 'blocked';
+    selectedAgent: string;
+    selectedWorkflow?: string | null;
+    approvalState: 'not_required' | 'required' | 'blocked';
+    nextStep: string;
+  };
   retryText?: string;
   errorDetail?: string;
 }
