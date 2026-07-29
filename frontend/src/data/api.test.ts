@@ -6,6 +6,7 @@ import {
   fetchMissionData,
   updateMissionTaskStatus,
   runMissionTask,
+  createMissionGoal,
   fetchConnectors,
   fetchApprovals,
   fetchSystemHealth,
@@ -239,6 +240,35 @@ describe('fetchMissionData', () => {
     expect(fetchMock.mock.calls[0][0]).toContain('/api/goals/g1/tasks/t1/run');
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'POST' });
     expect(result).toMatchObject({ finalOutput: 'Task completed through Master Agent.', requiresApproval: true });
+  });
+
+  it('creates a prompt-planned Mission Control goal in the selected workspace', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        goal: { goal_id: 'g-new', title: 'Build AI resume analyzer' },
+        task_graph: { tasks: [{ task_id: 't1' }, { task_id: 't2' }] },
+      }),
+    }));
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    const result = await createMissionGoal({
+      workspaceId: 'w1',
+      prompt: 'Build an AI resume analyzer app',
+      title: 'AI resume analyzer',
+      tags: ['demo', 'resume'],
+    });
+
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/goals');
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'POST' });
+    expect(JSON.parse((fetchMock.mock.calls[0][1] as any).body)).toMatchObject({
+      workspace_id: 'w1',
+      prompt: 'Build an AI resume analyzer app',
+      title: 'AI resume analyzer',
+      tags: ['demo', 'resume'],
+    });
+    expect(result).toEqual({ ok: true, goalId: 'g-new', title: 'Build AI resume analyzer', taskCount: 2 });
   });
 });
 
