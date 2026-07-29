@@ -835,6 +835,14 @@ describe('routeMessage', () => {
         selected_task_type: 'code_review',
         confidence: 0.82,
         intent: { primary_domain: 'Coding & Review', selected_task_type: 'code_review' },
+        workspace_id: 'w1',
+        memory_used: true,
+        workspace_memory_used: [{ memory_id: 'm1' }],
+        sources: [{ label: 'Project Brain' }],
+        tool_trace: [{ tool_name: 'knowledge_search' }],
+        agent_outputs: [{ provider: 'openai', model: 'gpt-4o-mini' }],
+        quality_gates: { prompt_injection_check: 'passed', secret_scan: 'passed' },
+        route_explanation: 'Code request routed to review lane.',
       }),
     }));
     vi.stubGlobal('fetch', fetchMock as any);
@@ -853,6 +861,17 @@ describe('routeMessage', () => {
         selectedAgent: 'Coding & Review specialist lane',
         selectedWorkflow: 'wf',
         approvalState: 'required',
+      },
+      context: {
+        workspaceId: 'w1',
+        memoryUsed: true,
+        memoryCount: 1,
+        knowledgeHits: 1,
+        selectedTools: ['knowledge_search'],
+        provider: 'openai',
+        model: 'gpt-4o-mini',
+        safetyStatus: 'passed',
+        routeExplanation: 'Code request routed to review lane.',
       },
     });
     const body = JSON.parse((fetchMock.mock.calls[0][1] as any).body);

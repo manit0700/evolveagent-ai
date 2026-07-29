@@ -25,7 +25,9 @@ import {
   Route,
   ShieldAlert,
   Workflow,
-  CheckCircle2
+  CheckCircle2,
+  Search,
+  Cpu
 } from 'lucide-react';
 
 export const SimpleModeChat: React.FC = () => {
@@ -47,6 +49,11 @@ export const SimpleModeChat: React.FC = () => {
     if (state === 'required') return 'border-amber-400/30 bg-amber-500/10 text-amber-100';
     if (state === 'blocked') return 'border-rose-400/30 bg-rose-500/10 text-rose-100';
     return 'border-emerald-400/25 bg-emerald-500/10 text-emerald-100';
+  };
+  const safetyTone = (state?: string) => {
+    if (state === 'blocked') return 'text-rose-200 border-rose-400/25 bg-rose-500/10';
+    if (state === 'passed') return 'text-emerald-200 border-emerald-400/25 bg-emerald-500/10';
+    return 'text-gray-300 border-white/10 bg-white/5';
   };
 
   useEffect(() => {
@@ -277,6 +284,69 @@ export const SimpleModeChat: React.FC = () => {
                       <p className="mt-3 text-[11px] text-gray-300">
                         {msg.routing.decision?.nextStep || 'Continue from this routed answer.'}
                       </p>
+                    </div>
+                  )}
+
+                  {!isUser && msg.routing?.context && (
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-200">
+                            <Search className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold text-white">Why EVA chose this</div>
+                            <div className="text-[10px] font-mono text-gray-400">Context, model, tools, and safety checks</div>
+                          </div>
+                        </div>
+                        <span className={`px-2.5 py-1 rounded-full border text-[10px] font-mono ${safetyTone(msg.routing.context.safetyStatus)}`}>
+                          Safety {msg.routing.context.safetyStatus}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 text-[11px]">
+                        <div className="rounded-xl border border-white/10 bg-black/20 p-2">
+                          <div className="text-gray-500 font-mono">Workspace</div>
+                          <div className="text-gray-100 font-semibold">{msg.routing.context.workspaceId?.slice(0, 8) || 'default'}</div>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-black/20 p-2">
+                          <div className="text-gray-500 font-mono">Memory</div>
+                          <div className="text-gray-100 font-semibold">
+                            {msg.routing.context.memoryUsed ? `${msg.routing.context.memoryCount || 'some'} used` : 'not used'}
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-black/20 p-2">
+                          <div className="text-gray-500 font-mono">Knowledge hits</div>
+                          <div className="text-gray-100 font-semibold">{msg.routing.context.knowledgeHits}</div>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-black/20 p-2">
+                          <div className="text-gray-500 font-mono">Model route</div>
+                          <div className="text-gray-100 font-semibold flex items-center gap-1.5">
+                            <Cpu className="w-3 h-3 text-cyan-300" />
+                            {msg.routing.context.provider || 'router'}{msg.routing.context.model ? ` / ${msg.routing.context.model}` : ''}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {msg.routing.context.selectedTools.length > 0 ? (
+                          msg.routing.context.selectedTools.map((tool) => (
+                            <span key={tool} className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-mono text-gray-300">
+                              tool: {tool}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-mono text-gray-400">
+                            no tools selected
+                          </span>
+                        )}
+                      </div>
+
+                      {msg.routing.context.routeExplanation && (
+                        <p className="mt-3 text-[11px] text-gray-300">
+                          {msg.routing.context.routeExplanation}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>

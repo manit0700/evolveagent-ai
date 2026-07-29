@@ -91,6 +91,18 @@ type EvaDecision = {
   nextStep: string;
 };
 
+type EvaContext = {
+  workspaceId?: string;
+  memoryUsed: boolean;
+  memoryCount: number;
+  knowledgeHits: number;
+  selectedTools: string[];
+  provider?: string;
+  model?: string;
+  safetyStatus: 'passed' | 'blocked' | 'unknown';
+  routeExplanation?: string;
+};
+
 function buildEvaDecision(payload: any, routeUsed: string): EvaDecision {
   const primaryDomain = payload?.intent?.primary_domain || payload?.primary_domain || '';
   const selectedTaskType = payload?.selected_task_type || payload?.intent?.selected_task_type || payload?.task_type || 'auto';
@@ -122,6 +134,42 @@ function buildEvaDecision(payload: any, routeUsed: string): EvaDecision {
   };
 }
 
+function buildEvaContext(payload: any): EvaContext {
+  const agentOutput = Array.isArray(payload?.agent_outputs) ? payload.agent_outputs[0] : null;
+  const toolTrace = Array.isArray(payload?.tool_trace) ? payload.tool_trace : [];
+  const memoryList = Array.isArray(payload?.workspace_memory_used) ? payload.workspace_memory_used : [];
+  const sourceList = Array.isArray(payload?.sources) ? payload.sources : [];
+  const qualityGates = payload?.quality_gates || {};
+  const securityReport = payload?.security_report || {};
+  const gateValues = [
+    qualityGates.prompt_injection_check,
+    qualityGates.secret_scan,
+    qualityGates.permission_check,
+    qualityGates.file_context_check,
+    securityReport.recommendation,
+  ].filter(Boolean).map((item) => String(item).toLowerCase());
+  const safetyStatus: EvaContext['safetyStatus'] = gateValues.some((item) => item.includes('blocked') || item.includes('failed'))
+    ? 'blocked'
+    : gateValues.length > 0
+      ? 'passed'
+      : 'unknown';
+
+  return {
+    workspaceId: payload?.workspace_id || payload?.workspace?.workspace_id,
+    memoryUsed: Boolean(payload?.memory_used || memoryList.length > 0),
+    memoryCount: memoryList.length,
+    knowledgeHits: sourceList.length,
+    selectedTools: toolTrace
+      .map((tool: any) => tool.tool_name || tool.name)
+      .filter(Boolean)
+      .slice(0, 4),
+    provider: agentOutput?.provider || payload?.provider || payload?.image_result?.provider,
+    model: agentOutput?.model || payload?.model || payload?.image_result?.model,
+    safetyStatus,
+    routeExplanation: payload?.route_explanation || payload?.master_plan?.selection_reason,
+  };
+}
+
 /** Route a chat message through the Master Agent. Returns the reply + metadata.
  *  `execute` is only honored by the backend for NON-risky intents; risky actions
  *  are always held for approval regardless. */
@@ -142,6 +190,7 @@ export async function routeMessage(
     primaryDomain: string;
     routeConfidence: number | null;
     decision: EvaDecision;
+    context: EvaContext;
   } | null
 > {
   const contextPayload = {
@@ -170,6 +219,7 @@ export async function routeMessage(
       primaryDomain: fallback.intent?.primary_domain || fallback.primary_domain || '',
       routeConfidence: typeof fallback.confidence === 'number' ? fallback.confidence : null,
       decision: buildEvaDecision(fallback, '/api/run'),
+      context: buildEvaContext(fallback),
     };
   }
   return {
@@ -184,6 +234,7 @@ export async function routeMessage(
     primaryDomain: d.intent?.primary_domain || d.primary_domain || '',
     routeConfidence: typeof d.confidence === 'number' ? d.confidence : null,
     decision: buildEvaDecision(d, '/api/master-agent/route'),
+    context: buildEvaContext(d),
   };
 }
 
