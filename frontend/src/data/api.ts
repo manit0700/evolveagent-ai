@@ -96,6 +96,20 @@ type EvaContext = {
   memoryUsed: boolean;
   memoryCount: number;
   knowledgeHits: number;
+  memorySources: {
+    id: string;
+    title: string;
+    type?: string;
+    source?: string;
+    snippet?: string;
+  }[];
+  knowledgeSources: {
+    id: string;
+    label: string;
+    type?: string;
+    source?: string;
+    snippet?: string;
+  }[];
   selectedTools: string[];
   provider?: string;
   model?: string;
@@ -104,6 +118,32 @@ type EvaContext = {
   safetyStatus: 'passed' | 'blocked' | 'unknown';
   routeExplanation?: string;
 };
+
+function clipText(value: any, max = 140): string | undefined {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!text) return undefined;
+  return text.length > max ? `${text.slice(0, max - 3)}...` : text;
+}
+
+function normalizeMemorySource(memory: any, index: number) {
+  return {
+    id: String(memory?.memory_id || memory?.id || `memory-${index + 1}`),
+    title: String(memory?.title || memory?.type || `Memory ${index + 1}`),
+    type: memory?.type ? String(memory.type) : undefined,
+    source: memory?.source ? String(memory.source) : undefined,
+    snippet: clipText(memory?.content || memory?.snippet || memory?.summary),
+  };
+}
+
+function normalizeKnowledgeSource(source: any, index: number) {
+  return {
+    id: String(source?.record_id || source?.id || source?.source_route || source?.label || `source-${index + 1}`),
+    label: String(source?.label || source?.title || source?.source_type || `Source ${index + 1}`),
+    type: source?.type || source?.source_type ? String(source.type || source.source_type) : undefined,
+    source: source?.source || source?.route || source?.source_route ? String(source.source || source.route || source.source_route) : undefined,
+    snippet: clipText(source?.snippet || source?.content || source?.why || source?.summary),
+  };
+}
 
 function buildEvaDecision(payload: any, routeUsed: string): EvaDecision {
   const primaryDomain = payload?.intent?.primary_domain || payload?.primary_domain || '';
@@ -175,6 +215,8 @@ function buildEvaContext(payload: any): EvaContext {
     memoryUsed: Boolean(payload?.memory_used || memoryList.length > 0),
     memoryCount: memoryList.length,
     knowledgeHits: sourceList.length,
+    memorySources: memoryList.map(normalizeMemorySource).slice(0, 5),
+    knowledgeSources: sourceList.map(normalizeKnowledgeSource).slice(0, 5),
     selectedTools: toolTrace
       .map((tool: any) => tool.tool_name || tool.name)
       .filter(Boolean)

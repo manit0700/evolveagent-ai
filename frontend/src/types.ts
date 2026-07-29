@@ -171,6 +171,20 @@ export interface ChatMessage {
       memoryUsed: boolean;
       memoryCount: number;
       knowledgeHits: number;
+      memorySources: {
+        id: string;
+        title: string;
+        type?: string;
+        source?: string;
+        snippet?: string;
+      }[];
+      knowledgeSources: {
+        id: string;
+        label: string;
+        type?: string;
+        source?: string;
+        snippet?: string;
+      }[];
       selectedTools: string[];
       provider?: string;
       model?: string;
@@ -204,6 +218,20 @@ export interface ChatRunStatus {
     memoryUsed: boolean;
     memoryCount: number;
     knowledgeHits: number;
+    memorySources: {
+      id: string;
+      title: string;
+      type?: string;
+      source?: string;
+      snippet?: string;
+    }[];
+    knowledgeSources: {
+      id: string;
+      label: string;
+      type?: string;
+      source?: string;
+      snippet?: string;
+    }[];
     selectedTools: string[];
     provider?: string;
     model?: string;
