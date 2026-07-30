@@ -123,6 +123,51 @@ export const SimpleModeChat: React.FC = () => {
       evidence,
     };
   };
+  const timelineFor = (routing: NonNullable<typeof chatMessages[number]['routing']>) => {
+    const context = routing.context;
+    const hasTools = (context?.selectedTools || []).length > 0 || (context?.toolPreviews || []).length > 0;
+    const blockedTool = (context?.toolPreviews || []).some((tool) => tool.blocked);
+    const needsToolApproval = (context?.toolPreviews || []).some((tool) => tool.approvalRequired);
+    const outcome = outcomeFor(routing);
+    return [
+      {
+        label: 'Route',
+        detail: routing.masterPriority ? 'Master priority' : 'Fallback route',
+        state: routing.masterPriority ? 'passed' : 'needs_review',
+      },
+      {
+        label: 'Context',
+        detail: context?.memoryUsed || (context?.knowledgeHits || 0) > 0
+          ? `${context?.memoryCount || 0} memory • ${context?.knowledgeHits || 0} knowledge`
+          : 'No extra context',
+        state: context?.memoryUsed || (context?.knowledgeHits || 0) > 0 ? 'passed' : 'unknown',
+      },
+      {
+        label: 'Model',
+        detail: context?.provider ? `${context.provider}${context.model ? `/${context.model}` : ''}` : 'Router',
+        state: context?.fallbackUsed ? 'needs_review' : 'passed',
+      },
+      {
+        label: 'Tools',
+        detail: hasTools ? `${context?.selectedTools.length || context?.toolPreviews.length || 0} selected` : 'None selected',
+        state: blockedTool ? 'blocked' : needsToolApproval ? 'needs_review' : hasTools ? 'passed' : 'unknown',
+      },
+      {
+        label: 'Verify',
+        detail: context?.overallVerification ? context.overallVerification.replaceAll('_', ' ') : 'Not reported',
+        state: context?.overallVerification || 'unknown',
+      },
+      {
+        label: 'Outcome',
+        detail: outcome.completionState,
+        state: outcome.completionState === 'complete'
+          ? 'passed'
+          : outcome.completionState === 'blocked' || outcome.completionState === 'failed'
+            ? 'blocked'
+            : 'needs_review',
+      },
+    ];
+  };
   const continueActionsFor = (routing?: typeof chatMessages[number]['routing']): ContinueAction[] => {
     if (!routing) return [{ label: 'Open Developer Trace', page: 'dev-console' }];
     const actions: ContinueAction[] = [];
@@ -385,6 +430,7 @@ export const SimpleModeChat: React.FC = () => {
 
                       {(() => {
                         const outcome = outcomeFor(msg.routing);
+                        const timeline = timelineFor(msg.routing);
                         return (
                           <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-2">
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -421,6 +467,29 @@ export const SimpleModeChat: React.FC = () => {
                                   {item}
                                 </span>
                               ))}
+                            </div>
+
+                            <div className="mt-3 rounded-lg border border-white/10 bg-white/[0.035] p-2">
+                              <div className="text-[10px] text-gray-500 font-mono uppercase">Run timeline</div>
+                              <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2">
+                                {timeline.map((step) => (
+                                  <div key={step.label} className="rounded-lg border border-white/10 bg-black/20 p-2">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className={`h-2 w-2 rounded-full ${
+                                        step.state === 'blocked'
+                                          ? 'bg-rose-300 shadow-[0_0_10px_rgba(251,113,133,0.55)]'
+                                          : step.state === 'needs_review'
+                                            ? 'bg-amber-300 shadow-[0_0_10px_rgba(252,211,77,0.45)]'
+                                            : step.state === 'passed'
+                                              ? 'bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.45)]'
+                                              : 'bg-gray-500'
+                                      }`} />
+                                      <span className="text-[10px] font-semibold text-white">{step.label}</span>
+                                    </div>
+                                    <div className="mt-1 text-[9px] font-mono text-gray-400">{step.detail}</div>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           </div>
                         );
