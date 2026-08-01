@@ -13,6 +13,15 @@ from app.services.safe_file_editor import SafeFileEditor
 from app.services.secret_scanner import SecretScanner
 from app.services.permission_service import PermissionService
 from app.services.storage_service import StorageService
+from app.services.llm_router import llm_router
+
+
+class _StaticLLMProvider:
+    def __init__(self, output: str = "Fast local answer."):
+        self.output = output
+
+    def generate(self, system_prompt: str, user_prompt: str, model: str | None = None) -> str:
+        return self.output
 
 
 def test_task_type_detection():
@@ -85,6 +94,62 @@ def test_master_agent_continues_when_specialist_raises(tmp_path, monkeypatch):
     # Later specialists still run, so the response remains useful instead of a 500.
     assert any(item.agent_name == master.specialists[-1].name and item.success for item in response.agent_outputs)
     assert response.final_output
+
+
+def test_fast_local_chat_uses_single_ollama_call_for_simple_requests(tmp_path, monkeypatch):
+    storage = StorageService(data_dir=str(tmp_path))
+    master = MasterOrchestratorAgent(storage=storage, memory_agent=MemoryAgent(storage))
+    monkeypatch.setattr("app.config.settings.llm_mode", "real")
+    monkeypatch.setattr("app.config.settings.default_provider", "ollama")
+    monkeypatch.setattr("app.config.settings.ollama_enabled", True)
+    monkeypatch.setattr("app.config.settings.ollama_local_only", True)
+    monkeypatch.setattr("app.config.settings.ollama_fast_model", "llama3.2")
+    monkeypatch.setattr("app.config.settings.openai_api_key", None)
+    monkeypatch.setattr("app.config.settings.anthropic_api_key", None)
+    monkeypatch.setattr("app.config.settings.gemini_api_key", None)
+    monkeypatch.setattr("app.config.settings.mistral_api_key", None)
+    monkeypatch.setitem(llm_router.providers, "ollama", _StaticLLMProvider("Local fast mode works."))
+
+    response = master.run(RunRequest(user_input="What is EvolveAgent?", task_type="general", deep_mode=False))
+
+    assert response.final_output == "Local fast mode works."
+    assert response.agents_used == ["Fast Local Chat Agent"]
+    assert response.agent_outputs[0].provider == "ollama"
+    assert response.agent_outputs[0].model == "llama3.2"
+    assert response.master_plan.selected_agents == ["Master Orchestrator Agent", "Fast Local Chat Agent"]
+    assert any(step.stage == "Fast Local Chat" for step in response.workflow_trace)
+    assert any(event.action_type == "fast_local_chat_used" for event in response.governance_events)
+    assert response.consensus_candidates == []
+    assert storage.read_list("tasks.json")[0]["agents_used"] == ["Fast Local Chat Agent"]
+
+
+def test_fast_local_chat_does_not_skip_full_workflow_when_deep_mode_enabled(tmp_path, monkeypatch):
+    storage = StorageService(data_dir=str(tmp_path))
+    master = MasterOrchestratorAgent(storage=storage, memory_agent=MemoryAgent(storage))
+    monkeypatch.setattr("app.config.settings.llm_mode", "real")
+    monkeypatch.setattr("app.config.settings.default_provider", "ollama")
+    monkeypatch.setattr("app.config.settings.ollama_enabled", True)
+    monkeypatch.setattr("app.config.settings.ollama_local_only", True)
+    monkeypatch.setattr("app.config.settings.openai_api_key", None)
+    monkeypatch.setattr("app.config.settings.anthropic_api_key", None)
+    monkeypatch.setattr("app.config.settings.gemini_api_key", None)
+    monkeypatch.setattr("app.config.settings.mistral_api_key", None)
+    monkeypatch.setitem(llm_router.providers, "ollama", _StaticLLMProvider("Local full workflow response."))
+
+    response = master.run(RunRequest(user_input="What is EvolveAgent?", task_type="general", deep_mode=True))
+
+    assert "Fast Local Chat Agent" not in response.agents_used
+    assert "Research Agent" in response.agents_used
+    assert response.consensus_candidates
+
+
+def test_fast_local_context_is_capped_for_local_models():
+    context = "intro\n" + ("x" * 4_000) + "\nending"
+
+    compact = MasterOrchestratorAgent.compact_fast_local_context(context)
+
+    assert len(compact) < 2_700
+    assert "Context shortened for Fast Local Chat Mode" in compact
 
 
 def test_app_automation_returns_approval_plan(tmp_path):

@@ -54,6 +54,8 @@ from app.services.workflow_strategy_service import WorkflowStrategyService
 
 
 class MasterOrchestratorAgent:
+    _FAST_LOCAL_CONTEXT_LIMIT = 2_500
+
     def __init__(self, storage: StorageService, memory_agent: MemoryAgent):
         self.storage = storage
         self.memory_agent = memory_agent
@@ -318,6 +320,26 @@ class MasterOrchestratorAgent:
             )
             if tool_context:
                 shared_context += f"\n\nRead-only tool results:\n{tool_context}"
+        if self.should_use_fast_local_chat(request, task_type, file_context_used, recording_context_used):
+            return self.run_fast_local_chat_workflow(
+                request=request,
+                task_id=task_id,
+                session_id=session_id,
+                assistant_message_id=assistant_message_id,
+                created_at=created_at,
+                task_type=task_type,
+                confidence=confidence,
+                suggested_agents=suggested_agents,
+                master_plan=master_plan,
+                workflow_trace=workflow_trace,
+                shared_context=shared_context,
+                workspace_memory_context=workspace_memory_context,
+                workspace_memory_used=workspace_memory_used,
+                quality_gates=quality_gates,
+                security_report=security_report,
+                governance_events=governance_events,
+                tool_trace=tool_trace,
+            )
         if recording_context_used:
             recording_agent_output, recording_summary = self.recording_analysis.run(
                 recordings_used, recording_context, request.user_input
@@ -630,6 +652,233 @@ class MasterOrchestratorAgent:
         self.persist_agent_analytics(response)
         self.persist_chat_session(request, response)
         return response
+
+    @staticmethod
+    def should_use_fast_local_chat(
+        request: RunRequest,
+        task_type: str,
+        file_context_used: bool,
+        recording_context_used: bool,
+    ) -> bool:
+        return bool(
+            llm_router.local_only_mode()
+            and not request.deep_mode
+            and not file_context_used
+            and not recording_context_used
+            and not request.custom_agent_id
+            and task_type in {"general", "system_explanation"}
+        )
+
+    def run_fast_local_chat_workflow(
+        self,
+        request: RunRequest,
+        task_id: str,
+        session_id: str,
+        assistant_message_id: str,
+        created_at: str,
+        task_type: str,
+        confidence: int,
+        suggested_agents: list[str],
+        master_plan: MasterPlan,
+        workflow_trace: list[WorkflowStep],
+        shared_context: str,
+        workspace_memory_context: str,
+        workspace_memory_used: list[dict],
+        quality_gates: QualityGates,
+        security_report: SecurityReport,
+        governance_events: list[GovernanceEvent],
+        tool_trace: list[dict],
+    ) -> RunResponse:
+        fast_plan = master_plan.model_copy(
+            update={
+                "selected_agents": ["Master Orchestrator Agent", "Fast Local Chat Agent"],
+                "execution_order": [
+                    "Detect task type",
+                    "Create master plan",
+                    "Fast Local Chat Agent",
+                    "Memory Agent",
+                ],
+                "selection_reason": (
+                    "Fast Local Chat Mode was selected because Ollama local-only mode is active, "
+                    "Deep Mode is off, and the request does not require files, recordings, custom agents, "
+                    "or specialized execution."
+                ),
+                "retry_policy": "If the local provider fails, use mock fallback only; cloud providers remain bypassed.",
+            }
+        )
+        workflow_trace.append(
+            WorkflowStep(
+                step=len(workflow_trace) + 1,
+                stage="Fast Local Chat",
+                agent_name="Master Orchestrator Agent",
+                status="complete",
+                summary="Used one local Ollama call instead of specialist fanout for a faster simple-chat response.",
+            )
+        )
+        governance_events.append(
+            self.log_governance_event(
+                task_id,
+                session_id,
+                task_type,
+                action_type="fast_local_chat_used",
+                tool_used="LLMRouter",
+                permission_level="read_only",
+                workspace_id=request.workspace_id,
+                risk_score=0,
+                reason="Ollama local-only mode used a single local model call with mock as the only fallback.",
+            )
+        )
+        system_prompt = (
+            "You are EvolveAgent AI in Fast Local Chat Mode. Answer directly and helpfully using the "
+            "available workspace context. Do not claim cloud providers were used."
+        )
+        compact_context = self.compact_fast_local_context(shared_context)
+        user_prompt = (
+            f"User task:\n{request.user_input}\n\n"
+            f"Context:\n{compact_context}\n\n"
+            "Respond as the final assistant answer."
+        ).strip()
+        result = llm_router.generate(
+            "Fast Local Chat Agent",
+            system_prompt,
+            user_prompt,
+            task_type=task_type,
+            quality="fast",
+            workspace_id=request.workspace_id,
+        )
+        output = AgentOutput(
+            agent_name="Fast Local Chat Agent",
+            provider=result.provider,
+            model=result.model,
+            latency_ms=result.latency_ms,
+            success=result.success,
+            fallback_used=result.fallback_used,
+            error=result.error,
+            output=result.output,
+        )
+        workflow_trace.append(
+            WorkflowStep(
+                step=len(workflow_trace) + 1,
+                stage="Final synthesis",
+                agent_name=output.agent_name,
+                status="complete",
+                summary=f"{output.provider}/{output.model}: {self.summarize_step(output.output)}",
+            )
+        )
+        judge_result = JudgeResult(
+            overall_score=88 if output.success else 70,
+            strengths=["Fast local response path avoided unnecessary multi-agent fanout."],
+            weaknesses=[] if output.success and not output.fallback_used else ["Local provider used fallback; review response quality."],
+            recommendation="Fast local answer is ready for user review.",
+            strongest_agent=output.agent_name,
+            weakest_agent=None,
+            workflow_strengths=["Local-only routing stayed inside Ollama/mock boundaries."],
+            workflow_weaknesses=[],
+            classification_correct=True,
+            capability_supported=True,
+            reason="Simple local chat response used deterministic governance and one model call.",
+            provider="rule-based",
+            model="fast-local-judge",
+        )
+        workflow_trace.append(
+            WorkflowStep(
+                step=len(workflow_trace) + 1,
+                stage="Persistence",
+                agent_name=self.memory_agent.name,
+                status="complete",
+                summary="Saved fast local chat result and memory summary to JSON storage.",
+            )
+        )
+        workflow_trace = [step.model_copy(update={"step": index}) for index, step in enumerate(workflow_trace, start=1)]
+        response = RunResponse(
+            task_id=task_id,
+            run_id=task_id,
+            session_id=session_id,
+            message_id=assistant_message_id,
+            workspace_id=request.workspace_id,
+            task_type=task_type,
+            agents_used=[output.agent_name],
+            suggested_agents=suggested_agents,
+            master_plan=fast_plan,
+            workflow_trace=workflow_trace,
+            agent_outputs=[output],
+            consensus_candidates=[],
+            consensus_winner=None,
+            consensus_judge_reason=None,
+            consensus_disagreement_notes=[],
+            judge_result=judge_result,
+            evolution_notes=["Fast Local Chat Mode preserves local-only speed for simple requests."],
+            memory_saved=True,
+            memory_used=bool(workspace_memory_context),
+            workspace_memory_used=workspace_memory_used,
+            memory_context_characters=len(workspace_memory_context),
+            file_context_used=False,
+            files_used=[],
+            file_summary=None,
+            file_context_characters=0,
+            recording_context_used=False,
+            recordings_used=[],
+            transcript_preview=None,
+            recording_summary=None,
+            action_items=[],
+            decisions=[],
+            goal_id=request.goal_id,
+            goal_task_id=request.task_id,
+            custom_agent_used=False,
+            custom_agent=None,
+            quality_gates=quality_gates,
+            security_report=security_report,
+            governance_events=governance_events,
+            tool_trace=tool_trace,
+            voice_used=request.voice_used,
+            voice_transcript=request.voice_transcript,
+            final_output=output.output,
+            created_at=created_at,
+        )
+        self.storage.append("tasks.json", response.model_dump())
+        self.memory_agent.remember(
+            {
+                "task_id": task_id,
+                "task_type": task_type,
+                "user_input": request.user_input,
+                "agents_used": response.agents_used,
+                "file_ids": [],
+                "filenames_used": [],
+                "file_context_used": False,
+                "recording_ids": [],
+                "recordings_used": [],
+                "recording_context_used": False,
+                "goal_id": request.goal_id,
+                "goal_task_id": request.task_id,
+                "custom_agent_id": None,
+                "workspace_id": request.workspace_id,
+                "workspace_memory_used": [item.get("memory_id") for item in workspace_memory_used],
+                "judge_score": judge_result.overall_score,
+                "final_output_summary": output.output[:280],
+                "created_at": created_at,
+            }
+        )
+        self.storage.append(
+            "evolution_logs.json",
+            {
+                "task_id": task_id,
+                "workspace_id": request.workspace_id,
+                "task_type": task_type,
+                "recommendations": response.evolution_notes,
+                "created_at": created_at,
+            },
+        )
+        self.persist_agent_analytics(response)
+        self.persist_chat_session(request, response)
+        return response
+
+    @classmethod
+    def compact_fast_local_context(cls, context: str) -> str:
+        compact = "\n".join(line.strip() for line in context.splitlines() if line.strip())
+        if len(compact) <= cls._FAST_LOCAL_CONTEXT_LIMIT:
+            return compact
+        head = compact[: cls._FAST_LOCAL_CONTEXT_LIMIT]
+        return head.rsplit("\n", 1)[0] + "\n[Context shortened for Fast Local Chat Mode.]"
 
     def security_preflight(
         self,

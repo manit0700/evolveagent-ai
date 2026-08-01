@@ -24,7 +24,7 @@ _QUALITY_TIER_FIELDS = {
     "anthropic": {"fast": "anthropic_fast_model", "balanced": "anthropic_model", "quality": "anthropic_strong_model"},
     "gemini": {"fast": "gemini_fast_model", "balanced": "gemini_model", "quality": "gemini_pro_model"},
     "mistral": {"fast": "mistral_fast_model", "balanced": "mistral_model", "quality": "mistral_strong_model"},
-    "ollama": {"fast": "ollama_default_model", "balanced": "ollama_default_model", "quality": "ollama_default_model"},
+    "ollama": {"fast": "ollama_fast_model", "balanced": "ollama_default_model", "quality": "ollama_default_model"},
 }
 # Recognized model-name prefixes, used to resolve a free-text task preference
 # (e.g. "claude-opus-4-8", stored by ProviderControlService) back to a provider.

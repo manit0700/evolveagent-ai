@@ -254,6 +254,14 @@ def test_quality_tier_resolves_previously_unused_settings_fields(monkeypatch):
     assert llm_router.route_for_agent("Any Agent").model == "gpt-4o-mini"  # default "balanced" unchanged
 
 
+def test_ollama_fast_quality_uses_optional_fast_model(monkeypatch):
+    monkeypatch.setattr(settings, "ollama_default_model", "llama3.1")
+    monkeypatch.setattr(settings, "ollama_fast_model", "llama3.2")
+
+    assert llm_router.model_for_provider("ollama", quality="fast") == "llama3.2"
+    assert llm_router.model_for_provider("ollama", quality="balanced") == "llama3.1"
+
+
 # ------------------------------------------------------------------
 # Real provider health/observability -- previously no call outcome was ever
 # recorded anywhere.
