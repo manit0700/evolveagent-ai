@@ -140,6 +140,7 @@ class ProviderStatus(BaseModel):
     real_mode_ready: bool = False
     default_model: str = "mock-agent-model"
     fallback_provider: str = "mock"
+    local_only: bool = False
     status_message: str = ""
     provider_details: list[dict] = Field(default_factory=list)
 

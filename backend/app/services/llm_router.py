@@ -95,6 +95,13 @@ class LLMRouter:
         self.provider_control = None
         self.usage_ledger = usage_ledger
 
+    def local_only_mode(self) -> bool:
+        return bool(
+            not settings.use_mock_llm
+            and settings.ollama_local_only
+            and settings.default_provider == "ollama"
+        )
+
     def generate(
         self,
         agent_name: str,
@@ -196,6 +203,11 @@ class LLMRouter:
         task_type: str | None = None,
         quality: str = "balanced",
     ) -> RouteChoice:
+        if self.local_only_mode():
+            if avoid_provider == "ollama":
+                return RouteChoice("mock", "mock-agent-model", label="local-only:fallback")
+            return RouteChoice("ollama", self.model_for_provider("ollama", quality), label="local-only")
+
         # Task-based preference (ProviderControlService.model_by_task) wins outright
         # when it resolves to a real, available provider -- it is a more specific
         # signal than the default agent-name-agnostic route below.
@@ -345,6 +357,7 @@ class LLMRouter:
                 real_mode_ready=False,
                 default_model="mock-agent-model",
                 fallback_provider="mock",
+                local_only=False,
                 status_message="Mock mode is active. Real providers are not used until LLM_MODE=real.",
                 provider_details=details,
             )
@@ -357,7 +370,8 @@ class LLMRouter:
         }
         available = [provider for provider in ["openai", "anthropic", "gemini", "mistral", "ollama"] if configured[provider]]
         available.append("mock")
-        default_provider = settings.default_provider if settings.default_provider in available else "mock"
+        local_only = self.local_only_mode()
+        default_provider = "ollama" if local_only and configured["ollama"] else settings.default_provider if settings.default_provider in available else "mock"
         return ProviderStatus(
             llm_mode=settings.llm_mode,
             openai_configured=configured["openai"],
@@ -370,21 +384,24 @@ class LLMRouter:
             real_mode_ready=any(configured.values()),
             default_model=self.model_for_provider(default_provider),
             fallback_provider="mock",
+            local_only=local_only,
             status_message=self._status_message(default_provider, configured),
             provider_details=details,
         )
 
     def provider_details(self) -> list[dict]:
         details = []
+        local_only = self.local_only_mode()
         for provider in ["openai", "anthropic", "gemini", "mistral", "ollama", "mock"]:
             configured = self.provider_configured(provider)
+            cloud_bypassed = local_only and provider not in ("ollama", "mock")
             details.append(
                 {
                     "provider": provider,
                     "label": self.provider_label(provider),
                     "configured": configured,
                     "model": self.model_for_provider(provider),
-                    "ready": configured and (provider == "mock" or not settings.use_mock_llm),
+                    "ready": (configured and (provider == "mock" or not settings.use_mock_llm)) and not cloud_bypassed,
                     "reason": self._provider_reason(provider, configured),
                     "fallback_provider": "mock" if provider != "mock" else None,
                 }
@@ -454,8 +471,12 @@ class LLMRouter:
             return "Mock fallback is always available."
         if settings.use_mock_llm:
             return "LLM_MODE=mock, so this provider will not be called."
+        if self.local_only_mode() and provider not in ("ollama", "mock"):
+            return "Ollama local-only mode is active; cloud providers are bypassed."
         if provider == "ollama":
             if configured:
+                if self.local_only_mode():
+                    return "Ollama local-only mode is active. This is the primary local model provider."
                 return "Ollama is enabled and can be selected as a local provider."
             return "Set OLLAMA_ENABLED=true and run Ollama locally; mock fallback will be used."
         if configured:
@@ -463,6 +484,10 @@ class LLMRouter:
         return f"{provider.upper()} API key is not configured; mock fallback will be used."
 
     def _status_message(self, default_provider: str, configured: dict[str, bool]) -> str:
+        if self.local_only_mode():
+            if configured.get("ollama"):
+                return "Ollama local-only mode is active. Cloud providers are bypassed and mock remains the only fallback."
+            return "Ollama local-only mode is requested, but Ollama is not configured. Mock fallback is active."
         if any(configured.values()):
             if default_provider == "mock":
                 return "Real mode is enabled, but the configured default provider is unavailable. Mock fallback is active."
@@ -470,6 +495,13 @@ class LLMRouter:
         return "Real mode is enabled, but no real provider keys are configured. Mock fallback is active."
 
     def fallback_routes(self, original_provider: str) -> list[RouteChoice]:
+        if self.local_only_mode():
+            routes = [
+                RouteChoice("ollama", settings.ollama_default_model),
+                RouteChoice("mock", "mock-agent-model"),
+            ]
+            return [route for route in routes if route.provider != original_provider]
+
         routes = [
             RouteChoice(settings.default_provider, self.model_for_provider(settings.default_provider)),
             RouteChoice("openai", settings.openai_text_model),

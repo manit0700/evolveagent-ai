@@ -12,6 +12,7 @@ import {
   fetchSystemHealth,
   fetchStorageStatus,
   fetchIntegrationReadiness,
+  fetchProviderStatus,
   fetchWorkflowRuns,
   fetchCodeChangeRuns,
   fetchWorkflowRunDetail,
@@ -592,6 +593,52 @@ describe('startDurableRun', () => {
 });
 
 describe('v260 model serving + v240 GPU workers + storage retention (Compute Fabric)', () => {
+  it('maps provider runtime and Ollama local status', async () => {
+    stubFetch({
+      '/api/provider-control/summary': {
+        total_providers: 5,
+        ready_providers: 1,
+        capability_modes: { text: 'real' },
+        fallback_enabled: true,
+      },
+      '/api/provider-control/key-check': {
+        checks: [
+          { provider: 'ollama', ready: true, keys: [{ key_name: 'OLLAMA_ENABLED', is_set: true }] },
+          { provider: 'openai', ready: false, keys: [{ key_name: 'OPENAI_API_KEY', is_set: false }] },
+        ],
+      },
+      '/api/providers/status': {
+        llm_mode: 'real',
+        default_provider: 'ollama',
+        default_model: 'llama3.1',
+        local_only: true,
+        status_message: 'Ollama local-only mode is active.',
+        available_providers: ['ollama', 'mock'],
+        provider_details: [
+          { provider: 'ollama', label: 'Ollama Local', configured: true, ready: true, model: 'llama3.1', reason: 'local' },
+        ],
+      },
+      '/api/providers/ollama/status': {
+        enabled: true,
+        configured: true,
+        reachable: true,
+        default_model: 'llama3.1',
+        models: ['llama3.1:latest'],
+        note: '',
+      },
+    });
+
+    const status = await fetchProviderStatus();
+
+    expect(status).toMatchObject({
+      totalProviders: 5,
+      readyProviders: 1,
+      fallbackEnabled: true,
+      runtime: { defaultProvider: 'ollama', defaultModel: 'llama3.1', localOnly: true },
+      ollama: { enabled: true, reachable: true, models: ['llama3.1:latest'] },
+    });
+  });
+
   it('maps the model-serving dashboard', async () => {
     stubFetch({
       '/api/model-serving/dashboard': {

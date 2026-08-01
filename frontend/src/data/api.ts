@@ -1148,14 +1148,40 @@ export interface ProviderStatus {
   capabilityModes: Record<string, string>;
   fallbackEnabled: boolean;
   providers: { provider: string; ready: boolean; keys: { name: string; isSet: boolean }[] }[];
+  runtime?: {
+    llmMode: string;
+    defaultProvider: string;
+    defaultModel: string;
+    localOnly: boolean;
+    statusMessage: string;
+    availableProviders: string[];
+    providerDetails: {
+      provider: string;
+      label: string;
+      configured: boolean;
+      ready: boolean;
+      model: string;
+      reason: string;
+    }[];
+  };
+  ollama?: {
+    enabled: boolean;
+    configured: boolean;
+    reachable: boolean;
+    defaultModel: string;
+    models: string[];
+    note: string;
+  };
 }
 
 export async function fetchProviderStatus(): Promise<ProviderStatus | null> {
-  const [summary, keyCheck] = await Promise.all([
+  const [summary, keyCheck, runtime, ollama] = await Promise.all([
     getJson<any>('/api/provider-control/summary'),
     getJson<any>('/api/provider-control/key-check'),
+    getJson<any>('/api/providers/status'),
+    getJson<any>('/api/providers/ollama/status'),
   ]);
-  if (!summary && !keyCheck) return null;
+  if (!summary && !keyCheck && !runtime && !ollama) return null;
   return {
     totalProviders: summary?.total_providers ?? 0,
     readyProviders: summary?.ready_providers ?? 0,
@@ -1166,6 +1192,30 @@ export async function fetchProviderStatus(): Promise<ProviderStatus | null> {
       ready: Boolean(c.ready),
       keys: (c.keys || []).map((k: any) => ({ name: k.key_name, isSet: Boolean(k.is_set) })),
     })),
+    runtime: runtime ? {
+      llmMode: runtime.llm_mode ?? '',
+      defaultProvider: runtime.default_provider ?? 'mock',
+      defaultModel: runtime.default_model ?? 'mock-agent-model',
+      localOnly: Boolean(runtime.local_only),
+      statusMessage: runtime.status_message ?? '',
+      availableProviders: runtime.available_providers ?? [],
+      providerDetails: (runtime.provider_details || []).map((p: any) => ({
+        provider: p.provider,
+        label: p.label,
+        configured: Boolean(p.configured),
+        ready: Boolean(p.ready),
+        model: p.model,
+        reason: p.reason,
+      })),
+    } : undefined,
+    ollama: ollama ? {
+      enabled: Boolean(ollama.enabled),
+      configured: Boolean(ollama.configured),
+      reachable: Boolean(ollama.reachable),
+      defaultModel: ollama.default_model ?? '',
+      models: ollama.models ?? [],
+      note: ollama.note ?? '',
+    } : undefined,
   };
 }
 
