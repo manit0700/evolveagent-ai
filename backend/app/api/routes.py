@@ -2295,6 +2295,23 @@ def provider_smoke_test(request: ProviderSmokeTestRequest) -> dict:
     return llm_router.smoke_test(provider=request.provider, live=request.live, task_type=request.task_type)
 
 
+@router.get("/providers/ollama/status")
+def ollama_provider_status() -> dict:
+    provider = llm_router.providers.get("ollama")
+    if provider is None or not hasattr(provider, "status"):
+        return {
+            "provider": "ollama",
+            "enabled": False,
+            "configured": False,
+            "reachable": False,
+            "base_url_configured": False,
+            "default_model": "",
+            "models": [],
+            "note": "Ollama provider is not registered.",
+        }
+    return provider.status()
+
+
 @router.get("/images/status")
 def get_image_provider_status() -> dict:
     return image_service.status()
