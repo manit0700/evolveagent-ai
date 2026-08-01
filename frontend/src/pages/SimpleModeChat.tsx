@@ -107,6 +107,7 @@ export const SimpleModeChat: React.FC = () => {
       routing.context?.memoryUsed ? 'memory saved/used' : null,
       (routing.context?.selectedTools || []).length > 0 ? 'tools selected' : null,
       routing.context?.overallVerification === 'passed' ? 'verification passed' : null,
+      routing.context?.fastLocal ? 'fast local' : null,
       routing.context?.fallbackUsed ? 'fallback used' : 'primary model route',
     ].filter(Boolean) as string[];
     return {
@@ -132,7 +133,7 @@ export const SimpleModeChat: React.FC = () => {
     return [
       {
         label: 'Route',
-        detail: routing.masterPriority ? 'Master priority' : 'Fallback route',
+        detail: context?.fastLocal ? 'Fast local path' : routing.masterPriority ? 'Master priority' : 'Fallback route',
         state: routing.masterPriority ? 'passed' : 'needs_review',
       },
       {
@@ -149,7 +150,7 @@ export const SimpleModeChat: React.FC = () => {
       },
       {
         label: 'Tools',
-        detail: hasTools ? `${context?.selectedTools.length || context?.toolPreviews.length || 0} selected` : 'None selected',
+        detail: context?.specialistFanoutSkipped ? 'Specialists skipped' : hasTools ? `${context?.selectedTools.length || context?.toolPreviews.length || 0} selected` : 'None selected',
         state: blockedTool ? 'blocked' : needsToolApproval ? 'needs_review' : hasTools ? 'passed' : 'unknown',
       },
       {
@@ -398,6 +399,12 @@ export const SimpleModeChat: React.FC = () => {
                             : <CheckCircle2 className="w-3 h-3" />}
                           {actionModeLabel(msg.routing.decision?.actionMode)}
                         </span>
+                        {msg.routing.context?.fastLocal && (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-mono bg-cyan-500/10 border-cyan-400/25 text-cyan-100">
+                            <Cpu className="w-3 h-3" />
+                            Fast Local
+                          </span>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 text-[11px]">
@@ -559,13 +566,20 @@ export const SimpleModeChat: React.FC = () => {
                             <p className="mt-1 text-[11px] text-gray-300">
                               {msg.routing.context.modelRoutingReason}
                             </p>
+                            {msg.routing.context.specialistFanoutSkipped && (
+                              <p className="mt-1 text-[11px] text-cyan-100">
+                                Specialist fanout was skipped for speed. Turn on Deep Mode to run the full multi-agent path.
+                              </p>
+                            )}
                           </div>
                           <span className={`shrink-0 px-2.5 py-1 rounded-full border text-[10px] font-mono ${
-                            msg.routing.context.fallbackUsed
+                            msg.routing.context.fastLocal
+                              ? 'bg-cyan-500/10 border-cyan-400/25 text-cyan-100'
+                              : msg.routing.context.fallbackUsed
                               ? 'bg-amber-500/10 border-amber-400/25 text-amber-200'
                               : 'bg-emerald-500/10 border-emerald-400/25 text-emerald-200'
                           }`}>
-                            {msg.routing.context.fallbackUsed ? 'fallback used' : 'primary route'}
+                            {msg.routing.context.fastLocal ? 'fast local' : msg.routing.context.fallbackUsed ? 'fallback used' : 'primary route'}
                           </span>
                         </div>
                       </div>
@@ -863,7 +877,9 @@ export const SimpleModeChat: React.FC = () => {
 
           {/* Quick prompt suggestions */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-            <span className="text-gray-500 font-mono shrink-0">Try asking:</span>
+            <span className="text-gray-500 font-mono shrink-0">
+              Deep Mode off uses Fast Local automatically when Ollama local-only is active.
+            </span>
             {[
               'Run a safety check on all connected MCP tools',
               'Summarize ADR #12 from Project Brain',

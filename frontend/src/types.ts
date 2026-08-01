@@ -210,6 +210,8 @@ export interface ChatMessage {
       provider?: string;
       model?: string;
       fallbackUsed: boolean;
+      fastLocal: boolean;
+      specialistFanoutSkipped: boolean;
       modelRoutingReason: string;
       safetyStatus: 'passed' | 'blocked' | 'unknown';
       routeExplanation?: string;
