@@ -985,6 +985,42 @@ describe('routeMessage', () => {
     const body = JSON.parse((fetchMock.mock.calls[1][1] as any).body);
     expect(body).toMatchObject({ workspace_id: 'w1', agent_id: 'a1', goal_id: 'g1' });
   });
+
+  it('marks fast local Ollama chat responses for the UI', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes('/api/master-agent/route')) {
+        return { ok: false, status: 404, json: async () => ({}) };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          final_output: 'local answer',
+          task_type: 'general',
+          requires_approval: false,
+          agents_used: ['Fast Local Chat Agent'],
+          workflow_trace: [{ stage: 'Fast Local Chat', status: 'success' }],
+          agent_outputs: [{
+            agent_name: 'Fast Local Chat Agent',
+            provider: 'ollama',
+            model: 'llama3.2',
+            fallback_used: false,
+          }],
+        }),
+      };
+    });
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    const res = await routeMessage('quick local answer', false);
+    expect(res?.context).toMatchObject({
+      provider: 'ollama',
+      model: 'llama3.2',
+      fallbackUsed: false,
+      fastLocal: true,
+      specialistFanoutSkipped: true,
+    });
+    expect(res?.context.modelRoutingReason).toContain('Fast Local Chat');
+  });
 });
 
 describe('fetchProjectSetupSummary', () => {

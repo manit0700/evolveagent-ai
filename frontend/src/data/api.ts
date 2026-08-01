@@ -135,6 +135,8 @@ type EvaContext = {
   provider?: string;
   model?: string;
   fallbackUsed: boolean;
+  fastLocal: boolean;
+  specialistFanoutSkipped: boolean;
   modelRoutingReason: string;
   safetyStatus: 'passed' | 'blocked' | 'unknown';
   routeExplanation?: string;
@@ -307,6 +309,8 @@ function buildEvaDecision(payload: any, routeUsed: string): EvaDecision {
 function buildEvaContext(payload: any): EvaContext {
   const agentOutput = Array.isArray(payload?.agent_outputs) ? payload.agent_outputs[0] : null;
   const toolTrace = Array.isArray(payload?.tool_trace) ? payload.tool_trace : [];
+  const workflowTrace = Array.isArray(payload?.workflow_trace) ? payload.workflow_trace : [];
+  const agentsUsed = Array.isArray(payload?.agents_used) ? payload.agents_used : [];
   const memoryList = Array.isArray(payload?.workspace_memory_used) ? payload.workspace_memory_used : [];
   const sourceList = Array.isArray(payload?.sources) ? payload.sources : [];
   const qualityGates = payload?.quality_gates || {};
@@ -332,7 +336,12 @@ function buildEvaContext(payload: any): EvaContext {
     || payload?.judge_result?.fallback_used
   );
   const selectedTaskType = payload?.selected_task_type || payload?.intent?.selected_task_type || payload?.task_type || 'auto';
-  const modelRoutingReason = fallbackUsed
+  const fastLocal = agentsUsed.includes('Fast Local Chat Agent')
+    || agentOutput?.agent_name === 'Fast Local Chat Agent'
+    || workflowTrace.some((step: any) => String(step?.stage || step?.step || '').toLowerCase().includes('fast local chat'));
+  const modelRoutingReason = fastLocal
+    ? 'Fast Local Chat used one local Ollama call because Deep Mode was off and no files, recordings, or custom agents were needed.'
+    : fallbackUsed
     ? 'Fallback was used because the preferred provider was unavailable, failed, or mock-safe mode handled the request.'
     : provider
       ? `EVA routed this ${selectedTaskType.replaceAll('_', ' ')} task to ${provider}${model ? `/${model}` : ''} based on available provider metadata.`
@@ -363,6 +372,8 @@ function buildEvaContext(payload: any): EvaContext {
     provider,
     model,
     fallbackUsed,
+    fastLocal,
+    specialistFanoutSkipped: fastLocal,
     modelRoutingReason,
     safetyStatus,
     routeExplanation: payload?.route_explanation || payload?.master_plan?.selection_reason,

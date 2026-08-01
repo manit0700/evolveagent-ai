@@ -338,13 +338,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       window.clearTimeout(slowTimer);
       const isDeploy = text.toLowerCase().includes('deploy') || text.toLowerCase().includes('run');
       const ranForReal = routed && !safetySettings.mockSafe && !routed.requiresApproval && !routed.blockedExecution;
+      const fastLocal = Boolean(routed?.context?.fastLocal);
       const replyText = routed
         ? `${routed.answer}`
           + (routed.requiresApproval ? '\n\n⚠️ This intent is **risky** — held for explicit approval (nothing was executed).' : '')
           + (ranForReal ? '\n\n✅ Approval-Safe is off — this non-risky action was executed for real.' : '')
           + (routed.suggestedWorkflow ? `\n\nSuggested workflow: **${routed.suggestedWorkflow}**` : '')
-          + (routed.masterPriority ? `\n\nEVA selected task type: **${routed.selectedTaskType || 'auto'}**${routed.primaryDomain ? ` under **${routed.primaryDomain}**` : ''}.` : '')
-          + `\n\nBackend route used: ${routed.routeUsed}`
+          + (routed.masterPriority && !fastLocal ? `\n\nEVA selected task type: **${routed.selectedTaskType || 'auto'}**${routed.primaryDomain ? ` under **${routed.primaryDomain}**` : ''}.` : '')
+          + (fastLocal ? '\n\nFast Local Mode answered this with Ollama on your Mac. Turn on Deep Mode when you want the full specialist-agent review.' : '')
         : `I couldn't reach the backend from Chat.\n\nWhat this means:\n- No live agent run was created.\n- No tools executed.\n- Your prompt stayed in the local UI fallback.\n\nUse **Retry Backend** or start the backend, then send this again.`;
 
       const agentMsg: ChatMessage = {
