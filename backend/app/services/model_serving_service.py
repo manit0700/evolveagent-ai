@@ -19,6 +19,7 @@ BACKEND_SPECS = [
     {
         "backend": "ollama",
         "name": "Ollama",
+        "enabled_setting": "ollama_enabled",
         "base_url_setting": "ollama_base_url",
         "list_path": "/api/tags",
         "models_key": "models",
@@ -83,6 +84,9 @@ class ModelServingService:
         return next((spec for spec in BACKEND_SPECS if spec["backend"] == backend), None)
 
     def _base_url(self, spec: dict) -> str:
+        enabled_setting = spec.get("enabled_setting")
+        if enabled_setting and not bool(getattr(settings, enabled_setting, False)):
+            return ""
         return str(getattr(settings, spec["base_url_setting"]) or "").strip()
 
     def _get_json(self, url: str) -> dict | list | None:
@@ -111,6 +115,7 @@ class ModelServingService:
             }
         base_url = self._base_url(spec)
         if not base_url:
+            setting_name = spec.get("enabled_setting") or spec["base_url_setting"]
             return {
                 "backend": spec["backend"],
                 "name": spec["name"],
@@ -118,7 +123,7 @@ class ModelServingService:
                 "reachable": False,
                 "models": [],
                 "checked_at": self._now(),
-                "note": f"Set {spec['base_url_setting'].upper()} to an already-running local endpoint to enable detection.",
+                "note": f"Set {setting_name.upper()} and point {spec['base_url_setting'].upper()} at an already-running local endpoint to enable detection.",
             }
         payload = self._get_json(base_url.rstrip("/") + spec["list_path"])
         if payload is None:

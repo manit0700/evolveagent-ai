@@ -4,6 +4,7 @@ import os
 from collections import Counter
 from datetime import UTC, datetime
 
+from app.config import settings
 from app.models.response_models import GovernanceEvent
 from app.services.governance_service import GovernanceService
 from app.services.storage_service import StorageService
@@ -15,6 +16,7 @@ PROVIDERS = [
     {"id": "anthropic", "name": "Anthropic (Claude)", "env_keys": ["ANTHROPIC_API_KEY"], "est_latency_ms": 850},
     {"id": "gemini", "name": "Google Gemini", "env_keys": ["GEMINI_API_KEY", "GOOGLE_API_KEY"], "est_latency_ms": 800},
     {"id": "mistral", "name": "Mistral", "env_keys": ["MISTRAL_API_KEY"], "est_latency_ms": 700},
+    {"id": "ollama", "name": "Ollama Local", "env_keys": ["OLLAMA_ENABLED"], "est_latency_ms": 300},
     {"id": "local", "name": "Local / Mock", "env_keys": [], "est_latency_ms": 50},
 ]
 
@@ -24,7 +26,7 @@ CAPABILITIES = ["chat", "image", "embedding"]
 TASK_TYPES = ["auto", "coding", "research", "business", "image_generation"]
 
 # Illustrative per-1k-token cost estimates (USD) — display only, never billed.
-_EST_COST_PER_1K = {"openai": 0.01, "anthropic": 0.012, "gemini": 0.007, "mistral": 0.004, "local": 0.0}
+_EST_COST_PER_1K = {"openai": 0.01, "anthropic": 0.012, "gemini": 0.007, "mistral": 0.004, "ollama": 0.0, "local": 0.0}
 
 
 class ProviderControlService:
@@ -53,6 +55,8 @@ class ProviderControlService:
 
     @staticmethod
     def _key_set(key_name: str) -> bool:
+        if key_name == "OLLAMA_ENABLED":
+            return bool(settings.ollama_enabled)
         value = os.environ.get(key_name)
         return bool(value and value.strip())
 

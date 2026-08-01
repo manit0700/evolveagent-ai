@@ -9,6 +9,7 @@ from app.services.providers.anthropic_provider import AnthropicProvider
 from app.services.providers.gemini_provider import GeminiProvider
 from app.services.providers.mistral_provider import MistralProvider
 from app.services.providers.mock_provider import MockProvider
+from app.services.providers.ollama_provider import OllamaProvider
 from app.services.providers.openai_provider import OpenAIProvider
 from app.models.response_models import ProviderStatus
 
@@ -23,6 +24,7 @@ _QUALITY_TIER_FIELDS = {
     "anthropic": {"fast": "anthropic_fast_model", "balanced": "anthropic_model", "quality": "anthropic_strong_model"},
     "gemini": {"fast": "gemini_fast_model", "balanced": "gemini_model", "quality": "gemini_pro_model"},
     "mistral": {"fast": "mistral_fast_model", "balanced": "mistral_model", "quality": "mistral_strong_model"},
+    "ollama": {"fast": "ollama_default_model", "balanced": "ollama_default_model", "quality": "ollama_default_model"},
 }
 # Recognized model-name prefixes, used to resolve a free-text task preference
 # (e.g. "claude-opus-4-8", stored by ProviderControlService) back to a provider.
@@ -38,6 +40,11 @@ _MODEL_PREFIX_PROVIDER = (
     ("mixtral", "mistral"),
     ("codestral", "mistral"),
     ("devstral", "mistral"),
+    ("llama", "ollama"),
+    ("codellama", "ollama"),
+    ("qwen", "ollama"),
+    ("deepseek", "ollama"),
+    ("phi", "ollama"),
 )
 
 
@@ -81,6 +88,7 @@ class LLMRouter:
             "anthropic": AnthropicProvider(),
             "gemini": GeminiProvider(),
             "mistral": MistralProvider(),
+            "ollama": OllamaProvider(),
             "mock": MockProvider(),
         }
         self.storage = None
@@ -201,6 +209,12 @@ class LLMRouter:
                     and self.provider_configured(preferred_provider)
                 ):
                     return RouteChoice(preferred_provider, preferred_model, label=f"task:{task_type}")
+        if (
+            settings.default_provider in self.providers
+            and settings.default_provider != "mock"
+            and settings.default_provider != avoid_provider
+        ):
+            return RouteChoice(settings.default_provider, self.model_for_provider(settings.default_provider, quality))
         if avoid_provider == "openai" or settings.default_provider == "mock":
             return RouteChoice("mock", "mock-agent-model")
         return RouteChoice("openai", self.model_for_provider("openai", quality))
@@ -273,12 +287,13 @@ class LLMRouter:
             "anthropic": "Claude",
             "gemini": "Gemini",
             "mistral": "Mistral",
+            "ollama": "Ollama Local",
             "mock": "Mock",
         }.get(provider, provider.title())
 
     def configured_real_routes(self) -> list[RouteChoice]:
         routes: list[RouteChoice] = []
-        for provider in ["openai", "anthropic", "gemini", "mistral"]:
+        for provider in ["openai", "anthropic", "gemini", "mistral", "ollama"]:
             if self.provider_configured(provider):
                 routes.append(RouteChoice(provider, self.model_for_provider(provider), self.provider_label(provider)))
         return routes
@@ -311,6 +326,7 @@ class LLMRouter:
             "anthropic": bool(settings.anthropic_api_key),
             "gemini": bool(settings.gemini_api_key),
             "mistral": bool(settings.mistral_api_key),
+            "ollama": bool(settings.ollama_enabled and settings.ollama_base_url),
             "mock": True,
         }.get(provider, False)
 
@@ -323,6 +339,7 @@ class LLMRouter:
                 anthropic_configured=False,
                 gemini_configured=False,
                 mistral_configured=False,
+                ollama_configured=False,
                 default_provider="mock",
                 available_providers=["mock"],
                 real_mode_ready=False,
@@ -336,8 +353,9 @@ class LLMRouter:
             "anthropic": self.provider_configured("anthropic"),
             "gemini": self.provider_configured("gemini"),
             "mistral": self.provider_configured("mistral"),
+            "ollama": self.provider_configured("ollama"),
         }
-        available = [provider for provider in ["openai", "anthropic", "gemini", "mistral"] if configured[provider]]
+        available = [provider for provider in ["openai", "anthropic", "gemini", "mistral", "ollama"] if configured[provider]]
         available.append("mock")
         default_provider = settings.default_provider if settings.default_provider in available else "mock"
         return ProviderStatus(
@@ -346,6 +364,7 @@ class LLMRouter:
             anthropic_configured=configured["anthropic"],
             gemini_configured=configured["gemini"],
             mistral_configured=configured["mistral"],
+            ollama_configured=configured["ollama"],
             default_provider=default_provider,
             available_providers=available,
             real_mode_ready=any(configured.values()),
@@ -357,7 +376,7 @@ class LLMRouter:
 
     def provider_details(self) -> list[dict]:
         details = []
-        for provider in ["openai", "anthropic", "gemini", "mistral", "mock"]:
+        for provider in ["openai", "anthropic", "gemini", "mistral", "ollama", "mock"]:
             configured = self.provider_configured(provider)
             details.append(
                 {
@@ -435,6 +454,10 @@ class LLMRouter:
             return "Mock fallback is always available."
         if settings.use_mock_llm:
             return "LLM_MODE=mock, so this provider will not be called."
+        if provider == "ollama":
+            if configured:
+                return "Ollama is enabled and can be selected as a local provider."
+            return "Set OLLAMA_ENABLED=true and run Ollama locally; mock fallback will be used."
         if configured:
             return "API key is configured and provider can be selected."
         return f"{provider.upper()} API key is not configured; mock fallback will be used."
@@ -453,6 +476,7 @@ class LLMRouter:
             RouteChoice("anthropic", settings.anthropic_model),
             RouteChoice("gemini", settings.gemini_model),
             RouteChoice("mistral", settings.mistral_model),
+            RouteChoice("ollama", settings.ollama_default_model),
             RouteChoice("mock", "mock-agent-model"),
         ]
         seen = {original_provider}

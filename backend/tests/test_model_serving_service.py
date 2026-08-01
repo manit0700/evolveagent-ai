@@ -57,7 +57,7 @@ def test_unconfigured_backend_is_reported_without_any_http_call(monkeypatch, tmp
         "reachable": False,
         "models": [],
         "checked_at": result["checked_at"],
-        "note": "Set OLLAMA_BASE_URL to an already-running local endpoint to enable detection.",
+        "note": "Set OLLAMA_ENABLED and point OLLAMA_BASE_URL at an already-running local endpoint to enable detection.",
     }
     assert http.calls == []  # never attempted a request for an unconfigured backend
 
@@ -66,6 +66,7 @@ def test_configured_and_reachable_backend_reports_its_models(monkeypatch, tmp_pa
     storage = StorageService(data_dir=str(tmp_path / "data"))
     governance = GovernanceService(storage)
     http = _FakeModelServingHTTP(data={"models": [{"name": "llama3"}, {"name": "mistral"}]})
+    monkeypatch.setattr(settings, "ollama_enabled", True)
     monkeypatch.setattr(settings, "ollama_base_url", "http://127.0.0.1:11434")
     service = ModelServingService(governance, http_client=http)
 
@@ -81,6 +82,7 @@ def test_configured_but_unreachable_backend_degrades_safely(monkeypatch, tmp_pat
     storage = StorageService(data_dir=str(tmp_path / "data"))
     governance = GovernanceService(storage)
     http = _FakeModelServingHTTP(raise_exc=ConnectionError("refused"))
+    monkeypatch.setattr(settings, "ollama_enabled", True)
     monkeypatch.setattr(settings, "ollama_base_url", "http://127.0.0.1:11434")
     service = ModelServingService(governance, http_client=http)
 
@@ -136,6 +138,7 @@ def test_dry_run_accepts_when_the_requested_model_is_loaded(monkeypatch, tmp_pat
     storage = StorageService(data_dir=str(tmp_path / "data"))
     governance = GovernanceService(storage)
     http = _FakeModelServingHTTP(data={"models": [{"name": "llama3"}]})
+    monkeypatch.setattr(settings, "ollama_enabled", True)
     monkeypatch.setattr(settings, "ollama_base_url", "http://127.0.0.1:11434")
     service = ModelServingService(governance, http_client=http)
 
@@ -149,6 +152,7 @@ def test_dry_run_declines_when_the_requested_model_is_not_loaded(monkeypatch, tm
     storage = StorageService(data_dir=str(tmp_path / "data"))
     governance = GovernanceService(storage)
     http = _FakeModelServingHTTP(data={"models": [{"name": "llama3"}]})
+    monkeypatch.setattr(settings, "ollama_enabled", True)
     monkeypatch.setattr(settings, "ollama_base_url", "http://127.0.0.1:11434")
     service = ModelServingService(governance, http_client=http)
 
@@ -165,6 +169,7 @@ def test_analytics_summary_never_makes_a_network_call(monkeypatch, tmp_path):
     storage = StorageService(data_dir=str(tmp_path / "data"))
     governance = GovernanceService(storage)
     http = _FakeModelServingHTTP()
+    monkeypatch.setattr(settings, "ollama_enabled", True)
     monkeypatch.setattr(settings, "ollama_base_url", "http://127.0.0.1:11434")
     monkeypatch.setattr(settings, "vllm_base_url", None)
     monkeypatch.setattr(settings, "local_openai_compatible_base_url", None)

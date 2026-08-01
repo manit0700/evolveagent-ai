@@ -134,6 +134,7 @@ class ProviderStatus(BaseModel):
     anthropic_configured: bool
     gemini_configured: bool
     mistral_configured: bool
+    ollama_configured: bool = False
     default_provider: str
     available_providers: list[str]
     real_mode_ready: bool = False

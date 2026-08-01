@@ -64,7 +64,11 @@ class Settings(BaseSettings):
     # at a backend the operator already runs themselves (e.g. Ollama on
     # localhost). Unset -> that backend is simply reported as not configured;
     # this app never starts, installs, or supervises any of these processes.
-    ollama_base_url: str | None = Field(default=None, alias="OLLAMA_BASE_URL")
+    # v300+: Ollama can also be used as a real local LLM provider, but only
+    # when explicitly enabled. Default URL is localhost; enabled remains false.
+    ollama_enabled: bool = Field(default=False, alias="OLLAMA_ENABLED")
+    ollama_base_url: str | None = Field(default="http://127.0.0.1:11434", alias="OLLAMA_BASE_URL")
+    ollama_default_model: str = Field(default="llama3.1", alias="OLLAMA_DEFAULT_MODEL")
     vllm_base_url: str | None = Field(default=None, alias="VLLM_BASE_URL")
     local_openai_compatible_base_url: str | None = Field(default=None, alias="LOCAL_OPENAI_COMPATIBLE_BASE_URL")
     codex_worker_mode: str = Field(default="manual_trigger", alias="CODEX_WORKER_MODE")
