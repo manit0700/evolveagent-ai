@@ -270,11 +270,20 @@ export const DevModeConsole: React.FC = () => {
               <span className={`w-2 h-2 rounded-full ${(providerStatus?.readyProviders || 0) > 0 ? 'bg-emerald-400' : 'bg-gray-500'}`} />
             </div>
             <div className="text-lg font-bold font-mono text-cyan-300">
-              {providerStatus ? `${providerStatus.readyProviders}/${providerStatus.totalProviders} ready` : 'Unavailable'}
+              {providerStatus?.runtime
+                ? `${providerStatus.runtime.defaultProvider} · ${providerStatus.runtime.defaultModel}`
+                : providerStatus ? `${providerStatus.readyProviders}/${providerStatus.totalProviders} ready` : 'Unavailable'}
             </div>
             <p className="text-[11px] text-gray-500 font-mono">
-              {providerStatus ? `Fallback ${providerStatus.fallbackEnabled ? 'enabled' : 'off'} · ${Object.keys(providerStatus.capabilityModes).length} capability mode(s)` : 'Provider status endpoint did not respond.'}
+              {providerStatus?.runtime?.localOnly
+                ? 'Ollama local-only active · cloud providers bypassed'
+                : providerStatus ? `Fallback ${providerStatus.fallbackEnabled ? 'enabled' : 'off'} · ${Object.keys(providerStatus.capabilityModes).length} capability mode(s)` : 'Provider status endpoint did not respond.'}
             </p>
+            {providerStatus?.ollama?.reachable && (
+              <span className="inline-flex w-fit text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
+                local Ollama reachable
+              </span>
+            )}
           </div>
 
           <div className="p-3 rounded-2xl bg-black/30 border border-white/[0.07] space-y-2">

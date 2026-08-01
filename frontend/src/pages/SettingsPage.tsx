@@ -54,6 +54,11 @@ export const SettingsPage: React.FC = () => {
   const providerLabel = providers
     ? `${providers.readyProviders}/${providers.totalProviders} ready`
     : 'Unavailable';
+  const localOllamaActive = Boolean(
+    providers?.runtime?.defaultProvider === 'ollama'
+    && providers?.ollama?.enabled
+    && providers?.ollama?.reachable
+  );
   const storageLabel = storageStatus
     ? `${storageStatus.backend.toUpperCase()} · ${storageStatus.collections} collections`
     : 'Unavailable';
@@ -138,6 +143,16 @@ export const SettingsPage: React.FC = () => {
               <span className="text-[11px] font-mono text-gray-400">{providers.readyProviders}/{providers.totalProviders} ready</span>
             </div>
             <div className="flex flex-wrap gap-2 pt-3">
+              {localOllamaActive && (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
+                  local Ollama active
+                </span>
+              )}
+              {providers.runtime?.localOnly && (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/30">
+                  cloud bypassed
+                </span>
+              )}
               {Object.entries(providers.capabilityModes).map(([cap, mode]) => (
                 <span key={cap} className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${mode === 'real' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' : 'bg-white/[0.04] text-gray-400 border-white/10'}`}>
                   {cap}: {mode}
@@ -146,20 +161,27 @@ export const SettingsPage: React.FC = () => {
               {providers.fallbackEnabled && <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">fallback on</span>}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-3">
-              {providers.providers.map(p => (
+              {providers.providers.map(p => {
+                const runtimeProvider = providers.runtime?.providerDetails.find(detail => detail.provider === p.provider);
+                const isLocalOllama = p.provider === 'ollama' && localOllamaActive;
+                return (
                 <div key={p.provider} className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/5">
-                  <span className="text-xs font-medium text-gray-200 capitalize">{p.provider}</span>
-                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${p.ready ? 'bg-emerald-500/15 text-emerald-300' : 'bg-gray-500/15 text-gray-400'}`}>
-                    {p.ready ? 'key set ✓' : 'no key'}
+                  <span className="text-xs font-medium text-gray-200 capitalize">{runtimeProvider?.label || p.provider}</span>
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${isLocalOllama || p.ready ? 'bg-emerald-500/15 text-emerald-300' : 'bg-gray-500/15 text-gray-400'}`}>
+                    {isLocalOllama ? 'local active ✓' : p.ready ? 'configured ✓' : 'not set'}
                   </span>
                 </div>
-              ))}
+                );
+              })}
               {!providers.providers.length && (
                 <div className="sm:col-span-2 p-3 rounded-xl bg-white/[0.02] border border-white/5 text-xs text-gray-400">
                   No provider key-check rows are available. The app can still use safe fallback mode until real providers are configured.
                 </div>
               )}
             </div>
+            {providers.runtime?.statusMessage && (
+              <p className="text-[11px] text-cyan-200 pt-3">{providers.runtime.statusMessage}</p>
+            )}
             <p className="text-[11px] text-gray-500 pt-3">Readiness is boolean-only — no secret values are ever shown or stored.</p>
           </GlassCard>
         )}
@@ -238,8 +260,14 @@ export const SettingsPage: React.FC = () => {
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono mb-6">
               <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-2">
                 <div className="text-gray-400 text-[10px] uppercase">Primary Reasoning Engine</div>
-                <div className="text-sm font-bold text-white">{providers ? `${providers.readyProviders}/${providers.totalProviders} provider(s) ready` : 'Provider status unavailable'}</div>
-                <div className="text-[11px] text-cyan-300">Live readiness from backend provider-control endpoints</div>
+                <div className="text-sm font-bold text-white">
+                  {providers?.runtime
+                    ? `${providers.runtime.defaultProvider} · ${providers.runtime.defaultModel}`
+                    : providers ? `${providers.readyProviders}/${providers.totalProviders} provider(s) ready` : 'Provider status unavailable'}
+                </div>
+                <div className="text-[11px] text-cyan-300">
+                  {localOllamaActive ? 'Running through your local Ollama server' : 'Live readiness from backend provider-control endpoints'}
+                </div>
               </div>
               <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-2">
                 <div className="text-gray-400 text-[10px] uppercase">Fallback Engine</div>

@@ -152,6 +152,56 @@ def test_task_type_preference_routes_to_configured_provider_model(tmp_path, monk
     assert route.label == "task:coding"
 
 
+def test_ollama_local_only_overrides_task_type_cloud_preference(tmp_path, monkeypatch):
+    router = LLMRouter()
+    pcs = _isolated_provider_control(tmp_path)
+    pcs.update({"coding": "claude-opus-4-8"}, None, None)
+    monkeypatch.setattr(router, "provider_control", pcs)
+    monkeypatch.setattr(settings, "llm_mode", "real")
+    monkeypatch.setattr(settings, "default_provider", "ollama")
+    monkeypatch.setattr(settings, "ollama_enabled", True)
+    monkeypatch.setattr(settings, "ollama_local_only", True)
+    monkeypatch.setattr(settings, "anthropic_api_key", "test-key")
+
+    route = router.route_for_agent("Coding Agent", task_type="coding")
+
+    assert route.provider == "ollama"
+    assert route.model == settings.ollama_default_model
+    assert route.label == "local-only"
+
+
+def test_ollama_local_only_fallback_chain_excludes_cloud_providers(monkeypatch):
+    router = LLMRouter()
+    monkeypatch.setattr(settings, "llm_mode", "real")
+    monkeypatch.setattr(settings, "default_provider", "ollama")
+    monkeypatch.setattr(settings, "ollama_enabled", True)
+    monkeypatch.setattr(settings, "ollama_local_only", True)
+    monkeypatch.setattr(settings, "openai_api_key", "test-key")
+    monkeypatch.setattr(settings, "anthropic_api_key", "test-key")
+    monkeypatch.setattr(settings, "gemini_api_key", "test-key")
+    monkeypatch.setattr(settings, "mistral_api_key", "test-key")
+
+    assert [route.provider for route in router.fallback_routes("ollama")] == ["mock"]
+
+
+def test_ollama_local_only_status_marks_cloud_providers_bypassed(monkeypatch):
+    router = LLMRouter()
+    monkeypatch.setattr(settings, "llm_mode", "real")
+    monkeypatch.setattr(settings, "default_provider", "ollama")
+    monkeypatch.setattr(settings, "ollama_enabled", True)
+    monkeypatch.setattr(settings, "ollama_local_only", True)
+    monkeypatch.setattr(settings, "openai_api_key", "test-key")
+
+    status = router.status()
+    openai = next(item for item in status.provider_details if item["provider"] == "openai")
+
+    assert status.local_only is True
+    assert status.default_provider == "ollama"
+    assert openai["ready"] is False
+    assert "cloud providers are bypassed" in openai["reason"]
+    assert "local-only mode is active" in status.status_message
+
+
 def test_task_type_preference_skipped_when_provider_not_configured(tmp_path, monkeypatch):
     pcs = _isolated_provider_control(tmp_path)
     pcs.update({"coding": "claude-opus-4-8"}, None, None)
