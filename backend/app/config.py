@@ -69,6 +69,7 @@ class Settings(BaseSettings):
     ollama_enabled: bool = Field(default=False, alias="OLLAMA_ENABLED")
     ollama_base_url: str | None = Field(default="http://127.0.0.1:11434", alias="OLLAMA_BASE_URL")
     ollama_default_model: str = Field(default="llama3.1", alias="OLLAMA_DEFAULT_MODEL")
+    ollama_fast_model: str | None = Field(default=None, alias="OLLAMA_FAST_MODEL")
     ollama_local_only: bool = Field(default=False, alias="OLLAMA_LOCAL_ONLY")
     vllm_base_url: str | None = Field(default=None, alias="VLLM_BASE_URL")
     local_openai_compatible_base_url: str | None = Field(default=None, alias="LOCAL_OPENAI_COMPATIBLE_BASE_URL")
