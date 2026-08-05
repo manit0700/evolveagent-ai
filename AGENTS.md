@@ -129,3 +129,47 @@ When finishing a task, report:
 - frontend build result
 - Linear status if updated
 - known limitations or follow-up
+
+## Cursor Cloud specific instructions
+
+These notes are for cloud agents whose VM already had the startup update script run
+(backend `venv` created + deps installed, frontend `node_modules` installed).
+
+### Services (all run in offline mock/JSON mode by default — no API keys needed)
+
+- Backend (FastAPI): from `backend/`, run `./venv/bin/uvicorn app.main:app --reload --port 8000`.
+  Health check: `GET http://127.0.0.1:8000/health`. Chat endpoint is `POST /api/run` with body
+  `{"user_input": "..."}` (note: the field is `user_input`, not `message`).
+- Frontend (React + Vite): from `frontend/`, run `npm run dev -- --host 127.0.0.1 --port 5173`,
+  then open `http://127.0.0.1:5173`. It defaults to the backend at `http://127.0.0.1:8000`
+  (override with `VITE_API_BASE`), so run the backend on port 8000 to match.
+- Root `npm run dev` starts backend on port 8001 (not 8000); if you use it, set
+  `frontend/.env` `VITE_API_BASE=http://127.0.0.1:8001` to match. Running the two services
+  separately on port 8000 is simpler.
+
+### Env / config gotchas
+
+- No `.env` file is required for dev: `backend/app/config.py` defaults to `LLM_MODE=mock` and
+  `STORAGE_BACKEND=json`, so the app is fully functional offline out of the box.
+- Do NOT run tests with `backend/.env` copied from `.env.example`: that template sets
+  `REDIS_URL`/`DATABASE_URL`, which flips `redis_ready`/`postgres_ready` to true and breaks
+  `tests/test_storage_backend.py::test_default_backend_is_json_and_status` (CI runs with these unset).
+  Only create a `.env` when you intentionally want real providers or Postgres/Redis.
+
+### Testing gotchas
+
+- Backend: `cd backend && ./venv/bin/pytest -q` (full suite is ~1440 tests, ~100s).
+  Frontend: `cd frontend && npm run test` (Vitest) and `npm run build` (Vite).
+- Some tests (e.g. `tests/test_business_intelligence_service.py`) assume a clean/empty JSON
+  data directory. Running the app or the suite writes runtime JSON into `backend/app/data/`,
+  which can then pollute those tests on the next run. For a pristine test baseline, clear the
+  runtime data first with `git clean -fdx backend/app/data/` (this keeps the tracked `.gitkeep`
+  and only removes gitignored runtime data). A fresh checkout / fresh VM starts clean, so CI is
+  unaffected.
+- Never stage `backend/app/data/` runtime JSON; it is gitignored except `.gitkeep`.
+
+### Toolchain
+
+- The VM uses Python 3.12 and Node 22 (CI pins 3.11 / 20, but 3.12 / 22 work). Creating the
+  backend venv requires the `python3.12-venv` system package (installed during environment setup);
+  it is not part of the per-startup update script.
